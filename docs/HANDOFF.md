@@ -17,23 +17,31 @@ Go to https://cursor.com. Download it. Install it. Open it. Sign in.
 
 That's it Burger. That's the hard part. You did it. Gold star.
 
-### Step 2: Use Cursor to set up Claude Code
+### Step 2: Use Cursor to set everything up
 
 Press **Ctrl+L** (or **Cmd+L** on Mac). A chat panel opens on the right side. Paste this:
 
 ```
-I need to set up Claude Code in this editor. Here's what I need:
+I need you to help me set up this project from scratch. I am not technical at all, walk me through every step like I'm a child.
 
-1. Make sure Node.js and Git are installed on my computer. If they're not, walk me through installing them.
-2. Once those are ready, run this in the terminal: npm install -g @anthropic-ai/claude-code
-3. Then clone this repo: git clone https://github.com/megachadxyz/mega-chad.git
+Here's what needs to happen:
+1. Make sure Node.js and Git are installed. If not, walk me through installing them.
+2. Set up GitHub authentication so I can clone repos. GitHub doesn't accept passwords anymore so I need either GitHub CLI (gh auth login) or a personal access token. The easiest way is to install GitHub CLI and run "gh auth login" which lets me log in through my browser. Walk me through this.
+3. Clone this repo: git clone https://github.com/megachadxyz/mega-chad.git
 4. cd into it and run: npm install
-5. Open the mega-chad folder in this editor
+5. Install Claude Code globally: npm install -g @anthropic-ai/claude-code
+6. Open the mega-chad folder in this editor
 
-Walk me through each step. I am not technical.
+If anything fails, help me fix it before moving on.
 ```
 
 Follow what Cursor tells you. Click what it tells you to click. You're doing great, Croissant the Salamander.
+
+**IF GIT CLONE ASKS FOR A USERNAME/PASSWORD:** GitHub killed password login years ago. You need to set up GitHub CLI first. Paste this into Cursor's chat:
+
+```
+Git clone is asking me for a username and password but GitHub doesn't accept passwords anymore. Help me install GitHub CLI (gh) and run "gh auth login" so I can authenticate through my browser instead. Then try the clone again.
+```
 
 ### Step 3: Start Claude Code
 
@@ -46,6 +54,14 @@ claude
 ```
 
 First time it'll ask you to log in — it gives you a link, you click it, sign in with your Anthropic account (the one with the Claude Code pass), come back. Done.
+
+**PRO TIP:** If Claude Code keeps asking you to approve every little thing and you want it to just cook, start it with:
+
+```
+claude --dangerously-skip-permissions
+```
+
+Now it'll just do stuff without asking. You like to live dangerously, right Burger?
 
 **Claude Code is now running.** This is your AI developer. Everything from here on out, you just type what you want into this terminal and Claude Code does it.
 
