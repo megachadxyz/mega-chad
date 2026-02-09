@@ -12,13 +12,14 @@
 ```
 1. User connects wallet
 2. User types a prompt like "jacked chad on the moon"
-3. User clicks BURN — this burns 1,000 $MEGACHAD tokens forever
-4. AI generates an image based on the prompt
-5. Image gets pinned to IPFS permanently
-6. User gets their image + IPFS link
+3. User clicks BURN — costs 1,000 $MEGACHAD tokens
+4. The 1,000 tokens split: 500 burned forever + 500 sent to the dev wallet
+5. AI generates an image based on the prompt
+6. Image gets pinned to IPFS permanently
+7. User gets their image + IPFS link
 ```
 
-The more people burn, the fewer tokens exist. Deflationary creativity.
+50% of every burn is destroyed (deflationary). 50% goes to the dev wallet (funds the team).
 
 ---
 
@@ -31,7 +32,7 @@ The more people burn, the fewer tokens exist. Deflationary creativity.
 - AI image generation backend (Replicate Flux Schnell)
 - IPFS pinning (Pinata)
 - Gallery page at `/gallery`
-- Smart contract ready (ERC-20 with burn, 1B supply)
+- Smart contract ready (ERC-20 with `burnToCreate`, 1B supply, 50/50 split)
 - Deployed to Vercel (preview)
 
 ## WHAT'S NOT DONE
@@ -41,6 +42,57 @@ The more people burn, the fewer tokens exist. Deflationary creativity.
 - [ ] Update "BUY NOW" links to point to the actual DEX
 - [ ] Add env vars on Vercel so the burn feature actually works
 - [ ] Add a favicon
+
+---
+
+## USING CLAUDE CODE (AI CODING ASSISTANT)
+
+You have Claude Code passes. Here's how to use them to work on this project.
+
+### What is Claude Code?
+
+It's an AI that lives in your terminal. You describe what you want in plain English and it writes the code, runs commands, and makes changes for you. It can read every file in the repo, edit them, run the dev server, deploy to Vercel — basically everything a developer does.
+
+### Install it
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+### Use it
+
+```bash
+cd mega-chad          # go to the project folder
+claude                # start Claude Code
+```
+
+Then just talk to it like a person:
+
+- "run the dev server"
+- "change the burn amount from 1000 to 500"
+- "deploy to vercel"
+- "add a new section to the homepage for community gallery"
+- "the burn button isn't working, fix it"
+- "deploy the token contract to MegaETH testnet"
+- "update the CA in the hero section to 0x1234..."
+- "add a favicon"
+
+It reads the codebase, makes changes, and can even run `forge test` or `npm run dev` to verify things work.
+
+### Tips
+
+- Be specific about what you want ("change the pink color to blue" not "make it look different")
+- It can see errors — if something breaks it'll try to fix it
+- Say "don't change anything else" if you only want a small tweak
+- Say "explain this to me" if you want to understand how something works
+- It remembers context within a session, so you can say "now do the same for the other section"
+- To deploy: "push to github and deploy to vercel"
+
+### What it CAN'T do
+
+- It can't connect your wallet or sign transactions
+- It can't access Vercel/GitHub unless you've logged in via the CLI first
+- It won't delete important files without asking
 
 ---
 
@@ -66,12 +118,13 @@ Copy `env.example` to `.env.local` and fill these in:
 
 | Key | What it is | Where to get it |
 |-----|-----------|-----------------|
-| `REPLICATE_API_TOKEN` | Makes the AI images | https://replicate.com → sign up → API Tokens |
-| `PINATA_JWT` | Saves images to IPFS | https://pinata.cloud → sign up → API Keys → New Key → copy JWT |
-| `UPSTASH_REDIS_REST_URL` | Prevents double-spending burns | https://upstash.com → sign up → Create Database → copy REST URL |
+| `REPLICATE_API_TOKEN` | Makes the AI images | https://replicate.com -> sign up -> API Tokens |
+| `PINATA_JWT` | Saves images to IPFS | https://pinata.cloud -> sign up -> API Keys -> New Key -> copy JWT |
+| `UPSTASH_REDIS_REST_URL` | Prevents double-spending burns | https://upstash.com -> sign up -> Create Database -> copy REST URL |
 | `UPSTASH_REDIS_REST_TOKEN` | Same as above | Same page, copy REST Token |
 | `NEXT_PUBLIC_MEGACHAD_CONTRACT` | The token contract address | You get this after deploying the contract |
 | `NEXT_PUBLIC_BURN_AMOUNT` | Tokens burned per image | Set to `1000` |
+| `DEV_WALLET` | Wallet that gets 50% of burns | Your team wallet address (used in deploy script) |
 
 All of these have free tiers. You don't need to pay for anything.
 
@@ -81,16 +134,22 @@ All of these have free tiers. You don't need to pay for anything.
 
 The smart contract is in `contracts/`. You need Foundry installed.
 
+The contract has a `burnToCreate()` function:
+- Takes 1,000 tokens from the user
+- Burns 500 (sends to zero address — gone forever)
+- Sends 500 to the dev wallet (set at deploy time, immutable)
+
 ```bash
 # Install Foundry (if you don't have it)
 curl -L https://foundry.paradigm.xyz | bash
 foundryup
 
-# Run tests
+# Run tests (14 tests, should all pass)
 cd contracts
 forge test
 
 # Deploy to MegaETH TESTNET (stealth name for opsec)
+DEV_WALLET=0xYOUR_DEV_WALLET_ADDRESS \
 forge script script/Deploy.s.sol:DeployTestnet \
   --rpc-url https://carrot.megaeth.com/rpc \
   --broadcast \
@@ -101,9 +160,11 @@ forge script script/Deploy.s.sol:DeployTestnet \
 # Also update the hero section CA display in app/page.tsx (search for 0xaaaaaa)
 ```
 
-For MAINNET deploy, change the script or pass different constructor args:
+For MAINNET deploy, change `DeployTestnet` to `DeployMainnet`:
 - Testnet: "Test Token Alpha" / "TTA" (stealth)
 - Mainnet: "Mega Chad" / "MEGACHAD" (real name)
+
+**IMPORTANT:** The `DEV_WALLET` address is baked into the contract forever (immutable). Make sure it's the right wallet before deploying to mainnet.
 
 ---
 
@@ -117,7 +178,7 @@ Go here: https://github.com/apps/vercel/installations/new
 
 - You need to be an **admin** of the megachadxyz GitHub org
 - Click "megachadxyz"
-- Select "Only select repositories" → pick "mega-chad"
+- Select "Only select repositories" -> pick "mega-chad"
 - Click Install
 
 ### Step 2: Import the repo on Vercel
@@ -132,14 +193,14 @@ Go here: https://vercel.com/new/import?s=https://github.com/megachadxyz/mega-cha
 ### Step 3: Add the API keys
 
 In Vercel:
-1. Go to your project → Settings → Environment Variables
+1. Go to your project -> Settings -> Environment Variables
 2. Add each key from the table above
 3. Click Save
-4. Go to Deployments → click the 3 dots on the latest → Redeploy
+4. Go to Deployments -> click the 3 dots on the latest -> Redeploy
 
 ### Step 4: Custom domain (optional)
 
-1. Go to Settings → Domains
+1. Go to Settings -> Domains
 2. Type your domain (like `megachad.xyz`)
 3. Vercel tells you what DNS records to add
 4. Go to your domain registrar and add them
@@ -148,7 +209,7 @@ In Vercel:
 ### Step 5: Delete the preview
 
 Once your own deployment works, the contributor can delete the preview at:
-https://vercel.com/midaswhales-projects/mega-chad/settings → scroll down → Delete Project
+https://vercel.com/midaswhales-projects/mega-chad/settings -> scroll down -> Delete Project
 
 ### After that: auto-deploy
 
@@ -173,6 +234,24 @@ If you need to change something, here's where to look:
 
 ---
 
+## BURN MECHANICS
+
+The smart contract (`burnToCreate` function) does this in ONE transaction:
+
+```
+User sends 1,000 $MEGACHAD
+  |
+  +---> 500 tokens -> 0x0000...0000 (burned forever, reduces total supply)
+  |
+  +---> 500 tokens -> dev wallet (funds the team)
+```
+
+- The dev wallet is set when the contract is deployed and can never be changed
+- The regular `burn()` function still works too (sends 100% to zero address)
+- The website uses `burnToCreate()` for the burn-to-create feature
+
+---
+
 ## TECH STACK (for nerds)
 
 - **Next.js 14** — React framework
@@ -191,17 +270,18 @@ If you need to change something, here's where to look:
 ```
 User connects wallet (wagmi/viem on MegaETH)
   -> User enters prompt + clicks "Burn & Create"
-  -> Frontend calls burn(1000 * 10^18) on $MEGACHAD ERC-20
+  -> Frontend calls burnToCreate(1000 * 10^18) on $MEGACHAD ERC-20
+  -> Contract burns 500 tokens + sends 500 to dev wallet
   -> User signs tx in wallet -> tx confirmed
   -> Frontend sends { txHash, prompt, burnerAddress } to POST /api/generate
-  -> Backend verifies burn on MegaETH RPC
+  -> Backend verifies burn on MegaETH RPC (checks Transfer to 0x0)
   -> Backend generates image via Replicate (Flux Schnell)
   -> Backend pins image to Pinata IPFS
   -> Backend stores record in Upstash Redis
   -> Returns { ipfsCid, ipfsUrl, imageUrl }
 ```
 
-The contract is a standard ERC-20 with OpenZeppelin's ERC20Burnable. 1 billion supply, 18 decimals. The `burn()` function sends tokens to the zero address permanently.
+The contract is a standard ERC-20 with OpenZeppelin's ERC20Burnable plus a custom `burnToCreate()`. 1 billion supply, 18 decimals. Dev wallet is immutable (set in constructor).
 
 ---
 

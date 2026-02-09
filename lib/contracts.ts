@@ -9,14 +9,28 @@ export const BURN_AMOUNT_DISPLAY = Number(
   process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000'
 );
 
-// Minimal ERC20 + ERC20Burnable ABI — only the functions we need
+// Minimal ERC20 + ERC20Burnable + burnToCreate ABI
 export const MEGACHAD_ABI = [
+  {
+    type: 'function',
+    name: 'burnToCreate',
+    inputs: [{ name: 'amount', type: 'uint256' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
   {
     type: 'function',
     name: 'burn',
     inputs: [{ name: 'value', type: 'uint256' }],
     outputs: [],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'devWallet',
+    inputs: [],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
   },
   {
     type: 'function',

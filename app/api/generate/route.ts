@@ -9,6 +9,8 @@ const MEGACHAD_CONTRACT = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
 const BURN_AMOUNT = BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') * 10n ** 18n;
+// burnToCreate splits 50/50: half burned, half to dev wallet
+const BURN_HALF = BURN_AMOUNT / 2n;
 
 const TRANSFER_EVENT = parseAbiItem(
   'event Transfer(address indexed from, address indexed to, uint256 value)'
@@ -84,11 +86,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify amount
+    // Verify amount (burnToCreate sends half to 0x0)
     const burnedAmount = BigInt(burnLog.data);
-    if (burnedAmount < BURN_AMOUNT) {
+    if (burnedAmount < BURN_HALF) {
       return NextResponse.json(
-        { error: `Insufficient burn: ${burnedAmount} < ${BURN_AMOUNT}` },
+        { error: `Insufficient burn: ${burnedAmount} < ${BURN_HALF}` },
         { status: 400 }
       );
     }

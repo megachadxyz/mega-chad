@@ -146,7 +146,7 @@ export default function Home() {
     writeContract({
       address: MEGACHAD_ADDRESS,
       abi: MEGACHAD_ABI,
-      functionName: 'burn',
+      functionName: 'burnToCreate',
       args: [BURN_AMOUNT],
     });
   };
@@ -366,10 +366,10 @@ export default function Home() {
             $MEGACHAD is the home of looksmaxxing on MegaETH
           </h2>
           <p>
-            Every burn reduces supply. Every generation creates permanent,
-            on-chain art pinned to IPFS. The more you burn, the more rare
-            everything becomes. This is deflationary creativity &mdash;
-            the ultimate looksmaxx for your wallet.
+            Every burn splits 50/50 &mdash; half the tokens are destroyed forever,
+            half go to the dev wallet. Every generation creates permanent,
+            on-chain art pinned to IPFS. The more you burn, the rarer
+            everything becomes. Deflationary creativity meets builder funding.
           </p>
           <a href="#" className="btn btn-outline">Buy $MEGACHAD</a>
         </div>
@@ -383,7 +383,7 @@ export default function Home() {
         {!isConnected ? (
           <div className="burn-card">
             <div className="burn-connect-prompt">
-              Connect your wallet to burn tokens and generate art.
+              Connect your wallet to burn tokens and generate art. 50% burned forever, 50% to dev.
               <br />
               <button className="btn btn-primary" onClick={connectWallet}>
                 Connect Wallet

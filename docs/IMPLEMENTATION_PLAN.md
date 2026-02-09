@@ -4,7 +4,7 @@
 
 | Step | Description | Status |
 |------|-------------|--------|
-| 1 | Smart Contract (MegaChadToken.sol) | DONE |
+| 1 | Smart Contract (MegaChadToken.sol + burnToCreate 50/50 split) | DONE |
 | 2 | Install Dependencies | DONE |
 | 3 | Create lib/ utilities (wagmi, contracts, pinata, redis) | DONE |
 | 4 | Create app/providers.tsx | DONE |
