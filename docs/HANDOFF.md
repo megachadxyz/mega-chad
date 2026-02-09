@@ -47,52 +47,155 @@
 
 ## USING CLAUDE CODE (AI CODING ASSISTANT)
 
-You have Claude Code passes. Here's how to use them to work on this project.
+You have Claude Code passes. This is basically an AI developer that can read and edit every file in the project, run commands, deploy to Vercel, and fix bugs — all from plain English instructions. You don't need to know how to code.
 
-### What is Claude Code?
+The easiest setup is **Cursor** (a code editor with AI built in) + **Claude Code** running inside it. That way you can see the files, ask the editor questions, AND have Claude Code make changes all in one place.
 
-It's an AI that lives in your terminal. You describe what you want in plain English and it writes the code, runs commands, and makes changes for you. It can read every file in the repo, edit them, run the dev server, deploy to Vercel — basically everything a developer does.
+---
 
-### Install it
+### STEP 1: Install the prerequisites
+
+You need these installed on your computer first. If you already have them, skip ahead.
+
+**Node.js** (makes JavaScript run on your computer):
+1. Go to https://nodejs.org
+2. Download the **LTS** version (the big green button)
+3. Run the installer, click Next through everything
+4. When it's done, open a terminal and type `node --version` — you should see a number like `v20.x.x`
+
+**Git** (tracks code changes):
+1. Go to https://git-scm.com/downloads
+2. Download for your OS
+3. Run the installer, click Next through everything (defaults are fine)
+4. Verify: open terminal, type `git --version`
+
+---
+
+### STEP 2: Install Cursor (recommended IDE)
+
+Cursor is a code editor that has AI built in. It makes everything way easier because you can see your files and ask questions right in the editor.
+
+1. Go to https://cursor.com
+2. Download and install it
+3. Open it up
+4. It'll ask you to sign in — create an account or use GitHub
+
+---
+
+### STEP 3: Clone the repo and open it in Cursor
+
+Open a terminal (on Mac: Terminal app, on Windows: PowerShell or Command Prompt):
+
+```bash
+git clone https://github.com/megachadxyz/mega-chad.git
+cd mega-chad
+npm install
+```
+
+Then open the folder in Cursor:
+- Open Cursor
+- File -> Open Folder -> navigate to `mega-chad` -> click Open
+- You should see all the project files on the left sidebar
+
+---
+
+### STEP 4: Install Claude Code
+
+In Cursor, open the built-in terminal:
+- Press `` Ctrl+` `` (backtick, the key above Tab) to toggle the terminal panel
+- Or go to View -> Terminal
+
+Then type:
 
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
-### Use it
+It'll download and install. When it's done, type:
 
 ```bash
-cd mega-chad          # go to the project folder
-claude                # start Claude Code
+claude
 ```
 
-Then just talk to it like a person:
+The first time you run it, it'll ask you to log in to your Anthropic account (the Claude Code pass). Follow the link it gives you, sign in, and come back.
 
-- "run the dev server"
-- "change the burn amount from 1000 to 500"
-- "deploy to vercel"
-- "add a new section to the homepage for community gallery"
-- "the burn button isn't working, fix it"
-- "deploy the token contract to MegaETH testnet"
-- "update the CA in the hero section to 0x1234..."
-- "add a favicon"
+---
 
-It reads the codebase, makes changes, and can even run `forge test` or `npm run dev` to verify things work.
+### STEP 5: Start using it
 
-### Tips
+Now you're in Claude Code. Just type what you want in plain English. Here are real examples:
 
-- Be specific about what you want ("change the pink color to blue" not "make it look different")
-- It can see errors — if something breaks it'll try to fix it
-- Say "don't change anything else" if you only want a small tweak
-- Say "explain this to me" if you want to understand how something works
-- It remembers context within a session, so you can say "now do the same for the other section"
-- To deploy: "push to github and deploy to vercel"
+**Making changes to the site:**
+- `change the pink color to blue`
+- `make the headline say "BURN TO EARN" instead of "a chad does what a chad wants"`
+- `add a new image to the carousel — it's at public/images/newimage.jpg`
+- `remove the Andrew Tate card from Notable Chads`
+- `change the burn amount from 1000 to 500`
 
-### What it CAN'T do
+**Running and deploying:**
+- `run the dev server so I can preview the site`
+- `push my changes to github`
+- `deploy to vercel`
 
-- It can't connect your wallet or sign transactions
-- It can't access Vercel/GitHub unless you've logged in via the CLI first
-- It won't delete important files without asking
+**Fixing stuff:**
+- `the page won't load, help`
+- `the burn button isn't working, fix it`
+- `I'm getting an error that says [paste the error here]`
+
+**Understanding the code:**
+- `explain how the burn-to-create flow works`
+- `what file controls the roadmap section?`
+- `show me where the wallet connect logic is`
+
+**Contract stuff:**
+- `deploy the token contract to MegaETH testnet with dev wallet 0x1234...`
+- `update the CA in the hero section to 0xABCD...`
+- `run the contract tests`
+
+---
+
+### STEP 6: Your typical workflow
+
+Here's what a normal session looks like:
+
+1. Open Cursor
+2. Open the terminal (`` Ctrl+` ``)
+3. Make sure you're in the mega-chad folder: `cd mega-chad`
+4. Start Claude Code: `claude`
+5. Tell it what you want to change
+6. It makes the changes — you can see the files updating in real time in Cursor
+7. Preview locally: tell Claude `run the dev server` then open http://localhost:3000
+8. If it looks good: tell Claude `push to github and deploy to vercel`
+9. Your changes are live
+
+---
+
+### Using Cursor's built-in AI too
+
+Cursor itself has AI features you can use alongside Claude Code:
+
+- **Cmd+K** (Mac) or **Ctrl+K** (Windows) — highlight some code and ask a question about it or ask it to change it
+- **Cmd+L** (Mac) or **Ctrl+L** (Windows) — open the AI chat sidebar to ask questions about the code you're looking at
+- Click on any file in the sidebar to read it — then ask Cursor's AI "what does this file do?"
+
+The difference: **Cursor's AI** is good for quick questions about specific code you're looking at. **Claude Code** (in the terminal) is good for making changes across multiple files, running commands, deploying, etc. Use both.
+
+---
+
+### What Claude Code CAN'T do
+
+- It can't connect your wallet or sign blockchain transactions
+- It can't type passwords for you (it'll ask you to do it)
+- If Vercel or GitHub need you to log in, you need to do that once in the terminal first — then Claude Code can deploy for you going forward
+
+---
+
+### If you get stuck
+
+- Type `help` in Claude Code for a list of commands
+- Type `explain what just happened` if something confusing happened
+- Just describe what went wrong in plain English — it's very good at debugging
+- Worst case: close the terminal, open a new one, `cd mega-chad`, `claude` — fresh start
 
 ---
 
