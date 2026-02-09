@@ -9,33 +9,51 @@ You don't need to understand any of this. You have AI that does everything. You 
 
 ---
 
-## THE ONLY 3 THINGS YOU ACTUALLY DO
+## SETUP (one time, 10 minutes)
 
-### 1. Install Cursor
+### Step 1: Install Cursor
 
 Go to https://cursor.com. Download it. Install it. Open it. Sign in.
 
 That's it Burger. That's the hard part. You did it. Gold star.
 
-### 2. Open the AI chat
+### Step 2: Use Cursor to set up Claude Code
 
-Press **Ctrl+L** (or **Cmd+L** on Mac). A chat panel opens on the right side. This is your AI assistant. It can do literally everything. You just talk to it.
-
-### 3. Copy-paste this into the chat
+Press **Ctrl+L** (or **Cmd+L** on Mac). A chat panel opens on the right side. Paste this:
 
 ```
-Help me set up the mega-chad project. The repo is at https://github.com/megachadxyz/mega-chad — clone it, install everything, and open it in this editor. If I'm missing anything like Node.js or Git, walk me through installing those first.
+I need to set up Claude Code in this editor. Here's what I need:
+
+1. Make sure Node.js and Git are installed on my computer. If they're not, walk me through installing them.
+2. Once those are ready, run this in the terminal: npm install -g @anthropic-ai/claude-code
+3. Then clone this repo: git clone https://github.com/megachadxyz/mega-chad.git
+4. cd into it and run: npm install
+5. Open the mega-chad folder in this editor
+
+Walk me through each step. I am not technical.
 ```
 
-The AI will handle everything from there. Follow what it says. If it asks you to click something, click it.
+Follow what Cursor tells you. Click what it tells you to click. You're doing great, Croissant the Salamander.
 
-From this point forward, **you never need to read another line of this document.** Just talk to the AI. It has access to all these files and knows what everything does.
+### Step 3: Start Claude Code
+
+Open the terminal in Cursor: press `` Ctrl+` `` (the key above Tab).
+
+Type:
+
+```
+claude
+```
+
+First time it'll ask you to log in — it gives you a link, you click it, sign in with your Anthropic account (the one with the Claude Code pass), come back. Done.
+
+**Claude Code is now running.** This is your AI developer. Everything from here on out, you just type what you want into this terminal and Claude Code does it.
 
 ---
 
-## COPY-PASTE PROMPTS
+## COPY-PASTE PROMPTS FOR CLAUDE CODE
 
-Below are ready-made prompts you can copy-paste into Cursor's AI chat (Ctrl+L). Just grab whichever one you need, Biscuit the Newt.
+Everything below goes into Claude Code (the terminal where you typed `claude`). Just copy-paste whichever one you need, Biscuit the Newt.
 
 ---
 
@@ -66,11 +84,11 @@ Remove the Andrew Tate card from Notable Chads
 ```
 
 ```
-Change the burn amount from 1000 to 500 everywhere on the site
+Change the burn amount from 1000 to 500 everywhere on the site and in the code
 ```
 
 ```
-Swap the music. I put a new mp3 on my desktop called newtrack.mp3 — replace the current one
+Swap the music. I put a new mp3 on my desktop called newtrack.mp3 — replace the current one with it
 ```
 
 ---
@@ -81,7 +99,7 @@ Swap the music. I put a new mp3 on my desktop called newtrack.mp3 — replace th
 Run the dev server so I can preview the site locally
 ```
 
-Then open http://localhost:3000 in your browser. That's your local preview. Changes show up in real time.
+Then open http://localhost:3000 in your browser. That's your local preview.
 
 ---
 
@@ -100,11 +118,11 @@ The site won't load. Fix it.
 ```
 
 ```
-The burn button isn't working. Fix it.
+The burn button isn't working. Debug it and fix it.
 ```
 
 ```
-Everything is broken and I don't know what happened. Help.
+Everything is broken and I don't know what happened. Investigate and fix it.
 ```
 
 If you see an error message, just paste it in:
@@ -134,7 +152,7 @@ Run the smart contract tests to make sure everything passes
 ### Set up API keys for production
 
 ```
-Help me set up the API keys for this project so the burn-to-create feature works in production. Walk me through each one step by step. The services I need are Replicate, Pinata, and Upstash.
+Help me set up the API keys for this project so the burn-to-create feature works in production. Walk me through each one step by step. The services I need are Replicate (replicate.com), Pinata (pinata.cloud), and Upstash (upstash.com). After I get the keys, help me add them to Vercel.
 ```
 
 ---
@@ -142,7 +160,7 @@ Help me set up the API keys for this project so the burn-to-create feature works
 ### Move hosting to your own Vercel account
 
 ```
-Help me transfer this project's Vercel hosting from the contributor's account to the megachadxyz organization's own Vercel account. Walk me through every step.
+Help me transfer this project's Vercel hosting from the contributor's account to the megachadxyz organization's own Vercel account. Walk me through every step including installing the GitHub integration and importing the repo.
 ```
 
 ---
@@ -150,7 +168,7 @@ Help me transfer this project's Vercel hosting from the contributor's account to
 ### Connect the megachad.xyz domain
 
 ```
-Help me connect the megachad.xyz domain to our Vercel deployment. Tell me exactly what DNS records to add and where.
+Help me connect the megachad.xyz domain to our Vercel deployment. Tell me exactly what DNS records to add and where to add them.
 ```
 
 ---
@@ -166,27 +184,21 @@ What does the burn-to-create feature do? How does the 50/50 split work?
 ```
 
 ```
-What file controls the roadmap section?
+What file controls the roadmap section? Show me what's in it.
 ```
 
 ---
 
-## SUPERCHARGE IT: ADD CLAUDE CODE
+## WHEN TO USE WHICH AI
 
-You have Claude Code passes. Claude Code is even more powerful than Cursor's built-in AI — it can edit dozens of files at once, deploy to Vercel, push to GitHub, and handle complex multi-step stuff.
+You have two AIs now. Here's when to use each:
 
-To install it, paste this into Cursor's AI chat:
+| AI | How to open | Use it for |
+|----|------------|------------|
+| **Claude Code** | Terminal → type `claude` | **Almost everything.** Editing code, deploying, fixing bugs, running tests, pushing to GitHub. This is your main tool. |
+| **Cursor chat** | Ctrl+L | Quick questions about a specific file you're looking at. Like "what does this line do?" |
 
-```
-Install Claude Code for me. I need to run "npm install -g @anthropic-ai/claude-code" in the terminal. If npm isn't installed, help me install Node.js first. After it's installed, open a terminal and run "claude" so I can log in.
-```
-
-Once installed, open the terminal in Cursor (press `` Ctrl+` ``) and type `claude`. Now you have TWO AIs:
-
-| AI | How to open | Best for |
-|----|------------|----------|
-| **Cursor chat** | Ctrl+L | Quick questions, small edits |
-| **Claude Code** | Terminal → type `claude` | Big changes, deploying, multi-file edits |
+Claude Code is the one doing the heavy lifting. Cursor chat is for when you're staring at a file and want a quick answer. Think of Claude Code as the contractor and Cursor chat as the guy you ask "what's that pipe for?"
 
 You're basically a tech company now. CEO: Flatbread the Tadpole.
 
@@ -208,7 +220,7 @@ You're basically a tech company now. CEO: Flatbread the Tadpole.
 
 ## WHAT'S NOT DONE
 
-Just copy-paste the relevant prompt from above when you're ready. The AI does the work. You watch. Your specialty, Panini the Frog.
+Just copy-paste the relevant prompt from above into Claude Code when you're ready. It does the work. You watch. Your specialty, Panini the Frog.
 
 - Deploy the token contract
 - Put the real contract address on the site
@@ -236,8 +248,8 @@ User connects wallet
 
 ## IF YOU'RE TRULY STUCK
 
-1. Ask the AI. Seriously. Just describe what's wrong.
-2. If the AI is confused too, screenshot the error and send it in the group chat.
+1. Ask Claude Code. Seriously. Just describe what's wrong.
+2. If Claude Code is confused too, screenshot the error and send it in the group chat.
 3. If Cursor itself won't open: uninstall it, reinstall it from https://cursor.com
 4. If your computer is on fire: that's a you problem, Ciabatta the Gecko.
 
