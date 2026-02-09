@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description:
     'Burn $MEGACHAD tokens on MegaETH to generate AI art. The home of looksmaxxing on MegaETH.',
   icons: {
-    icon: '/favicon.jpg',
+    icon: '/chadfavicon.jpg',
   },
 };
 
