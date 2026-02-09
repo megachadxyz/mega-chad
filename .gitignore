@@ -1,0 +1,34 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build
+.next
+out
+build
+dist
+
+# Env (never commit tokens)
+.env
+.env.local
+.env.*.local
+
+# Debug / IDE
+npm-debug.log*
+.DS_Store
+*.pem
+
+# Vercel
+.vercel
+
+# TypeScript
+next-env.d.ts
+
+# Foundry (contracts)
+contracts/lib/
+contracts/cache/
+contracts/out/
+
+# Playwright MCP
+.playwright-mcp/
