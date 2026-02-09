@@ -351,7 +351,7 @@ export default function Home() {
           </div>
           <div className="hero-text fade-up">
             <h1 className="hero-headline">
-              chad does what chad wants
+              a chad does what a chad wants
             </h1>
             <div className="hero-ca">CA: 0xaaaaaa</div>
             <a href="https://www.kumbaya.xyz/#/" target="_blank" rel="noopener noreferrer" className="btn btn-primary hero-buy">BUY NOW</a>
@@ -402,10 +402,9 @@ export default function Home() {
             $MEGACHAD is the home of looksmaxxing on MegaETH
           </h2>
           <p>
-            Every burn splits 50/50 &mdash; half the tokens are destroyed forever,
-            half go to the dev wallet. Every generation creates permanent,
-            on-chain art pinned to IPFS. The more you burn, the rarer
-            everything becomes. Deflationary creativity meets builder funding.
+            Every time you looksmaxx half the tokens are destroyed forever
+            and half go to the tren fund. Every looksmaxx is stored permanently
+            on-chain. The more you burn, the rarer everything becomes.
           </p>
           <a href="https://www.kumbaya.xyz/#/" target="_blank" rel="noopener noreferrer" className="btn btn-outline">Buy $MEGACHAD</a>
         </div>
@@ -413,13 +412,12 @@ export default function Home() {
 
       {/* ─── BURN TO LOOKSMAXX ──────────────────────── */}
       <section id="burn" className="section burn">
-        <div className="section-label">The Engine</div>
         <h2 className="section-heading">Burn to Looksmaxx</h2>
 
         {!isConnected ? (
           <div className="burn-card">
             <div className="burn-connect-prompt">
-              Connect your wallet to burn tokens and generate art. 50% burned forever, 50% to dev.
+              Connect your wallet to burn tokens and generate art. 50% burned forever, 50% to tren fund.
               <br />
               <button className="btn btn-primary" onClick={connectWallet}>
                 Connect Wallet
@@ -532,14 +530,13 @@ export default function Home() {
 
       {/* ─── ROADMAP ─────────────────────────────────── */}
       <section id="roadmap" className="section roadmap">
-        <div className="section-label">The Plan</div>
         <h2 className="section-heading">Roadmap</h2>
         <div className="roadmap-grid">
           {[
-            { date: 'Feb 9th', title: 'Bulk', desc: 'Launch $MEGACHAD on MegaETH. Initial liquidity. Community forms.' },
-            { date: 'TBA', title: 'Cut', desc: 'Burn-to-create goes live. Every image permanently reduces supply.' },
-            { date: 'TBA', title: 'Recomp', desc: 'Community gallery. Leaderboards. The most prolific burners get recognition.' },
-            { date: 'TBA', title: 'Looksmaxx', desc: 'Full ecosystem. The ultimate convergence of aesthetics and defi.' },
+            { date: 'Feb 9th', title: 'Bulk', desc: 'Respect the pump.' },
+            { date: 'TBA', title: 'Cut', desc: 'Burn-to-looksmaxx. Every image permanently reduces supply.' },
+            { date: 'TBA', title: 'Recomp', desc: 'Physiquemaxxers get recognition.' },
+            { date: 'TBA', title: 'Looksmaxx', desc: 'Mog everyone.' },
           ].map((item) => (
             <div key={item.title} className="roadmap-item">
               <div className="roadmap-date">{item.date}</div>
@@ -586,6 +583,7 @@ export default function Home() {
           <div className="footer-right">
             <ul className="footer-links">
               <li><a href="#about">About</a></li>
+              <li><a href="#burn">Burn</a></li>
               <li><a href="#roadmap">Roadmap</a></li>
               <li><a href="#chads">Chads</a></li>
             </ul>
@@ -605,10 +603,10 @@ export default function Home() {
                 />
               </a>
               <a
-                href="https://t.me/+Tp3f1RKewcxhNDAx"
+                href="https://t.me/megachads"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="footer-social-link"
+                className="footer-social-link footer-social-link--telegram"
                 aria-label="Telegram"
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
