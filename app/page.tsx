@@ -210,6 +210,28 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
 
+  // Autoplay on first user interaction (click/scroll/keydown)
+  useEffect(() => {
+    let started = false;
+    const startAudio = () => {
+      if (started || !audioRef.current) return;
+      started = true;
+      audioRef.current.volume = 0.3;
+      audioRef.current.play().then(() => setAudioPlaying(true)).catch(() => {});
+      window.removeEventListener('click', startAudio);
+      window.removeEventListener('scroll', startAudio);
+      window.removeEventListener('keydown', startAudio);
+    };
+    window.addEventListener('click', startAudio);
+    window.addEventListener('scroll', startAudio);
+    window.addEventListener('keydown', startAudio);
+    return () => {
+      window.removeEventListener('click', startAudio);
+      window.removeEventListener('scroll', startAudio);
+      window.removeEventListener('keydown', startAudio);
+    };
+  }, []);
+
   const toggleAudio = useCallback(() => {
     if (!audioRef.current) return;
     if (audioPlaying) {
@@ -227,7 +249,7 @@ export default function Home() {
   return (
     <>
       {/* Audio element */}
-      <audio ref={audioRef} loop preload="none">
+      <audio ref={audioRef} loop preload="auto">
         <source src="/audio/megachad-theme.mp3" type="audio/mpeg" />
       </audio>
 
