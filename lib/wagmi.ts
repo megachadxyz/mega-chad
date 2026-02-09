@@ -1,5 +1,4 @@
 import { http, createConfig } from 'wagmi';
-import { injected, walletConnect } from 'wagmi/connectors';
 import { defineChain } from 'viem';
 
 export const megaethTestnet = defineChain({
@@ -26,18 +25,10 @@ export const megaeth = defineChain({
   },
 });
 
-// WalletConnect project ID — get one free at https://cloud.walletconnect.com
-const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID || '';
-
 // Use testnet by default — switch to mainnet via env
+// wagmi auto-detects injected wallets (MetaMask, Brave, Phantom, etc.)
 export const config = createConfig({
   chains: [megaethTestnet],
-  connectors: [
-    injected(),
-    ...(WC_PROJECT_ID
-      ? [walletConnect({ projectId: WC_PROJECT_ID })]
-      : []),
-  ],
   transports: {
     [megaethTestnet.id]: http(),
   },
