@@ -46,4 +46,3 @@ Mint site and art pipeline: **Vercel** (host + API) + **Replicate** (image gener
 [https://github.com/megachadxyz/mega-chad](https://github.com/megachadxyz/mega-chad)
 
 
-
