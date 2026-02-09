@@ -3,7 +3,7 @@ import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '$MEGACHAD — Burn to Looksmaxx',
+  title: '$MEGACHAD - Looksmaxxing on MegaETH',
   description:
     'Burn $MEGACHAD tokens on MegaETH to generate AI art. The home of looksmaxxing on MegaETH.',
   icons: {
