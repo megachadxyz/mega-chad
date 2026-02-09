@@ -351,7 +351,7 @@ export default function Home() {
           </div>
           <div className="hero-text fade-up">
             <h1 className="hero-headline">
-              a chad does what a chad wants
+              chad does what chad wants
             </h1>
             <div className="hero-ca">CA: 0xaaaaaa</div>
             <a href="https://www.kumbaya.xyz/#/" target="_blank" rel="noopener noreferrer" className="btn btn-primary hero-buy">BUY NOW</a>
