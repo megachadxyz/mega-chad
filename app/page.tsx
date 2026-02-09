@@ -353,8 +353,8 @@ export default function Home() {
             <h1 className="hero-headline">
               a chad does what a chad wants
             </h1>
-            <div className="hero-ca">CA: 0xaaaaaa</div>
-            <a href="https://www.kumbaya.xyz/#/" target="_blank" rel="noopener noreferrer" className="btn btn-primary hero-buy">BUY NOW</a>
+            <div className="hero-ca">CA: 0x0A0c85b9C6E6a92a6cC4276B2E261cbFf5981f5A</div>
+            <a href="https://www.kumbaya.xyz/#/launch/0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888" target="_blank" rel="noopener noreferrer" className="btn btn-primary hero-buy">BUY NOW</a>
           </div>
         </div>
       </section>
@@ -406,7 +406,7 @@ export default function Home() {
             and half go to the tren fund. Every looksmaxx is stored permanently
             on-chain. The more you burn, the rarer everything becomes.
           </p>
-          <a href="https://www.kumbaya.xyz/#/" target="_blank" rel="noopener noreferrer" className="btn btn-outline">Buy $MEGACHAD</a>
+          <a href="https://www.kumbaya.xyz/#/launch/0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888" target="_blank" rel="noopener noreferrer" className="btn btn-outline">Buy $MEGACHAD</a>
         </div>
       </section>
 
