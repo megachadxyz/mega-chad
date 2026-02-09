@@ -73,9 +73,22 @@ export default function Home() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
 
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
+
   const connectWallet = () => {
-    const injected = connectors.find((c) => c.id === 'injected') ?? connectors[0];
-    if (injected) connect({ connector: injected });
+    // If only one connector, use it directly
+    if (connectors.length <= 1) {
+      const c = connectors[0];
+      if (c) connect({ connector: c });
+      return;
+    }
+    // Show picker for multiple wallets
+    setShowWalletPicker(true);
+  };
+
+  const pickConnector = (connector: typeof connectors[number]) => {
+    connect({ connector });
+    setShowWalletPicker(false);
   };
 
   // ─── Contract reads ────────────────────────────────
@@ -290,6 +303,22 @@ export default function Home() {
         </div>
       </nav>
 
+      {/* ─── WALLET PICKER ───────────────────────────── */}
+      {showWalletPicker && (
+        <div className="wallet-overlay" onClick={() => setShowWalletPicker(false)}>
+          <div className="wallet-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Connect Wallet</h3>
+            <div className="wallet-options">
+              {connectors.map((c) => (
+                <button key={c.uid} className="wallet-option" onClick={() => pickConnector(c)}>
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── HERO ────────────────────────────────────── */}
       <section className="hero">
         <div className="hero-images">
@@ -318,7 +347,7 @@ export default function Home() {
               a chad does what a chad wants
             </h1>
             <div className="hero-ca">CA: 0xaaaaaa</div>
-            <a href="#" className="btn btn-primary hero-buy">BUY NOW</a>
+            <a href="https://www.kumbaya.xyz/#/" target="_blank" rel="noopener noreferrer" className="btn btn-primary hero-buy">BUY NOW</a>
           </div>
         </div>
       </section>
@@ -371,7 +400,7 @@ export default function Home() {
             on-chain art pinned to IPFS. The more you burn, the rarer
             everything becomes. Deflationary creativity meets builder funding.
           </p>
-          <a href="#" className="btn btn-outline">Buy $MEGACHAD</a>
+          <a href="https://www.kumbaya.xyz/#/" target="_blank" rel="noopener noreferrer" className="btn btn-outline">Buy $MEGACHAD</a>
         </div>
       </section>
 

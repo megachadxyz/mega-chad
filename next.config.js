@@ -14,6 +14,8 @@ const nextConfig = {
       'porto/internal': false,
       'porto': false,
       '@metamask/sdk': false,
+      '@gemini-wallet/core': false,
+      '@coinbase/wallet-sdk': false,
     };
     return config;
   },
