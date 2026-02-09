@@ -97,14 +97,58 @@ npm run dev                 # http://localhost:3000
 
 ---
 
-## Not done / next
+## Hosting
 
-1. **Deploy token** to MegaETH testnet, then update `NEXT_PUBLIC_MEGACHAD_CONTRACT`
-2. **Gallery page** (`/gallery`) — show recent burns from Redis
-3. **Real CA** — replace placeholder `0xaaaaaa` in hero section
-4. **Buy links** — update "BUY NOW" / "Buy $MEGACHAD" hrefs to actual DEX
-5. **Vercel deploy** — add env vars in project settings
+**Preview (live now):** https://mega-chad.vercel.app
+Deployed via Vercel CLI to `midaswhales-projects/mega-chad`. This is a temporary preview deployment.
+
+### Transfer to megachadxyz Vercel Team
+
+When the org is ready to own the deployment:
+
+1. **Install the Vercel GitHub App** on the `megachadxyz` GitHub org:
+   ```
+   https://github.com/apps/vercel/installations/new
+   ```
+   Select the `megachadxyz` org → grant access to `mega-chad` repo.
+
+2. **Import the repo** on Vercel under the org's team:
+   ```
+   https://vercel.com/new/import?s=https://github.com/megachadxyz/mega-chad
+   ```
+
+3. **Add env vars** in Vercel project settings → Environment Variables:
+   ```
+   REPLICATE_API_TOKEN=       # for image generation
+   PINATA_JWT=                # for IPFS pinning
+   UPSTASH_REDIS_REST_URL=    # for tx dedup + gallery
+   UPSTASH_REDIS_REST_TOKEN=
+   NEXT_PUBLIC_MEGACHAD_CONTRACT=0x...  # deployed token address
+   NEXT_PUBLIC_BURN_AMOUNT=1000
+   ```
+
+4. **Add a custom domain** (optional):
+   Vercel Settings → Domains → add `megachad.xyz` or similar.
+   Update DNS: CNAME `@` → `cname.vercel-dns.com`
+
+5. **Delete the preview deployment** once org deployment is live:
+   The contributor can remove the project from their personal account at
+   `https://vercel.com/midaswhales-projects/mega-chad/settings` → Delete Project.
+
+### Auto-Deploy
+
+Once the GitHub integration is installed, every push to `main` auto-deploys to production. PRs get preview URLs automatically.
 
 ---
 
-*Updated 2026-02-08*
+## Not done / next
+
+1. **Deploy token** to MegaETH testnet, then update `NEXT_PUBLIC_MEGACHAD_CONTRACT`
+2. **Real CA** — replace placeholder `0xaaaaaa` in hero section
+3. **Buy links** — update "BUY NOW" / "Buy $MEGACHAD" hrefs to actual DEX
+4. **Add env vars** on Vercel for Replicate, Pinata, Upstash (burn feature needs these)
+5. **Favicon** — add a favicon.ico to `public/` (currently 404)
+
+---
+
+*Updated 2026-02-09*
