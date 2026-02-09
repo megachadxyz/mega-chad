@@ -223,29 +223,33 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
 
-  // Auto-play on load, then fallback to first user interaction if blocked
+  // Aggressive autoplay: start muted, then unmute (bypasses browser restrictions)
   useEffect(() => {
-    let started = false;
-    const startAudio = () => {
-      if (started || !audioRef.current) return;
-      started = true;
-      audioRef.current.volume = 0.3;
-      audioRef.current.play().then(() => setAudioPlaying(true)).catch(() => {});
-      window.removeEventListener('click', startAudio);
-      window.removeEventListener('scroll', startAudio);
-      window.removeEventListener('keydown', startAudio);
-    };
-    // Try autoplay as soon as the page opens
-    const t = setTimeout(() => startAudio(), 100);
-    window.addEventListener('click', startAudio);
-    window.addEventListener('scroll', startAudio);
-    window.addEventListener('keydown', startAudio);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener('click', startAudio);
-      window.removeEventListener('scroll', startAudio);
-      window.removeEventListener('keydown', startAudio);
-    };
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Start muted to bypass autoplay restrictions
+    audio.muted = true;
+    audio.volume = 0.3;
+
+    // Play muted audio immediately
+    audio.play().then(() => {
+      setAudioPlaying(true);
+      // Unmute after 100ms
+      setTimeout(() => {
+        audio.muted = false;
+      }, 100);
+    }).catch(() => {
+      // If even muted autoplay fails, try on first interaction
+      const playOnInteraction = () => {
+        audio.muted = false;
+        audio.play().then(() => setAudioPlaying(true)).catch(() => {});
+        window.removeEventListener('click', playOnInteraction);
+        window.removeEventListener('keydown', playOnInteraction);
+      };
+      window.addEventListener('click', playOnInteraction, { once: true });
+      window.addEventListener('keydown', playOnInteraction, { once: true });
+    });
   }, []);
 
   const toggleAudio = useCallback(() => {
@@ -265,7 +269,7 @@ export default function Home() {
   return (
     <>
       {/* Audio element */}
-      <audio ref={audioRef} loop preload="auto" autoPlay>
+      <audio ref={audioRef} loop preload="auto" autoPlay muted>
         <source src="/audio/megachad-theme.mp3" type="audio/mpeg" />
       </audio>
 
