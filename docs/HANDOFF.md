@@ -21,62 +21,153 @@ That's it Burger. That's the hard part. You did it. Gold star.
 
 Press **Ctrl+L** (or **Cmd+L** on Mac). A chat panel opens on the right side. This is your AI assistant. It can do literally everything. You just talk to it.
 
-### 3. Tell it what you want
+### 3. Copy-paste this into the chat
 
-Type this into the chat:
+```
+Help me set up the mega-chad project. The repo is at https://github.com/megachadxyz/mega-chad — clone it, install everything, and open it in this editor. If I'm missing anything like Node.js or Git, walk me through installing those first.
+```
 
-> Help me set up the mega-chad project. The repo is https://github.com/megachadxyz/mega-chad — clone it, install everything, and open it in this editor. If I'm missing anything like Node.js or Git, install those for me too.
-
-The AI will:
-- Check what you're missing
-- Install it for you (or tell you exactly what to click)
-- Clone the repo
-- Install dependencies
-- Open the project
+The AI will handle everything from there. Follow what it says. If it asks you to click something, click it.
 
 From this point forward, **you never need to read another line of this document.** Just talk to the AI. It has access to all these files and knows what everything does.
 
 ---
 
-## THINGS YOU CAN SAY TO THE AI
+## COPY-PASTE PROMPTS
 
-You don't need to remember commands, file names, or anything technical. Just say what you want like you're texting a friend who happens to be a software engineer. Here's some ideas to get your toad brain going:
+Below are ready-made prompts you can copy-paste into Cursor's AI chat (Ctrl+L). Just grab whichever one you need, Biscuit the Newt.
 
-**Changing the site:**
-> change the background color to dark purple
+---
 
-> make the headline say something different
+### Change how the site looks
 
-> swap out the music for this new mp3 I put on my desktop
+```
+Change the background color to dark purple
+```
 
-> add a new image to the carousel
+```
+Make the main headline say "BURN TO CREATE" instead of whatever it says now
+```
 
-> change the burn amount from 1000 to 500
+```
+Make the font bigger on the hero section
+```
 
-**Seeing your changes:**
-> run the site locally so I can preview it
+```
+Change the pink color to something more red
+```
 
-(Then open http://localhost:3000 in your browser)
+```
+Add a new image to the carousel. The file is on my desktop called newchad.jpg — move it into the project and add it
+```
 
-**Making it live:**
-> push my changes and deploy to vercel
+```
+Remove the Andrew Tate card from Notable Chads
+```
 
-**When stuff breaks:**
-> it's broken. fix it
+```
+Change the burn amount from 1000 to 500 everywhere on the site
+```
 
-> I'm getting this error: [paste whatever you see]
+```
+Swap the music. I put a new mp3 on my desktop called newtrack.mp3 — replace the current one
+```
 
-**Contract stuff:**
-> deploy the token contract to MegaETH with dev wallet 0x1234...
+---
 
-> update the contract address on the site to 0xABCD...
+### Preview the site on your computer
 
-**Understanding things:**
-> what does the burn-to-create feature do?
+```
+Run the dev server so I can preview the site locally
+```
 
-> explain this project to me like I'm five
+Then open http://localhost:3000 in your browser. That's your local preview. Changes show up in real time.
 
-That last one was made for you specifically, Croissant the Salamander.
+---
+
+### Make changes live for everyone
+
+```
+Push all my changes to GitHub and deploy to Vercel
+```
+
+---
+
+### Fix stuff when it breaks
+
+```
+The site won't load. Fix it.
+```
+
+```
+The burn button isn't working. Fix it.
+```
+
+```
+Everything is broken and I don't know what happened. Help.
+```
+
+If you see an error message, just paste it in:
+
+```
+I'm getting this error: [PASTE THE ERROR HERE]
+```
+
+---
+
+### Deploy the token contract
+
+```
+Deploy the token contract to MegaETH testnet with dev wallet 0xPUT_YOUR_WALLET_ADDRESS_HERE
+```
+
+```
+Update the contract address displayed on the site to 0xPUT_THE_NEW_ADDRESS_HERE
+```
+
+```
+Run the smart contract tests to make sure everything passes
+```
+
+---
+
+### Set up API keys for production
+
+```
+Help me set up the API keys for this project so the burn-to-create feature works in production. Walk me through each one step by step. The services I need are Replicate, Pinata, and Upstash.
+```
+
+---
+
+### Move hosting to your own Vercel account
+
+```
+Help me transfer this project's Vercel hosting from the contributor's account to the megachadxyz organization's own Vercel account. Walk me through every step.
+```
+
+---
+
+### Connect the megachad.xyz domain
+
+```
+Help me connect the megachad.xyz domain to our Vercel deployment. Tell me exactly what DNS records to add and where.
+```
+
+---
+
+### Understand the project
+
+```
+Explain this entire project to me like I'm five
+```
+
+```
+What does the burn-to-create feature do? How does the 50/50 split work?
+```
+
+```
+What file controls the roadmap section?
+```
 
 ---
 
@@ -84,66 +175,51 @@ That last one was made for you specifically, Croissant the Salamander.
 
 You have Claude Code passes. Claude Code is even more powerful than Cursor's built-in AI — it can edit dozens of files at once, deploy to Vercel, push to GitHub, and handle complex multi-step stuff.
 
-To install it, just ask Cursor's AI chat:
+To install it, paste this into Cursor's AI chat:
 
-> Install Claude Code for me. I have a Claude Code pass from Anthropic.
+```
+Install Claude Code for me. I need to run "npm install -g @anthropic-ai/claude-code" in the terminal. If npm isn't installed, help me install Node.js first. After it's installed, open a terminal and run "claude" so I can log in.
+```
 
-It'll walk you through it. Once installed, you open the terminal in Cursor (press `` Ctrl+` ``) and type `claude`. Now you have TWO AIs:
+Once installed, open the terminal in Cursor (press `` Ctrl+` ``) and type `claude`. Now you have TWO AIs:
 
-| AI | How to use | Best for |
-|----|-----------|----------|
-| **Cursor chat** (Ctrl+L) | Chat panel on the right | Quick questions, small edits |
-| **Claude Code** (terminal) | Type `claude` in terminal | Big changes, deploying, fixing complex bugs |
+| AI | How to open | Best for |
+|----|------------|----------|
+| **Cursor chat** | Ctrl+L | Quick questions, small edits |
+| **Claude Code** | Terminal → type `claude` | Big changes, deploying, multi-file edits |
 
 You're basically a tech company now. CEO: Flatbread the Tadpole.
 
 ---
 
-## STUFF THAT'S DONE
+## WHAT'S DONE
 
 - Full website (hero, about, burn-to-create, roadmap, notable chads, footer)
 - Image carousel with music
 - Wallet connect (MetaMask, Brave Wallet, Phantom, etc.)
 - Burn-to-create: type a prompt, burn 1000 tokens, get AI art
-- 50/50 split: 500 tokens burned forever, 500 to dev wallet
+- 50/50 split: 500 burned forever, 500 to dev wallet
 - AI image generation (Replicate)
 - IPFS permanent storage (Pinata)
 - Gallery page
-- Smart contract ready
+- Smart contract (14 tests passing)
 - Pink is `#F786C6` (you're welcome)
 - Buy links go to kumbaya.xyz
 
-## STUFF THAT'S NOT DONE
+## WHAT'S NOT DONE
 
-Just tell the AI to do any of these when you're ready:
+Just copy-paste the relevant prompt from above when you're ready. The AI does the work. You watch. Your specialty, Panini the Frog.
 
-- **Deploy the contract** — "deploy the token contract to MegaETH with dev wallet 0x..."
-- **Set the real contract address** — "update the contract address to 0x..."
-- **Set up API keys on Vercel** — "help me add the API keys to Vercel so the burn feature works in production"
-- **Move hosting to your own Vercel** — "help me transfer this to the megachadxyz Vercel account"
-- **Point megachad.xyz at it** — "help me connect megachad.xyz domain to our Vercel deployment"
-- **Add a favicon** — "add a favicon to the site"
-- **Teach Burger how computers work** — estimated completion: never
-
----
-
-## API KEYS (the AI will help you set these up)
-
-Before the burn feature works in production, you need accounts at these sites. All free. Just tell the AI:
-
-> Help me set up the API keys for this project. Walk me through each one.
-
-It'll tell you exactly where to go, what to click, and where to paste the keys. The services are:
-
-| Service | What it does | Sign up |
-|---------|-------------|---------|
-| Replicate | Makes the AI images | https://replicate.com |
-| Pinata | Saves images forever | https://pinata.cloud |
-| Upstash | Prevents double-burns | https://upstash.com |
+- Deploy the token contract
+- Put the real contract address on the site
+- Set up API keys on Vercel
+- Move hosting to your own Vercel
+- Connect megachad.xyz domain
+- Add a favicon
 
 ---
 
-## HOW THE SITE WORKS (for context, not for you to memorize)
+## HOW THE SITE WORKS (you don't need to memorize this)
 
 ```
 User connects wallet
@@ -156,8 +232,6 @@ User connects wallet
   -> User gets their art
 ```
 
-This is called "tokenomics" Burger. Don't worry about it. The AI knows.
-
 ---
 
 ## IF YOU'RE TRULY STUCK
@@ -165,7 +239,7 @@ This is called "tokenomics" Burger. Don't worry about it. The AI knows.
 1. Ask the AI. Seriously. Just describe what's wrong.
 2. If the AI is confused too, screenshot the error and send it in the group chat.
 3. If Cursor itself won't open: uninstall it, reinstall it from https://cursor.com
-4. If your computer is on fire: that's a you problem, Biscuit the Newt.
+4. If your computer is on fire: that's a you problem, Ciabatta the Gecko.
 
 ---
 
