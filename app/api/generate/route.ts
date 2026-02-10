@@ -5,6 +5,8 @@ import { pinImage } from '@/lib/pinata';
 import { isTxUsed, markTxUsed } from '@/lib/redis';
 import { megaethTestnet } from '@/lib/wagmi';
 
+export const maxDuration = 120;
+
 const MEGACHAD_CONTRACT = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
@@ -30,25 +32,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'REPLICATE_API_TOKEN not set' }, { status: 500 });
   }
 
-  // ── Parse body ────────────────────────────────────────
-  let body: { txHash?: string; prompt?: string; burnerAddress?: string };
+  // ── Parse FormData ──────────────────────────────────────
+  let formData: FormData;
   try {
-    body = await req.json();
+    formData = await req.formData();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
-  const { txHash, prompt, burnerAddress } = body;
+  const txHash = formData.get('txHash') as string | null;
+  const burnerAddress = formData.get('burnerAddress') as string | null;
+  const imageFile = formData.get('image') as File | null;
 
-  if (!txHash || typeof txHash !== 'string' || !txHash.startsWith('0x')) {
+  if (!txHash || !txHash.startsWith('0x')) {
     return NextResponse.json({ error: 'Missing or invalid txHash' }, { status: 400 });
   }
-  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
-    return NextResponse.json({ error: 'Missing or empty prompt' }, { status: 400 });
-  }
-  if (!burnerAddress || typeof burnerAddress !== 'string') {
+  if (!burnerAddress) {
     return NextResponse.json({ error: 'Missing burnerAddress' }, { status: 400 });
   }
+  if (!imageFile || !(imageFile instanceof File)) {
+    return NextResponse.json({ error: 'Missing image file' }, { status: 400 });
+  }
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!validTypes.includes(imageFile.type)) {
+    return NextResponse.json({ error: 'Image must be JPEG, PNG, or WebP' }, { status: 400 });
+  }
+  if (imageFile.size > 4 * 1024 * 1024) {
+    return NextResponse.json({ error: 'Image must be under 4MB' }, { status: 400 });
+  }
+
+  // Convert uploaded image to data URI for Replicate
+  const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+  const dataUri = `data:${imageFile.type};base64,${imageBuffer.toString('base64')}`;
 
   // ── Check replay ──────────────────────────────────────
   try {
@@ -112,13 +128,22 @@ export async function POST(req: NextRequest) {
   const replicate = new Replicate({ auth: replicateToken });
   let imageUrl: string;
 
+  const looksmaxxPrompt = [
+    'Transform this person into a hyper-masculine gigachad meme with glowing red laser eyes,',
+    'chiseled jawline, extreme muscle definition, dramatic lighting, dark moody background,',
+    'meme aesthetic, exaggerated chad features, intense stare, sharp cheekbones.',
+    'Keep the original person recognizable but dramatically enhanced.',
+    'DO NOT: change the background to bright colors, add text or watermarks,',
+    'make it look cartoonish or anime, remove the laser eyes effect.',
+  ].join(' ');
+
   try {
     const output = await replicate.run(
-      'black-forest-labs/flux-schnell' as `${string}/${string}`,
+      'black-forest-labs/flux-2-max' as `${string}/${string}`,
       {
         input: {
-          prompt: prompt.trim(),
-          num_outputs: 1,
+          prompt: looksmaxxPrompt,
+          input_images: [dataUri],
           aspect_ratio: '1:1',
         },
       }
@@ -144,7 +169,7 @@ export async function POST(req: NextRequest) {
 
     const pinResult = await pinImage(imgBuffer, {
       burner: burnerAddress,
-      prompt: prompt.trim(),
+      prompt: 'looksmaxx',
       txHash,
     });
 
@@ -166,7 +191,7 @@ export async function POST(req: NextRequest) {
     await markTxUsed({
       txHash,
       burner: burnerAddress,
-      prompt: prompt.trim(),
+      prompt: 'looksmaxx',
       cid: ipfsCid,
       ipfsUrl,
       timestamp: new Date().toISOString(),

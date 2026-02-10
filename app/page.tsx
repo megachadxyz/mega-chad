@@ -101,7 +101,9 @@ export default function Home() {
   });
 
   // ─── Burn flow ─────────────────────────────────────
-  const [prompt, setPrompt] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<BurnStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -149,8 +151,35 @@ export default function Home() {
     }
   }, [burnTxHash, status]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setError('Image must be under 4MB.');
+      return;
+    }
+
+    setError(null);
+    setImageFile(file);
+    const url = URL.createObjectURL(file);
+    setImagePreview(url);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleBurn = () => {
-    if (!prompt.trim() || !isConnected) return;
+    if (!imageFile || !isConnected) return;
     setStatus('burning');
     setError(null);
     setResult(null);
@@ -167,14 +196,14 @@ export default function Home() {
   async function generateImage(txHash: string) {
     setStatus('generating');
     try {
+      const formData = new FormData();
+      formData.append('txHash', txHash);
+      formData.append('burnerAddress', address!);
+      formData.append('image', imageFile!);
+
       const res = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          txHash,
-          prompt: prompt.trim(),
-          burnerAddress: address,
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
@@ -196,7 +225,7 @@ export default function Home() {
     setStatus('idle');
     setError(null);
     setResult(null);
-    setPrompt('');
+    removeImage();
     resetWrite();
   };
 
@@ -433,21 +462,45 @@ export default function Home() {
               </span>
             </div>
 
-            <textarea
-              className="burn-textarea"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe your Mega Chad..."
-              disabled={isBusy}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
             />
+            <div
+              className={`burn-upload-zone ${imagePreview ? 'has-preview' : ''}`}
+              onClick={() => !imagePreview && !isBusy && fileInputRef.current?.click()}
+            >
+              {imagePreview ? (
+                <div className="burn-upload-preview">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imagePreview} alt="Upload preview" />
+                  {!isBusy && (
+                    <button className="burn-upload-remove" onClick={(e) => { e.stopPropagation(); removeImage(); }} aria-label="Remove image">
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="burn-upload-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M12 16V4m0 0l-4 4m4-4l4 4" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Upload your photo to looksmaxx
+                </div>
+              )}
+            </div>
 
             <button
               className={`btn btn-primary burn-submit ${
-                status === 'idle' && prompt.trim() && hasEnough ? 'pulse-glow' : ''
+                status === 'idle' && imageFile && hasEnough ? 'pulse-glow' : ''
               }`}
               onClick={status === 'done' || status === 'error' ? resetBurn : handleBurn}
               disabled={
-                isBusy || (status === 'idle' && (!prompt.trim() || !hasEnough))
+                isBusy || (status === 'idle' && (!imageFile || !hasEnough))
               }
             >
               {status === 'done'
@@ -456,7 +509,7 @@ export default function Home() {
                 ? 'Try Again'
                 : isBusy
                 ? STATUS_LABELS[status]
-                : `Burn ${BURN_AMOUNT_DISPLAY.toLocaleString()} $MEGACHAD & Generate`}
+                : `BURN ${BURN_AMOUNT_DISPLAY.toLocaleString()} $MEGACHAD & LOOKSMAXX`}
             </button>
 
             {!hasEnough && status === 'idle' && (

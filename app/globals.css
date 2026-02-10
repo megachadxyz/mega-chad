@@ -471,26 +471,81 @@ img { max-width: 100%; height: auto; }
   color: var(--pink);
 }
 
-.burn-textarea {
+/* Upload zone */
+.burn-upload-zone {
   width: 100%;
-  min-height: 100px;
-  padding: 1rem;
+  min-height: 180px;
+  border: 2px dashed var(--border);
   background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.burn-upload-zone:hover {
+  border-color: var(--pink);
+  box-shadow: var(--pink-glow);
+}
+
+.burn-upload-zone.has-preview {
+  min-height: auto;
+  cursor: default;
+}
+
+.burn-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+  color: var(--text-dim);
+  font-size: .8rem;
+  pointer-events: none;
+}
+
+.burn-upload-placeholder svg {
+  width: 40px;
+  height: 40px;
+  opacity: .5;
+}
+
+.burn-upload-preview {
+  position: relative;
+  width: 100%;
+}
+
+.burn-upload-preview img {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+}
+
+.burn-upload-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  background: rgba(10, 10, 15, .85);
   border: 1px solid var(--border);
   color: var(--text);
-  font-family: var(--font-body);
-  font-size: .85rem;
-  resize: vertical;
-  outline: none;
-  transition: border-color .2s;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+  z-index: 2;
 }
 
-.burn-textarea:focus {
+.burn-upload-remove:hover {
   border-color: var(--pink);
-}
-
-.burn-textarea::placeholder {
-  color: var(--text-dim);
+  color: var(--pink);
+  box-shadow: var(--pink-glow);
 }
 
 .burn-submit {
