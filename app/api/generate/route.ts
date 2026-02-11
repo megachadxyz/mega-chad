@@ -1,29 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
-import { createPublicClient, http, parseAbiItem } from 'viem';
-import { pinImage } from '@/lib/pinata';
+import { createPublicClient, createWalletClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { pinImage, pinMetadata } from '@/lib/pinata';
 import { isTxUsed, markTxUsed } from '@/lib/redis';
-import { megaethTestnet } from '@/lib/wagmi';
+import { megaeth } from '@/lib/wagmi';
 
 export const maxDuration = 120;
 
 const MEGACHAD_CONTRACT = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
+const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
 const BURN_AMOUNT = BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') * 10n ** 18n;
-// burnToCreate splits 50/50: half burned, half to dev wallet
 const BURN_HALF = BURN_AMOUNT / 2n;
 
-const TRANSFER_EVENT = parseAbiItem(
-  'event Transfer(address indexed from, address indexed to, uint256 value)'
-);
-
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`;
+const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
+const DEV_WALLET = (process.env.DEV_WALLET ||
+  '0x85bf9272DEA7dff1781F71473187b96c6f2f370C') as `0x${string}`;
 
 const viemClient = createPublicClient({
-  chain: megaethTestnet,
+  chain: megaeth,
   transport: http(),
 });
+
+function getMinterWalletClient() {
+  const pk = process.env.MINTER_PRIVATE_KEY;
+  if (!pk) return null;
+  const account = privateKeyToAccount(pk as `0x${string}`);
+  return createWalletClient({
+    account,
+    chain: megaeth,
+    transport: http(),
+  });
+}
 
 export async function POST(req: NextRequest) {
   // ── Validate env ──────────────────────────────────────
@@ -40,12 +52,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
-  const txHash = formData.get('txHash') as string | null;
+  const burnTxHash = formData.get('burnTxHash') as string | null;
+  const devTxHash = formData.get('devTxHash') as string | null;
   const burnerAddress = formData.get('burnerAddress') as string | null;
   const imageFile = formData.get('image') as File | null;
 
-  if (!txHash || !txHash.startsWith('0x')) {
-    return NextResponse.json({ error: 'Missing or invalid txHash' }, { status: 400 });
+  if (!burnTxHash || !burnTxHash.startsWith('0x')) {
+    return NextResponse.json({ error: 'Missing or invalid burnTxHash' }, { status: 400 });
+  }
+  if (!devTxHash || !devTxHash.startsWith('0x')) {
+    return NextResponse.json({ error: 'Missing or invalid devTxHash' }, { status: 400 });
   }
   if (!burnerAddress) {
     return NextResponse.json({ error: 'Missing burnerAddress' }, { status: 400 });
@@ -68,7 +84,7 @@ export async function POST(req: NextRequest) {
 
   // ── Check replay ──────────────────────────────────────
   try {
-    if (await isTxUsed(txHash)) {
+    if (await isTxUsed(burnTxHash)) {
       return NextResponse.json({ error: 'This burn transaction has already been used' }, { status: 409 });
     }
   } catch {
@@ -76,33 +92,31 @@ export async function POST(req: NextRequest) {
     console.warn('Redis not available — skipping replay check');
   }
 
-  // ── Verify burn on-chain ──────────────────────────────
+  // ── Verify burn transfer on-chain ──────────────────────
   try {
-    const receipt = await viemClient.getTransactionReceipt({
-      hash: txHash as `0x${string}`,
+    const burnReceipt = await viemClient.getTransactionReceipt({
+      hash: burnTxHash as `0x${string}`,
     });
 
-    if (receipt.status !== 'success') {
-      return NextResponse.json({ error: 'Transaction failed on-chain' }, { status: 400 });
+    if (burnReceipt.status !== 'success') {
+      return NextResponse.json({ error: 'Burn transaction failed on-chain' }, { status: 400 });
     }
 
-    // Find Transfer event to 0x0 (burn) from our contract
-    const burnLog = receipt.logs.find((log) => {
+    // Find Transfer event to 0x...dEaD (burn) from our contract
+    const burnLog = burnReceipt.logs.find((log) => {
       if (log.address.toLowerCase() !== MEGACHAD_CONTRACT.toLowerCase()) return false;
       if (log.topics.length < 3) return false;
-      // topics[0] = event sig, topics[1] = from, topics[2] = to
       const to = ('0x' + (log.topics[2]?.slice(26) || '')) as `0x${string}`;
-      return to.toLowerCase() === ZERO_ADDRESS;
+      return to.toLowerCase() === BURN_ADDRESS.toLowerCase();
     });
 
     if (!burnLog) {
       return NextResponse.json(
-        { error: 'No burn event found in this transaction for our contract' },
+        { error: 'No burn transfer event found in this transaction' },
         { status: 400 }
       );
     }
 
-    // Verify amount (burnToCreate sends half to 0x0)
     const burnedAmount = BigInt(burnLog.data);
     if (burnedAmount < BURN_HALF) {
       return NextResponse.json(
@@ -111,15 +125,58 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify burner
     const from = ('0x' + (burnLog.topics[1]?.slice(26) || '')) as `0x${string}`;
     if (from.toLowerCase() !== burnerAddress.toLowerCase()) {
       return NextResponse.json({ error: 'Burner address mismatch' }, { status: 400 });
     }
   } catch (err) {
-    console.error('On-chain verification failed:', err);
+    console.error('Burn verification failed:', err);
     return NextResponse.json(
       { error: 'Failed to verify burn on-chain. Is the tx confirmed?' },
+      { status: 502 }
+    );
+  }
+
+  // ── Verify dev wallet transfer on-chain ────────────────
+  try {
+    const devReceipt = await viemClient.getTransactionReceipt({
+      hash: devTxHash as `0x${string}`,
+    });
+
+    if (devReceipt.status !== 'success') {
+      return NextResponse.json({ error: 'Dev wallet transfer failed on-chain' }, { status: 400 });
+    }
+
+    const devLog = devReceipt.logs.find((log) => {
+      if (log.address.toLowerCase() !== MEGACHAD_CONTRACT.toLowerCase()) return false;
+      if (log.topics.length < 3) return false;
+      const to = ('0x' + (log.topics[2]?.slice(26) || '')) as `0x${string}`;
+      return to.toLowerCase() === DEV_WALLET.toLowerCase();
+    });
+
+    if (!devLog) {
+      return NextResponse.json(
+        { error: 'No dev wallet transfer event found in this transaction' },
+        { status: 400 }
+      );
+    }
+
+    const devAmount = BigInt(devLog.data);
+    if (devAmount < BURN_HALF) {
+      return NextResponse.json(
+        { error: `Insufficient dev transfer: ${devAmount} < ${BURN_HALF}` },
+        { status: 400 }
+      );
+    }
+
+    const from = ('0x' + (devLog.topics[1]?.slice(26) || '')) as `0x${string}`;
+    if (from.toLowerCase() !== burnerAddress.toLowerCase()) {
+      return NextResponse.json({ error: 'Dev transfer sender mismatch' }, { status: 400 });
+    }
+  } catch (err) {
+    console.error('Dev transfer verification failed:', err);
+    return NextResponse.json(
+      { error: 'Failed to verify dev transfer on-chain. Is the tx confirmed?' },
       { status: 502 }
     );
   }
@@ -157,12 +214,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Image generation failed' }, { status: 502 });
   }
 
-  // ── Pin to IPFS ───────────────────────────────────────
+  // ── Pin image to IPFS ──────────────────────────────────
   let ipfsCid = '';
   let ipfsUrl = '';
 
   try {
-    // Download image from Replicate CDN
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) throw new Error('Failed to download generated image');
     const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
@@ -170,14 +226,13 @@ export async function POST(req: NextRequest) {
     const pinResult = await pinImage(imgBuffer, {
       burner: burnerAddress,
       prompt: 'looksmaxx',
-      txHash,
+      txHash: burnTxHash,
     });
 
     ipfsCid = pinResult.cid;
     ipfsUrl = pinResult.url;
   } catch (err) {
     console.error('IPFS pinning failed:', err);
-    // Return image URL even if pinning fails
     return NextResponse.json({
       imageUrl,
       ipfsCid: null,
@@ -186,10 +241,66 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // ── Pin NFT metadata to IPFS ───────────────────────────
+  let metadataUrl = '';
+  try {
+    const metaResult = await pinMetadata({
+      name: `MegaChad Looksmaxx #${burnTxHash.slice(0, 8)}`,
+      description: `Looksmaxxed by ${burnerAddress}. Burn tx: ${burnTxHash}`,
+      imageCid: ipfsCid,
+      attributes: [
+        { trait_type: 'Burner', value: burnerAddress },
+        { trait_type: 'Burn Tx', value: burnTxHash },
+        { trait_type: 'Dev Tx', value: devTxHash },
+      ],
+    });
+    metadataUrl = metaResult.url;
+  } catch (err) {
+    console.error('NFT metadata pinning failed:', err);
+  }
+
+  // ── Mint NFT ───────────────────────────────────────────
+  let tokenId: string | null = null;
+  const walletClient = getMinterWalletClient();
+
+  if (walletClient && metadataUrl && NFT_CONTRACT !== '0x0000000000000000000000000000000000000000') {
+    try {
+      const mintHash = await walletClient.writeContract({
+        address: NFT_CONTRACT,
+        abi: [
+          {
+            type: 'function',
+            name: 'mint',
+            inputs: [
+              { name: 'to', type: 'address' },
+              { name: 'tokenURI', type: 'string' },
+            ],
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'nonpayable',
+          },
+        ] as const,
+        functionName: 'mint',
+        args: [burnerAddress as `0x${string}`, metadataUrl],
+      });
+
+      const mintReceipt = await viemClient.waitForTransactionReceipt({ hash: mintHash });
+
+      // Parse tokenId from Transfer event (ERC-721 Transfer has tokenId in topics[3])
+      const transferLog = mintReceipt.logs.find((log) => {
+        return log.address.toLowerCase() === NFT_CONTRACT.toLowerCase() && log.topics.length >= 4;
+      });
+      if (transferLog && transferLog.topics[3]) {
+        tokenId = BigInt(transferLog.topics[3]).toString();
+      }
+    } catch (err) {
+      console.error('NFT minting failed:', err);
+    }
+  }
+
   // ── Store in Redis ────────────────────────────────────
   try {
     await markTxUsed({
-      txHash,
+      txHash: burnTxHash,
       burner: burnerAddress,
       prompt: 'looksmaxx',
       cid: ipfsCid,
@@ -204,5 +315,6 @@ export async function POST(req: NextRequest) {
     imageUrl,
     ipfsCid,
     ipfsUrl,
+    tokenId,
   });
 }

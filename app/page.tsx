@@ -15,28 +15,36 @@ import {
   MEGACHAD_ABI,
   BURN_AMOUNT,
   BURN_AMOUNT_DISPLAY,
+  BURN_ADDRESS,
+  DEV_WALLET,
 } from '@/lib/contracts';
 
 type BurnStatus =
   | 'idle'
   | 'burning'
   | 'confirming'
+  | 'burning2'
+  | 'confirming2'
   | 'generating'
   | 'pinning'
+  | 'minting'
   | 'done'
   | 'error';
 
 const STATUS_LABELS: Record<BurnStatus, string> = {
   idle: '',
-  burning: 'Signing burn transaction...',
-  confirming: 'Waiting for on-chain confirmation...',
+  burning: 'Signing burn transaction (1/2)...',
+  confirming: 'Waiting for burn confirmation...',
+  burning2: 'Signing dev wallet transfer (2/2)...',
+  confirming2: 'Waiting for transfer confirmation...',
   generating: 'Generating your Mega Chad...',
   pinning: 'Pinning to IPFS...',
+  minting: 'Minting your NFT...',
   done: 'Your Mega Chad is immortalized.',
   error: 'Something went wrong.',
 };
 
-const PROGRESS_STEPS = ['burning', 'confirming', 'generating', 'pinning', 'done'] as const;
+const PROGRESS_STEPS = ['burning', 'confirming', 'burning2', 'confirming2', 'generating', 'pinning', 'minting', 'done'] as const;
 
 function stepIndex(status: BurnStatus): number {
   const idx = PROGRESS_STEPS.indexOf(status as typeof PROGRESS_STEPS[number]);
@@ -110,13 +118,17 @@ export default function Home() {
     imageUrl: string;
     ipfsUrl: string;
     cid: string;
+    tokenId?: string;
   } | null>(null);
 
+  const HALF_AMOUNT = BURN_AMOUNT / 2n;
+
+  // --- Transfer 1: burn to dead address ---
   const {
-    writeContract,
+    writeContract: writeBurn,
     data: burnTxHash,
-    error: writeError,
-    reset: resetWrite,
+    error: burnWriteError,
+    reset: resetBurn1,
   } = useWriteContract();
 
   const { isSuccess: burnConfirmed, isError: burnFailed } =
@@ -125,31 +137,83 @@ export default function Home() {
       query: { enabled: !!burnTxHash },
     });
 
-  useEffect(() => {
-    if (writeError && status === 'burning') {
-      setStatus('error');
-      setError(writeError.message.includes('User rejected')
-        ? 'Transaction rejected.'
-        : writeError.message.slice(0, 120));
-    }
-  }, [writeError, status]);
+  // --- Transfer 2: send to dev wallet ---
+  const {
+    writeContract: writeDev,
+    data: devTxHash,
+    error: devWriteError,
+    reset: resetDev,
+  } = useWriteContract();
 
+  const { isSuccess: devConfirmed, isError: devFailed } =
+    useWaitForTransactionReceipt({
+      hash: devTxHash,
+      query: { enabled: !!devTxHash },
+    });
+
+  // Handle write errors for transfer 1
   useEffect(() => {
-    if (burnConfirmed && burnTxHash && status === 'confirming') {
-      generateImage(burnTxHash);
+    if (burnWriteError && status === 'burning') {
+      setStatus('error');
+      setError(burnWriteError.message.includes('User rejected')
+        ? 'Transaction rejected.'
+        : burnWriteError.message.slice(0, 120));
+    }
+  }, [burnWriteError, status]);
+
+  // Handle write errors for transfer 2
+  useEffect(() => {
+    if (devWriteError && status === 'burning2') {
+      setStatus('error');
+      setError(devWriteError.message.includes('User rejected')
+        ? 'Transaction rejected.'
+        : devWriteError.message.slice(0, 120));
+    }
+  }, [devWriteError, status]);
+
+  // When burn tx hash arrives, move to confirming
+  useEffect(() => {
+    if (burnTxHash && status === 'burning') {
+      setStatus('confirming');
+    }
+  }, [burnTxHash, status]);
+
+  // When burn confirmed, fire transfer 2
+  useEffect(() => {
+    if (burnConfirmed && status === 'confirming') {
+      setStatus('burning2');
+      writeDev({
+        address: MEGACHAD_ADDRESS,
+        abi: MEGACHAD_ABI,
+        functionName: 'transfer',
+        args: [DEV_WALLET, HALF_AMOUNT],
+      });
     }
     if (burnFailed && status === 'confirming') {
       setStatus('error');
       setError('Burn transaction failed on-chain.');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [burnConfirmed, burnFailed, burnTxHash, status]);
+  }, [burnConfirmed, burnFailed, status]);
 
+  // When dev tx hash arrives, move to confirming2
   useEffect(() => {
-    if (burnTxHash && status === 'burning') {
-      setStatus('confirming');
+    if (devTxHash && status === 'burning2') {
+      setStatus('confirming2');
     }
-  }, [burnTxHash, status]);
+  }, [devTxHash, status]);
+
+  // When dev transfer confirmed, call generate API
+  useEffect(() => {
+    if (devConfirmed && devTxHash && burnTxHash && status === 'confirming2') {
+      generateImage(burnTxHash, devTxHash);
+    }
+    if (devFailed && status === 'confirming2') {
+      setStatus('error');
+      setError('Dev wallet transfer failed on-chain.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devConfirmed, devFailed, devTxHash, burnTxHash, status]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -183,21 +247,24 @@ export default function Home() {
     setStatus('burning');
     setError(null);
     setResult(null);
-    resetWrite();
+    resetBurn1();
+    resetDev();
 
-    writeContract({
+    // Transfer 1: burn half to dead address
+    writeBurn({
       address: MEGACHAD_ADDRESS,
       abi: MEGACHAD_ABI,
-      functionName: 'burnToCreate',
-      args: [BURN_AMOUNT],
+      functionName: 'transfer',
+      args: [BURN_ADDRESS, HALF_AMOUNT],
     });
   };
 
-  async function generateImage(txHash: string) {
+  async function generateImage(burnHash: string, devHash: string) {
     setStatus('generating');
     try {
       const formData = new FormData();
-      formData.append('txHash', txHash);
+      formData.append('burnTxHash', burnHash);
+      formData.append('devTxHash', devHash);
       formData.append('burnerAddress', address!);
       formData.append('image', imageFile!);
 
@@ -213,6 +280,7 @@ export default function Home() {
         imageUrl: data.imageUrl || data.ipfsUrl,
         ipfsUrl: data.ipfsUrl,
         cid: data.ipfsCid,
+        tokenId: data.tokenId,
       });
       refetchBalance();
     } catch (e) {
@@ -221,12 +289,13 @@ export default function Home() {
     }
   }
 
-  const resetBurn = () => {
+  const resetFlow = () => {
     setStatus('idle');
     setError(null);
     setResult(null);
     removeImage();
-    resetWrite();
+    resetBurn1();
+    resetDev();
   };
 
   const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
@@ -498,7 +567,7 @@ export default function Home() {
               className={`btn btn-primary burn-submit ${
                 status === 'idle' && imageFile && hasEnough ? 'pulse-glow' : ''
               }`}
-              onClick={status === 'done' || status === 'error' ? resetBurn : handleBurn}
+              onClick={status === 'done' || status === 'error' ? resetFlow : handleBurn}
               disabled={
                 isBusy || (status === 'idle' && (!imageFile || !hasEnough))
               }
@@ -540,6 +609,11 @@ export default function Home() {
             {result && (
               <div className="burn-result">
                 <img src={result.imageUrl} alt="Generated Mega Chad" />
+                {result.tokenId && (
+                  <div className="burn-result-nft">
+                    NFT #{result.tokenId} minted to your wallet
+                  </div>
+                )}
                 <div className="burn-result-links">
                   <a
                     href={result.ipfsUrl}
@@ -549,6 +623,16 @@ export default function Home() {
                   >
                     View on IPFS
                   </a>
+                  {result.tokenId && (
+                    <a
+                      href={`https://megaexplorer.xyz/token/${process.env.NEXT_PUBLIC_NFT_CONTRACT}/instance/${result.tokenId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline"
+                    >
+                      View NFT
+                    </a>
+                  )}
                   <a
                     href={`https://x.com/intent/tweet?text=${encodeURIComponent(
                       `Just burned ${BURN_AMOUNT_DISPLAY.toLocaleString()} $MEGACHAD to create this. @megachadxyz`

@@ -18,19 +18,18 @@ export const megaeth = defineChain({
   name: 'MegaETH',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://rpc.megaeth.com'] },
+    default: { http: ['https://mainnet.megaeth.com/rpc'] },
   },
   blockExplorers: {
     default: { name: 'MegaETH Explorer', url: 'https://megaexplorer.xyz' },
   },
 });
 
-// Use testnet by default — switch to mainnet via env
 // wagmi auto-detects injected wallets (MetaMask, Brave, Phantom, etc.)
 export const config = createConfig({
-  chains: [megaethTestnet],
+  chains: [megaeth],
   transports: {
-    [megaethTestnet.id]: http(),
+    [megaeth.id]: http(),
   },
   ssr: true,
 });

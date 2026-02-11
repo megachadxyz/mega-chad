@@ -9,28 +9,25 @@ export const BURN_AMOUNT_DISPLAY = Number(
   process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000'
 );
 
-// Minimal ERC20 + ERC20Burnable + burnToCreate ABI
+export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
+
+export const DEV_WALLET = (process.env.NEXT_PUBLIC_DEV_WALLET ||
+  '0x85bf9272DEA7dff1781F71473187b96c6f2f370C') as `0x${string}`;
+
+export const NFT_ADDRESS = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
+// Minimal ERC20 ABI (standard transfer, no burnToCreate)
 export const MEGACHAD_ABI = [
   {
     type: 'function',
-    name: 'burnToCreate',
-    inputs: [{ name: 'amount', type: 'uint256' }],
-    outputs: [],
+    name: 'transfer',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'burn',
-    inputs: [{ name: 'value', type: 'uint256' }],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'devWallet',
-    inputs: [],
-    outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -75,5 +72,19 @@ export const MEGACHAD_ABI = [
       { name: 'to', type: 'address', indexed: true },
       { name: 'value', type: 'uint256', indexed: false },
     ],
+  },
+] as const;
+
+// ERC-721 NFT ABI (mint function)
+export const NFT_ABI = [
+  {
+    type: 'function',
+    name: 'mint',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'tokenURI', type: 'string' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'nonpayable',
   },
 ] as const;
