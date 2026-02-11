@@ -318,6 +318,7 @@ export async function POST(req: NextRequest) {
       cid: ipfsCid,
       ipfsUrl,
       timestamp: new Date().toISOString(),
+      burnAmount: Number(BURN_AMOUNT / 10n ** 18n),
     });
   } catch {
     console.warn('Redis store failed — image was still generated and pinned');
