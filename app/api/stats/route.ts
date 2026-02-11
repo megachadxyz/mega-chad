@@ -50,9 +50,11 @@ export async function GET() {
 
     const totalSupply = Number(totalSupplyRaw / 10n ** 18n);
     const tokensBurned = Number(burnedRaw / 10n ** 18n);
+    const circulatingSupply = totalSupply - tokensBurned;
 
     return NextResponse.json({
       totalSupply,
+      circulatingSupply,
       tokensBurned,
       totalBurns,
     });

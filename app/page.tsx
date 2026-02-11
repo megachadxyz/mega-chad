@@ -363,9 +363,10 @@ export default function Home() {
   // ─── Burn stats ─────────────────────────────────────
   const [stats, setStats] = useState<{
     totalSupply: number | null;
+    circulatingSupply: number | null;
     tokensBurned: number | null;
     totalBurns: number | null;
-  }>({ totalSupply: null, tokensBurned: null, totalBurns: null });
+  }>({ totalSupply: null, circulatingSupply: null, tokensBurned: null, totalBurns: null });
 
   useEffect(() => {
     const fetchStats = () => {
@@ -683,9 +684,9 @@ export default function Home() {
           </div>
           <div className="burn-stat">
             <div className="burn-stat-value">
-              {stats.totalSupply !== null ? stats.totalSupply.toLocaleString() : '—'}
+              {stats.circulatingSupply !== null ? stats.circulatingSupply.toLocaleString() : '—'}
             </div>
-            <div className="burn-stat-label">Total Supply</div>
+            <div className="burn-stat-label">Circulating Supply</div>
           </div>
         </div>
       </section>
