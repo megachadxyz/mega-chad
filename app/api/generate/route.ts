@@ -237,11 +237,27 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // ── Get sequential number for NFT name ──────────────────
+  let mintNumber = 1;
+  try {
+    const { Redis } = await import('@upstash/redis');
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (redisUrl && redisToken) {
+      const r = new Redis({ url: redisUrl, token: redisToken });
+      const count = await r.zcard('burn:gallery');
+      mintNumber = count;
+    }
+  } catch {
+    // fallback to 1
+  }
+
   // ── Pin NFT metadata to IPFS ───────────────────────────
+  const paddedNumber = String(mintNumber).padStart(4, '0');
   let metadataUrl = '';
   try {
     const metaResult = await pinMetadata({
-      name: `MegaChad Looksmaxx #${burnTxHash.slice(0, 8)}`,
+      name: `$MEGACHAD ${paddedNumber}`,
       description: `Looksmaxxed by ${burnerAddress}. Burn tx: ${burnTxHash}`,
       imageCid: ipfsCid,
       attributes: [

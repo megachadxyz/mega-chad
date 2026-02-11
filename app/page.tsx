@@ -37,7 +37,7 @@ const STATUS_LABELS: Record<BurnStatus, string> = {
   confirming: 'Waiting for burn confirmation...',
   burning2: 'Signing dev wallet transfer (2/2)...',
   confirming2: 'Waiting for transfer confirmation...',
-  generating: 'Generating your Mega Chad...',
+  generating: 'LOOKSMAXXING IN PROCESS...',
   pinning: 'Pinning to IPFS...',
   minting: 'Minting your NFT...',
   done: 'Your Mega Chad is immortalized.',
