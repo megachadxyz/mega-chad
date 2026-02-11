@@ -13,4 +13,4 @@ remappings = [
 
 [rpc_endpoints]
 megaeth_testnet = "https://carrot.megaeth.com/rpc"
-# megaeth_mainnet = "https://rpc.megaeth.com"
+megaeth_mainnet = "https://mainnet.megaeth.com/rpc"
