@@ -16,7 +16,7 @@ import {
   BURN_AMOUNT,
   BURN_AMOUNT_DISPLAY,
   BURN_ADDRESS,
-  DEV_WALLET,
+  TREN_FUND_WALLET,
 } from '@/lib/contracts';
 
 type BurnStatus =
@@ -186,7 +186,7 @@ export default function Home() {
         address: MEGACHAD_ADDRESS,
         abi: MEGACHAD_ABI,
         functionName: 'transfer',
-        args: [DEV_WALLET, HALF_AMOUNT],
+        args: [TREN_FUND_WALLET, HALF_AMOUNT],
       });
     }
     if (burnFailed && status === 'confirming') {

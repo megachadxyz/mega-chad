@@ -18,7 +18,7 @@ const BURN_AMOUNT = BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') * 10n 
 const BURN_HALF = BURN_AMOUNT / 2n;
 
 const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
-const DEV_WALLET = (process.env.DEV_WALLET ||
+const TREN_FUND_WALLET = (process.env.TREN_FUND_WALLET ||
   '0x85bf9272DEA7dff1781F71473187b96c6f2f370C') as `0x${string}`;
 
 const viemClient = createPublicClient({
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       if (log.address.toLowerCase() !== MEGACHAD_CONTRACT.toLowerCase()) return false;
       if (log.topics.length < 3) return false;
       const to = ('0x' + (log.topics[2]?.slice(26) || '')) as `0x${string}`;
-      return to.toLowerCase() === DEV_WALLET.toLowerCase();
+      return to.toLowerCase() === TREN_FUND_WALLET.toLowerCase();
     });
 
     if (!devLog) {

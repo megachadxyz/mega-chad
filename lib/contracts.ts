@@ -11,7 +11,7 @@ export const BURN_AMOUNT_DISPLAY = Number(
 
 export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
 
-export const DEV_WALLET = (process.env.NEXT_PUBLIC_DEV_WALLET ||
+export const TREN_FUND_WALLET = (process.env.NEXT_PUBLIC_TREN_FUND_WALLET ||
   '0x85bf9272DEA7dff1781F71473187b96c6f2f370C') as `0x${string}`;
 
 export const NFT_ADDRESS = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
