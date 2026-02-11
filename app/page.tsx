@@ -360,6 +360,25 @@ export default function Home() {
     }
   }, [audioPlaying]);
 
+  // ─── Burn stats ─────────────────────────────────────
+  const [stats, setStats] = useState<{
+    totalSupply: number | null;
+    tokensBurned: number | null;
+    totalBurns: number | null;
+  }>({ totalSupply: null, tokensBurned: null, totalBurns: null });
+
+  useEffect(() => {
+    const fetchStats = () => {
+      fetch('/api/stats')
+        .then((r) => r.json())
+        .then(setStats)
+        .catch(() => {});
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ─── Mobile nav ────────────────────────────────────
   const [mobileNav, setMobileNav] = useState(false);
 
@@ -651,15 +670,21 @@ export default function Home() {
 
         <div className="burn-stats">
           <div className="burn-stat">
-            <div className="burn-stat-value">0</div>
+            <div className="burn-stat-value">
+              {stats.totalBurns !== null ? stats.totalBurns.toLocaleString() : '—'}
+            </div>
             <div className="burn-stat-label">Total Burns</div>
           </div>
           <div className="burn-stat">
-            <div className="burn-stat-value">0</div>
+            <div className="burn-stat-value">
+              {stats.tokensBurned !== null ? stats.tokensBurned.toLocaleString() : '—'}
+            </div>
             <div className="burn-stat-label">Tokens Burned</div>
           </div>
           <div className="burn-stat">
-            <div className="burn-stat-value">1B</div>
+            <div className="burn-stat-value">
+              {stats.totalSupply !== null ? stats.totalSupply.toLocaleString() : '—'}
+            </div>
             <div className="burn-stat-label">Total Supply</div>
           </div>
         </div>
