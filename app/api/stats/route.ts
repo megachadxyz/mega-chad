@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { megaeth } from '@/lib/wagmi';
-import { getTotalTokensBurned } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,24 +24,23 @@ const ERC20_ABI = [
 
 export async function GET() {
   try {
-    const [totalSupplyRaw, tokensBurned, totalBurns] = await Promise.all([
+    const [totalSupplyRaw, burnStats] = await Promise.all([
       viemClient.readContract({
         address: MEGACHAD_CONTRACT,
         abi: ERC20_ABI,
         functionName: 'totalSupply',
       }),
-      getTotalTokensBurned(),
-      getBurnCount(),
+      getBurnStats(),
     ]);
 
     const totalSupply = Number(totalSupplyRaw / 10n ** 18n);
-    const circulatingSupply = totalSupply - tokensBurned;
+    const circulatingSupply = totalSupply - burnStats.tokensBurned;
 
     return NextResponse.json({
       totalSupply,
       circulatingSupply,
-      tokensBurned,
-      totalBurns,
+      tokensBurned: burnStats.tokensBurned,
+      totalBurns: burnStats.totalBurns,
     });
   } catch (err) {
     console.error('Stats fetch failed:', err);
@@ -54,16 +52,31 @@ export async function GET() {
   }
 }
 
-async function getBurnCount(): Promise<number> {
+async function getBurnStats(): Promise<{ totalBurns: number; tokensBurned: number }> {
   try {
     const { Redis } = await import('@upstash/redis');
     const url = process.env.UPSTASH_REDIS_REST_URL;
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (!url || !token) return 0;
+    if (!url || !token) return { totalBurns: 0, tokensBurned: 0 };
     const r = new Redis({ url, token });
-    const count = await r.zcard('burn:gallery');
-    return count;
-  } catch {
-    return 0;
+
+    const [totalBurns, totalBurnedRaw] = await Promise.all([
+      r.zcard('burn:gallery'),
+      r.get('burn:total_tokens'),
+    ]);
+
+    let tokensBurned = totalBurnedRaw ? Number(totalBurnedRaw) : 0;
+
+    // Migration: if counter not yet initialized, seed from burn count
+    if (tokensBurned === 0 && totalBurns > 0) {
+      const burnAmount = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000');
+      tokensBurned = totalBurns * burnAmount;
+      await r.set('burn:total_tokens', tokensBurned);
+    }
+
+    return { totalBurns, tokensBurned };
+  } catch (err) {
+    console.error('getBurnStats error:', err);
+    return { totalBurns: 0, tokensBurned: 0 };
   }
 }
