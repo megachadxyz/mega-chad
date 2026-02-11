@@ -60,19 +60,10 @@ async function getBurnStats(): Promise<{ totalBurns: number; tokensBurned: numbe
     if (!url || !token) return { totalBurns: 0, tokensBurned: 0 };
     const r = new Redis({ url, token });
 
-    const [totalBurns, totalBurnedRaw] = await Promise.all([
-      r.zcard('burn:gallery'),
-      r.get('burn:total_tokens'),
-    ]);
-
-    let tokensBurned = totalBurnedRaw ? Number(totalBurnedRaw) : 0;
-
-    // Migration: if counter not yet initialized, seed from burn count
-    if (tokensBurned === 0 && totalBurns > 0) {
-      const burnAmount = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000');
-      tokensBurned = totalBurns * burnAmount;
-      await r.set('burn:total_tokens', tokensBurned);
-    }
+    const totalBurns = await r.zcard('burn:gallery');
+    // Only half of BURN_AMOUNT goes to the dead address (actual burn)
+    const burnAmount = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000');
+    const tokensBurned = totalBurns * (burnAmount / 2);
 
     return { totalBurns, tokensBurned };
   } catch (err) {
