@@ -136,31 +136,28 @@ export default function ChadboardPage() {
         )}
 
         {!loading && entries.length > 0 && !selectedWallet && (
-          <div className="cb-grid">
+          <div className="chads-grid" style={{ marginTop: '2.5rem' }}>
             {entries.map((entry, i) => (
               <div
                 key={entry.address}
-                className="cb-card"
+                className="chad-card cb-clickable"
                 onClick={() => setSelectedWallet(entry)}
               >
-                <div className="cb-rank">#{i + 1}</div>
-                <div className="cb-card-image">
+                <div className="chad-img">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={entry.latestImage} alt={`Latest by ${truncAddr(entry.address)}`} />
                   {i === 0 && <div className="cb-crown">MOGGER</div>}
                 </div>
-                <div className="cb-card-info">
-                  <div className="cb-card-title">#{i + 1} LooksMaxxer</div>
-                  <div className="cb-card-address">{truncAddr(entry.address)}</div>
-                  <div className="cb-card-stats">
-                    <div className="cb-card-stat">
-                      <span className="cb-card-stat-value">{entry.totalBurns}</span>
-                      <span className="cb-card-stat-label">{entry.totalBurns === 1 ? 'Burn' : 'Burns'}</span>
-                    </div>
-                    <div className="cb-card-stat">
-                      <span className="cb-card-stat-value">{entry.totalBurned.toLocaleString()}</span>
-                      <span className="cb-card-stat-label">Burned</span>
-                    </div>
+                <div className="chad-name">#{i + 1} LooksMaxxer</div>
+                <div className="chad-role">{truncAddr(entry.address)}</div>
+                <div className="cb-card-stats">
+                  <div className="cb-card-stat">
+                    <span className="cb-card-stat-value">{entry.totalBurns}</span>
+                    <span className="cb-card-stat-label">{entry.totalBurns === 1 ? 'Burn' : 'Burns'}</span>
+                  </div>
+                  <div className="cb-card-stat">
+                    <span className="cb-card-stat-value">{entry.totalBurned.toLocaleString()}</span>
+                    <span className="cb-card-stat-label">Burned</span>
                   </div>
                 </div>
               </div>

@@ -1085,76 +1085,8 @@ img { max-width: 100%; height: auto; }
   text-transform: uppercase;
 }
 
-.cb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2.5rem;
-}
-
-.cb-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+.cb-clickable {
   cursor: pointer;
-  transition: border-color .3s, box-shadow .3s, transform .2s;
-  position: relative;
-  overflow: hidden;
-}
-
-.cb-card:hover {
-  border-color: var(--pink);
-  box-shadow: var(--pink-glow);
-  transform: translateY(-2px);
-}
-
-.cb-rank {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 2;
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  color: var(--pink);
-  text-shadow: 0 0 20px rgba(247, 134, 198, .6);
-  line-height: 1;
-}
-
-.cb-card-image {
-  width: 100%;
-  aspect-ratio: 1;
-  overflow: hidden;
-  position: relative;
-  border-bottom: 1px solid var(--border);
-}
-
-.cb-card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  filter: grayscale(30%);
-  transition: filter .3s;
-}
-
-.cb-card:hover .cb-card-image img {
-  filter: grayscale(0%);
-}
-
-/* Pink scan line on card images */
-.cb-card-image::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    transparent 40%,
-    rgba(247, 134, 198, .15) 50%,
-    transparent 60%,
-    transparent 100%
-  );
-  pointer-events: none;
-  animation: scanChad 3s ease-in-out infinite;
 }
 
 .cb-crown {
@@ -1171,28 +1103,11 @@ img { max-width: 100%; height: auto; }
   box-shadow: var(--pink-glow);
 }
 
-.cb-card-info {
-  padding: 1.25rem;
-}
-
-.cb-card-title {
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  color: var(--text);
-  line-height: 1;
-}
-
-.cb-card-address {
-  font-size: .7rem;
-  letter-spacing: .08em;
-  color: var(--pink);
-  margin-top: .35rem;
-}
-
 .cb-card-stats {
   display: flex;
   gap: 1.5rem;
-  margin-top: .85rem;
+  margin-top: .5rem;
+  justify-content: center;
 }
 
 .cb-card-stat {
