@@ -23,6 +23,12 @@ function truncAddr(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
+const TEST_CID = 'bafkreia6nhohfylww3stb3vou6kynvrpdov6vrfhromuwwbmzuwptrzd3u';
+
+function isTestImage(url: string): boolean {
+  return url.includes(TEST_CID);
+}
+
 export default function ChadboardPage() {
   const [entries, setEntries] = useState<ChadboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,8 +150,12 @@ export default function ChadboardPage() {
                 onClick={() => setSelectedWallet(entry)}
               >
                 <div className="chad-img">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={entry.latestImage} alt={`Latest by ${truncAddr(entry.address)}`} />
+                  {isTestImage(entry.latestImage) ? (
+                    <div className="cb-test-placeholder">TEST</div>
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={entry.latestImage} alt={`Latest by ${truncAddr(entry.address)}`} />
+                  )}
                   {i === 0 && <div className="cb-crown">MOGGER</div>}
                 </div>
                 <div className="chad-name">#{i + 1} LooksMaxxer</div>
@@ -192,8 +202,12 @@ export default function ChadboardPage() {
             <div className="cb-detail-grid">
               {selectedWallet.images.map((img) => (
                 <div key={img.txHash} className="cb-detail-item">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.ipfsUrl} alt="Looksmaxxed" className="cb-detail-image" />
+                  {isTestImage(img.ipfsUrl) ? (
+                    <div className="cb-test-placeholder cb-detail-image">TEST</div>
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={img.ipfsUrl} alt="Looksmaxxed" className="cb-detail-image" />
+                  )}
                   <div className="cb-detail-meta">
                     <div className="cb-detail-date">
                       {new Date(img.timestamp).toLocaleDateString()}
