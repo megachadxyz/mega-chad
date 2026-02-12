@@ -147,7 +147,7 @@ export default function ChadboardPage() {
                 <div className="cb-card-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={entry.latestImage} alt={`Latest by ${truncAddr(entry.address)}`} />
-                  {i === 0 && <div className="cb-crown">KING</div>}
+                  {i === 0 && <div className="cb-crown">MOGGER</div>}
                 </div>
                 <div className="cb-card-info">
                   <div className="cb-card-title">#{i + 1} LooksMaxxer</div>
