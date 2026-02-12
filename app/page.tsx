@@ -408,6 +408,8 @@ export default function Home() {
           <li><a href="#burn" onClick={() => setMobileNav(false)}>Burn</a></li>
           <li><a href="#roadmap" onClick={() => setMobileNav(false)}>Roadmap</a></li>
           <li><a href="#chads" onClick={() => setMobileNav(false)}>Chads</a></li>
+          <li className="nav-divider">|</li>
+          <li><a href="/chadboard">Chadboard</a></li>
         </ul>
         <div className="nav-right">
           <button className="audio-toggle" onClick={toggleAudio} title={audioPlaying ? 'Mute' : 'Play Music'}>
@@ -749,6 +751,8 @@ export default function Home() {
               <li><a href="#burn">Burn</a></li>
               <li><a href="#roadmap">Roadmap</a></li>
               <li><a href="#chads">Chads</a></li>
+              <li className="footer-divider">|</li>
+              <li><a href="/chadboard">Chadboard</a></li>
             </ul>
             <div className="footer-social">
               <a
