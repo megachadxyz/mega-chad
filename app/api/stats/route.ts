@@ -1,18 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, http } from 'viem';
-import { megaeth } from '@/lib/wagmi';
+import { createPublicClient, http, defineChain } from 'viem';
 
 export const dynamic = 'force-dynamic';
 
 const MEGACHAD_CONTRACT = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  '0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888') as `0x${string}`;
 
 const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
-
-const viemClient = createPublicClient({
-  chain: megaeth,
-  transport: http(),
-});
 
 const ERC20_ABI = [
   {
@@ -33,13 +27,28 @@ const ERC20_ABI = [
 
 export async function GET() {
   try {
+    // Create client fresh per request to avoid stale connections on serverless
+    const megaeth = defineChain({
+      id: 4326,
+      name: 'MegaETH',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      rpcUrls: {
+        default: { http: ['https://mainnet.megaeth.com/rpc'] },
+      },
+    });
+
+    const client = createPublicClient({
+      chain: megaeth,
+      transport: http('https://mainnet.megaeth.com/rpc'),
+    });
+
     const [totalSupplyRaw, burnedRaw, totalBurns] = await Promise.all([
-      viemClient.readContract({
+      client.readContract({
         address: MEGACHAD_CONTRACT,
         abi: ERC20_ABI,
         functionName: 'totalSupply',
       }),
-      viemClient.readContract({
+      client.readContract({
         address: MEGACHAD_CONTRACT,
         abi: ERC20_ABI,
         functionName: 'balanceOf',
