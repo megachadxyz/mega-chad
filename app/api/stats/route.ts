@@ -1,70 +1,55 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, http, defineChain } from 'viem';
 
 export const dynamic = 'force-dynamic';
 
-const MEGACHAD_CONTRACT = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
-  '0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888') as `0x${string}`;
+const MEGACHAD_CONTRACT = '0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888';
+const DEAD_ADDRESS_PADDED = '0x000000000000000000000000000000000000000000000000000000000000dEaD';
+const RPC_URL = 'https://mainnet.megaeth.com/rpc';
 
-const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
+async function rpcCall(method: string, params: unknown[]): Promise<string> {
+  const res = await fetch(RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.result;
+}
 
-const ERC20_ABI = [
-  {
-    type: 'function',
-    name: 'totalSupply',
-    inputs: [],
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'balanceOf',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-  },
-] as const;
+async function getOnChainStats(): Promise<{ totalSupply: number; tokensBurned: number }> {
+  // totalSupply() selector = 0x18160ddd
+  const totalSupplyHex = await rpcCall('eth_call', [
+    { to: MEGACHAD_CONTRACT, data: '0x18160ddd' },
+    'latest',
+  ]);
+
+  // balanceOf(0x...dEaD) selector = 0x70a08231 + padded address
+  const burnedHex = await rpcCall('eth_call', [
+    { to: MEGACHAD_CONTRACT, data: '0x70a08231' + DEAD_ADDRESS_PADDED.slice(2) },
+    'latest',
+  ]);
+
+  const totalSupply = Number(BigInt(totalSupplyHex) / 10n ** 18n);
+  const tokensBurned = Number(BigInt(burnedHex) / 10n ** 18n);
+
+  return { totalSupply, tokensBurned };
+}
 
 export async function GET() {
   try {
-    // Create client fresh per request to avoid stale connections on serverless
-    const megaeth = defineChain({
-      id: 4326,
-      name: 'MegaETH',
-      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-      rpcUrls: {
-        default: { http: ['https://mainnet.megaeth.com/rpc'] },
-      },
-    });
-
-    const client = createPublicClient({
-      chain: megaeth,
-      transport: http('https://mainnet.megaeth.com/rpc'),
-    });
-
-    const [totalSupplyRaw, burnedRaw, totalBurns] = await Promise.all([
-      client.readContract({
-        address: MEGACHAD_CONTRACT,
-        abi: ERC20_ABI,
-        functionName: 'totalSupply',
-      }),
-      client.readContract({
-        address: MEGACHAD_CONTRACT,
-        abi: ERC20_ABI,
-        functionName: 'balanceOf',
-        args: [BURN_ADDRESS],
-      }),
+    const [onChain, totalBurns] = await Promise.all([
+      getOnChainStats(),
       getBurnCount(),
     ]);
 
-    const totalSupply = Number(totalSupplyRaw / 10n ** 18n);
-    const tokensBurned = Number(burnedRaw / 10n ** 18n);
-    const circulatingSupply = totalSupply - tokensBurned;
+    const circulatingSupply = onChain.totalSupply - onChain.tokensBurned;
 
     return NextResponse.json({
-      totalSupply,
+      totalSupply: onChain.totalSupply,
       circulatingSupply,
-      tokensBurned,
+      tokensBurned: onChain.tokensBurned,
       totalBurns,
     });
   } catch (err) {
