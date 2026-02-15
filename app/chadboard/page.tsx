@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAccount } from 'wagmi';
+import * as Ably from 'ably';
 
 interface ChadboardImage {
   ipfsUrl: string;
@@ -19,6 +21,14 @@ interface ChadboardEntry {
   images: ChadboardImage[];
 }
 
+interface ChatMessage {
+  id: string;
+  address: string;
+  displayName: string;
+  text: string;
+  timestamp: number;
+}
+
 function truncAddr(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
@@ -33,6 +43,9 @@ export default function ChadboardPage() {
   const [entries, setEntries] = useState<ChadboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWallet, setSelectedWallet] = useState<ChadboardEntry | null>(null);
+
+  // ─── Wallet ──────────────────────────────────────────
+  const { address, isConnected } = useAccount();
 
   // ─── Audio ─────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -81,6 +94,183 @@ export default function ChadboardPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // ─── Chat State ────────────────────────────────────
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const [hasBurns, setHasBurns] = useState(false);
+  const [burnCheckDone, setBurnCheckDone] = useState(false);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
+  const ablyClientRef = useRef<Ably.Realtime | null>(null);
+  const channelRef = useRef<Ably.RealtimeChannel | null>(null);
+
+  // ─── Name popup state ──────────────────────────────
+  const [showNamePopup, setShowNamePopup] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [isAnon, setIsAnon] = useState(false);
+  const [currentName, setCurrentName] = useState<string | null>(null);
+  const [nameError, setNameError] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const nameCheckedRef = useRef(false);
+
+  // Check if user has burns when wallet connects
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setHasBurns(false);
+      setBurnCheckDone(false);
+      nameCheckedRef.current = false;
+      return;
+    }
+
+    fetch('/api/chat/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address }),
+    }).then((r) => {
+      setHasBurns(r.ok);
+      setBurnCheckDone(true);
+    }).catch(() => {
+      setBurnCheckDone(true);
+    });
+  }, [isConnected, address]);
+
+  // Fetch display name when wallet connects
+  useEffect(() => {
+    if (!isConnected || !address || nameCheckedRef.current) return;
+    nameCheckedRef.current = true;
+
+    fetch(`/api/chat/name?address=${address}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setCurrentName(data.name || null);
+      })
+      .catch(() => {});
+  }, [isConnected, address]);
+
+  // Connect to Ably when chat opens
+  useEffect(() => {
+    if (!chatOpen || !hasBurns || !address) return;
+    if (ablyClientRef.current) return;
+
+    const client = new Ably.Realtime({
+      authCallback: async (_, callback) => {
+        try {
+          const res = await fetch('/api/chat/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address }),
+          });
+          const tokenRequest = await res.json();
+          callback(null, tokenRequest);
+        } catch (err) {
+          const errInfo = err instanceof Error
+            ? { message: err.message, code: 40000, statusCode: 400 } as Ably.ErrorInfo
+            : null;
+          callback(errInfo, null);
+        }
+      },
+    });
+
+    ablyClientRef.current = client;
+    const channel = client.channels.get('chadchat');
+    channelRef.current = channel;
+
+    channel.subscribe('message', (msg: Ably.Message) => {
+      const data = msg.data as ChatMessage;
+      setChatMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev;
+        return [...prev, data];
+      });
+    });
+
+    // Load history
+    fetch('/api/chat/messages?limit=50')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.messages) {
+          setChatMessages(data.messages);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      channel.unsubscribe();
+      client.close();
+      ablyClientRef.current = null;
+      channelRef.current = null;
+    };
+  }, [chatOpen, hasBurns, address]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const handleChatToggle = () => {
+    if (!chatOpen && !currentName && nameCheckedRef.current) {
+      setShowNamePopup(true);
+      return;
+    }
+    setChatOpen(!chatOpen);
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || chatSending || !address) return;
+
+    setChatSending(true);
+    try {
+      const res = await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, text: chatInput.trim() }),
+      });
+      if (res.ok) {
+        setChatInput('');
+      }
+    } catch {
+      // ignore
+    }
+    setChatSending(false);
+  };
+
+  const handleNameSave = async () => {
+    if (!address) return;
+    setNameError('');
+    setNameSaving(true);
+
+    try {
+      const res = await fetch('/api/chat/name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          name: isAnon ? undefined : (nameInput.trim() || undefined),
+          isAnon,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setNameError(data.error || 'Failed');
+        setNameSaving(false);
+        return;
+      }
+      setCurrentName(data.name || null);
+      setShowNamePopup(false);
+      setChatOpen(true);
+    } catch {
+      setNameError('Failed to save name');
+    }
+    setNameSaving(false);
+  };
+
+  const formatTime = (ts: number) => {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <>
@@ -280,6 +470,131 @@ export default function ChadboardPage() {
           </div>
         </div>
       </footer>
+
+      {/* ─── CHADCHAT TOGGLE ──────────────────────────── */}
+      {isConnected && burnCheckDone && hasBurns && (
+        <button
+          className={`chadchat-toggle ${chatOpen ? 'chadchat-toggle--active' : ''}`}
+          onClick={handleChatToggle}
+          title="ChadChat"
+        >
+          {chatOpen ? '✕' : '💬'}
+        </button>
+      )}
+
+      {/* ─── CHADCHAT PANEL ──────────────────────────── */}
+      {chatOpen && (
+        <div className="chadchat-panel">
+          <div className="chadchat-header">
+            <span className="chadchat-title">ChadChat</span>
+            <button className="chadchat-name-btn" onClick={() => setShowNamePopup(true)} title="Change name">
+              {currentName || (address ? truncAddr(address) : '?')}
+            </button>
+          </div>
+          <div className="chadchat-messages" ref={chatMessagesRef}>
+            {chatMessages.length === 0 && (
+              <div className="chadchat-empty">No messages yet. Be the first Chad to speak.</div>
+            )}
+            {chatMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`chadchat-msg ${msg.address === address?.toLowerCase() ? 'chadchat-msg--own' : ''}`}
+              >
+                <div className="chadchat-msg-header">
+                  <span className="chadchat-msg-name">{msg.displayName}</span>
+                  <span className="chadchat-msg-time">{formatTime(msg.timestamp)}</span>
+                </div>
+                <div className="chadchat-msg-text">{msg.text}</div>
+              </div>
+            ))}
+          </div>
+          <div className="chadchat-input-bar">
+            <input
+              className="chadchat-input"
+              type="text"
+              placeholder="Type a message..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              maxLength={280}
+              disabled={chatSending}
+            />
+            <button
+              className="chadchat-send"
+              onClick={handleSendMessage}
+              disabled={chatSending || !chatInput.trim()}
+            >
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── NAME POPUP ──────────────────────────────── */}
+      {showNamePopup && (
+        <div className="chadchat-name-overlay" onClick={() => setShowNamePopup(false)}>
+          <div className="chadchat-name-popup" onClick={(e) => e.stopPropagation()}>
+            <h3 className="chadchat-name-popup-title">Set Chat Name</h3>
+            <p className="chadchat-name-popup-desc">
+              Choose how you appear in ChadChat.
+            </p>
+
+            <div className="chadchat-name-option">
+              <label className="chadchat-name-label">
+                <input
+                  type="radio"
+                  name="nameChoice"
+                  checked={!isAnon}
+                  onChange={() => setIsAnon(false)}
+                />
+                Custom name
+              </label>
+              {!isAnon && (
+                <input
+                  className="chadchat-name-input"
+                  type="text"
+                  placeholder="2-20 chars, letters/numbers/spaces"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  maxLength={20}
+                />
+              )}
+            </div>
+
+            <div className="chadchat-name-option">
+              <label className="chadchat-name-label">
+                <input
+                  type="radio"
+                  name="nameChoice"
+                  checked={isAnon}
+                  onChange={() => setIsAnon(true)}
+                />
+                Go Anon
+              </label>
+            </div>
+
+            <p className="chadchat-name-popup-hint">
+              Leave custom name empty to use your wallet address ({address ? truncAddr(address) : ''}).
+            </p>
+
+            {nameError && <div className="chadchat-name-error">{nameError}</div>}
+
+            <div className="chadchat-name-actions">
+              <button className="btn btn-outline chadchat-name-cancel" onClick={() => setShowNamePopup(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary chadchat-name-save" onClick={handleNameSave} disabled={nameSaving}>
+                {nameSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -14,6 +14,7 @@
     "@tanstack/react-query": "^5.90.20",
     "@upstash/redis": "^1.36.2",
     "@walletconnect/ethereum-provider": "^2.23.4",
+    "ably": "^2.17.1",
     "next": "^14.2.0",
     "pinata": "^2.5.4",
     "react": "^18.2.0",
