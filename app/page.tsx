@@ -699,8 +699,8 @@ export default function Home() {
         <div className="roadmap-grid">
           {[
             { date: 'Feb 9th', title: 'Bulk', desc: 'Respect the pump.' },
-            { date: 'TBA', title: 'Cut', desc: 'Burn-to-looksmaxx. Every image permanently reduces supply.' },
-            { date: 'TBA', title: 'Recomp', desc: 'Physiquemaxxers get recognition.' },
+            { date: 'Feb 12th', title: 'Cut', desc: 'Burn-to-looksmaxx. Every image permanently reduces supply.' },
+            { date: 'Feb 13th', title: 'Recomp', desc: 'Physiquemaxxers get recognition.' },
             { date: 'TBA', title: 'Looksmaxx', desc: 'Mog everyone.' },
           ].map((item) => (
             <div key={item.title} className="roadmap-item">
