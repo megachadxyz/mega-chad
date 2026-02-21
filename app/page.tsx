@@ -181,6 +181,8 @@ export default function Home() {
   // When burn confirmed, fire transfer 2
   useEffect(() => {
     if (burnConfirmed && status === 'confirming') {
+    // Add delay to ensure nonce updates before second transaction
+    setTimeout(() => {
       setStatus('burning2');
       writeDev({
         address: MEGACHAD_ADDRESS,
@@ -188,7 +190,8 @@ export default function Home() {
         functionName: 'transfer',
         args: [TREN_FUND_WALLET, HALF_AMOUNT],
       });
-    }
+    }, 2000); // 2 second delay to allow nonce to update
+  }
     if (burnFailed && status === 'confirming') {
       setStatus('error');
       setError('Burn transaction failed on-chain.');
@@ -787,3 +790,4 @@ export default function Home() {
     </>
   );
 }
+
