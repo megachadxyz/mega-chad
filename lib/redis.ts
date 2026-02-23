@@ -20,6 +20,7 @@ export interface BurnRecord {
   ipfsUrl: string;
   timestamp: string;
   burnAmount?: number; // total tokens burned (human-readable, e.g. 11250)
+  tokenId?: string; // NFT token ID if minted
 }
 
 const TX_PREFIX = 'burn:tx:';

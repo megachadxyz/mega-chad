@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { createPublicClient, http } from 'viem';
+import { megaeth } from '@/lib/wagmi';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +12,7 @@ interface BurnRecord {
   ipfsUrl: string;
   timestamp: string;
   burnAmount?: number;
+  tokenId?: string;
 }
 
 export interface ChadboardEntry {
@@ -20,6 +23,24 @@ export interface ChadboardEntry {
   latestTimestamp: string;
   images: { ipfsUrl: string; timestamp: string; txHash: string }[];
 }
+
+const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
+const viemClient = createPublicClient({
+  chain: megaeth,
+  transport: http(),
+});
+
+const NFT_ABI = [
+  {
+    type: 'function',
+    name: 'ownerOf',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
+] as const;
 
 export async function GET() {
   try {
@@ -42,12 +63,37 @@ export async function GET() {
       typeof item === 'string' ? JSON.parse(item) : item
     ) as BurnRecord[];
 
-    // Group by wallet address
+    // Filter burns that have tokenIds (NFTs were minted)
+    const burnsWithTokens = burns.filter((b) => b.tokenId);
+
+    // Query current NFT ownership from blockchain
+    const ownershipPromises = burnsWithTokens.map(async (burn) => {
+      try {
+        const owner = await viemClient.readContract({
+          address: NFT_CONTRACT,
+          abi: NFT_ABI,
+          functionName: 'ownerOf',
+          args: [BigInt(burn.tokenId!)],
+        });
+        return {
+          ...burn,
+          currentOwner: owner.toLowerCase(),
+        };
+      } catch {
+        // NFT doesn't exist or error querying - skip this burn
+        return null;
+      }
+    });
+
+    const ownershipResults = await Promise.all(ownershipPromises);
+    const validBurns = ownershipResults.filter((b) => b !== null);
+
+    // Group by current owner (not original burner)
     const walletMap = new Map<string, ChadboardEntry>();
     const burnAmountPerBurn = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') / 2;
 
-    for (const burn of burns) {
-      const addr = burn.burner.toLowerCase();
+    for (const burn of validBurns) {
+      const addr = burn.currentOwner;
       const existing = walletMap.get(addr);
 
       const imageEntry = {
@@ -67,7 +113,7 @@ export async function GET() {
         }
       } else {
         walletMap.set(addr, {
-          address: burn.burner,
+          address: burn.currentOwner,
           totalBurns: 1,
           totalBurned: burnAmountPerBurn,
           latestImage: burn.ipfsUrl,
