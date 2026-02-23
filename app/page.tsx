@@ -168,13 +168,13 @@ export default function LandingPage() {
         }
 
         .landing-footer a {
-          color: var(--text);
+          color: var(--pink);
           text-decoration: none;
-          transition: color 0.2s;
+          transition: opacity 0.2s;
         }
 
         .landing-footer a:hover {
-          color: var(--pink);
+          opacity: 0.8;
         }
 
         .footer-sep {
