@@ -45,5 +45,9 @@ Mint site and art pipeline: **Vercel** (host + API) + **Replicate** (image gener
 
 [https://github.com/megachadxyz/mega-chad](https://github.com/megachadxyz/mega-chad)
 
+## Recent Updates
+
+- Landing page with legal documentation deployed (Feb 23, 2026)
+
 
 
