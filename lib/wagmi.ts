@@ -6,7 +6,10 @@ export const megaethTestnet = defineChain({
   name: 'MegaETH Testnet',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://carrot.megaeth.com/rpc'] },
+    default: {
+      http: ['https://carrot.megaeth.com/rpc'],
+      webSocket: ['wss://carrot.megaeth.com/ws'],
+    },
   },
   blockExplorers: {
     default: { name: 'MegaETH Explorer', url: 'https://megaexplorer.xyz' },
@@ -18,7 +21,10 @@ export const megaeth = defineChain({
   name: 'MegaETH',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://mainnet.megaeth.com/rpc'] },
+    default: {
+      http: ['https://mainnet.megaeth.com/rpc'],
+      webSocket: ['wss://mainnet.megaeth.com/ws'],
+    },
   },
   blockExplorers: {
     default: { name: 'MegaETH Explorer', url: 'https://megaexplorer.xyz' },

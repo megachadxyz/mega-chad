@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import * as Ably from 'ably';
+import { useRealtimeNFTMints } from '@/hooks/useRealtimeNFTMints';
 
 interface ChadboardImage {
   ipfsUrl: string;
@@ -48,9 +49,13 @@ export default function ChadboardPage() {
   const [entries, setEntries] = useState<ChadboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWallet, setSelectedWallet] = useState<ChadboardEntry | null>(null);
+  const [newMintNotif, setNewMintNotif] = useState(false);
 
   // ─── Wallet ──────────────────────────────────────────
   const { address, isConnected } = useAccount();
+
+  // ─── Real-time NFT mints ─────────────────────────────
+  const { latestMint, isConnected: wsConnected } = useRealtimeNFTMints();
 
   // ─── Audio ─────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -92,13 +97,29 @@ export default function ChadboardPage() {
   const [mobileNav, setMobileNav] = useState(false);
 
   // ─── Fetch data ────────────────────────────────────
-  useEffect(() => {
+  const fetchChadboard = useCallback(() => {
     fetch('/api/chadboard')
       .then((r) => r.json())
       .then((data) => setEntries(data.entries || []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchChadboard();
+  }, [fetchChadboard]);
+
+  // ─── Real-time mint updates ────────────────────────
+  useEffect(() => {
+    if (!latestMint) return;
+
+    // Show notification
+    setNewMintNotif(true);
+    setTimeout(() => setNewMintNotif(false), 5000);
+
+    // Refresh Chadboard data
+    fetchChadboard();
+  }, [latestMint, fetchChadboard]);
 
   // ─── Chat State ────────────────────────────────────
   const [chatOpen, setChatOpen] = useState(false);
@@ -433,6 +454,25 @@ export default function ChadboardPage() {
           </div>
         )}
       </section>
+
+      {/* ─── REAL-TIME STATUS ────────────────────────── */}
+      {wsConnected && (
+        <div className="realtime-status" title="Connected to MegaETH WebSocket">
+          <span className="realtime-dot" />
+          <span className="realtime-text">LIVE</span>
+        </div>
+      )}
+
+      {/* ─── NEW MINT NOTIFICATION ───────────────────── */}
+      {newMintNotif && (
+        <div className="new-mint-notif">
+          <span className="new-mint-icon">🔥</span>
+          <div>
+            <div className="new-mint-title">New Looksmaxxer!</div>
+            <div className="new-mint-subtitle">Someone just minted an NFT</div>
+          </div>
+        </div>
+      )}
 
       {/* ─── FOOTER ──────────────────────────────────── */}
       <footer className="footer">
