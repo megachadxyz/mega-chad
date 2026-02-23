@@ -56,6 +56,25 @@ export default function AboutPage() {
         </section>
 
         <section>
+          <h2>Open Source</h2>
+          <p>
+            MegaChad is built in public. Our entire codebase—frontend, smart contracts, and infrastructure—is
+            open source and available on GitHub. Community contributions, feedback, and transparency are core
+            to our mission.
+          </p>
+          <p>
+            <a
+              href="https://github.com/megachadxyz/mega-chad"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="github-link"
+            >
+              View on GitHub →
+            </a>
+          </p>
+        </section>
+
+        <section>
           <h2>Community</h2>
           <p>
             Join the MegaChad community to share your looksmaxxed creations, compete on the Chadboard
@@ -166,6 +185,17 @@ export default function AboutPage() {
           background: var(--pink);
           color: #000;
           box-shadow: var(--pink-glow);
+        }
+
+        .github-link {
+          color: var(--pink);
+          text-decoration: none;
+          font-weight: 600;
+          transition: opacity 0.2s;
+        }
+
+        .github-link:hover {
+          opacity: 0.8;
         }
 
         @media (max-width: 768px) {

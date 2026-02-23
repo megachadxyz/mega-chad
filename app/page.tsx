@@ -46,6 +46,8 @@ export default function LandingPage() {
           <span className="footer-sep">•</span>
           <Link href="/docs">Docs</Link>
           <span className="footer-sep">•</span>
+          <a href="https://github.com/megachadxyz/mega-chad" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <span className="footer-sep">•</span>
           <Link href="/privacy">Privacy</Link>
           <span className="footer-sep">•</span>
           <Link href="/terms">Terms</Link>

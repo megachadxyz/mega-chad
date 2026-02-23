@@ -164,6 +164,33 @@ export default function DocsPage() {
           </ul>
         </section>
 
+        <section>
+          <h2>Developer Resources</h2>
+          <p>
+            MegaChad is open source and built in public. Explore our codebase, smart contracts,
+            and contribute to the project.
+          </p>
+          <ul>
+            <li>
+              <strong>GitHub Repository:</strong>{' '}
+              <a
+                href="https://github.com/megachadxyz/mega-chad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="external-link"
+              >
+                github.com/megachadxyz/mega-chad
+              </a>
+            </li>
+            <li>
+              <strong>Smart Contracts:</strong> Verified on MegaETH Explorer
+            </li>
+            <li>
+              <strong>Storage:</strong> IPFS via Pinata + Warren Protocol (on-chain)
+            </li>
+          </ul>
+        </section>
+
         <div className="legal-footer">
           <Link href="/main" className="action-link">Start Looksmaxxing →</Link>
         </div>
@@ -285,6 +312,17 @@ export default function DocsPage() {
           background: var(--pink);
           color: #000;
           box-shadow: var(--pink-glow);
+        }
+
+        .external-link {
+          color: var(--pink);
+          text-decoration: none;
+          transition: opacity 0.2s;
+        }
+
+        .external-link:hover {
+          opacity: 0.8;
+          text-decoration: underline;
         }
 
         @media (max-width: 768px) {
