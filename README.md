@@ -49,4 +49,3 @@ Mint site and art pipeline: **Vercel** (host + API) + **Replicate** (image gener
 
 - Landing page with legal documentation deployed (Feb 23, 2026)
 
-
