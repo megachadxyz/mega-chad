@@ -53,6 +53,8 @@ interface NFTWithOwner {
 
 export async function GET() {
   try {
+    console.log('[Chadboard] Starting fetch, NFT contract:', NFT_CONTRACT);
+
     // Query all Transfer events from NFT contract
     const transferLogs = await viemClient.getLogs({
       address: NFT_CONTRACT,
@@ -60,6 +62,8 @@ export async function GET() {
       fromBlock: 0n,
       toBlock: 'latest',
     });
+
+    console.log('[Chadboard] Found', transferLogs.length, 'transfer events');
 
     // Build map of tokenId -> current owner and track transfer history
     const currentOwners = new Map<string, { owner: string; blockNumber: bigint }>();
@@ -96,6 +100,8 @@ export async function GET() {
     });
 
     const nftData = (await Promise.all(nftDataPromises)).filter((d) => d !== null) as NFTWithOwner[];
+
+    console.log('[Chadboard] Successfully fetched', nftData.length, 'NFT metadata');
 
     // Fetch metadata from IPFS to get images
     const nftsWithImages = await Promise.all(
@@ -166,6 +172,8 @@ export async function GET() {
       (a, b) => b.totalBurns - a.totalBurns || b.totalBurned - a.totalBurned
     );
 
+    console.log('[Chadboard] Grouped into', entries.length, 'wallet entries');
+
     // Resolve .mega names for all addresses
     await Promise.all(
       entries.map(async (entry) => {
@@ -185,9 +193,11 @@ export async function GET() {
       })
     );
 
+    console.log('[Chadboard] Returning', entries.length, 'entries');
     return NextResponse.json({ entries });
   } catch (err) {
-    console.error('Chadboard fetch failed:', err);
-    return NextResponse.json({ entries: [] });
+    console.error('[Chadboard] FATAL ERROR:', err);
+    console.error('[Chadboard] Error details:', err instanceof Error ? err.message : String(err));
+    return NextResponse.json({ entries: [], error: err instanceof Error ? err.message : 'Unknown error' });
   }
 }
