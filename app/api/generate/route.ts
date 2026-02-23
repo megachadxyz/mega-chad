@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
-import { createPublicClient, createWalletClient, http } from 'viem';
+import { createPublicClient, createWalletClient, encodeFunctionData, http, type TransactionReceipt } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { pinImage, pinMetadata } from '@/lib/pinata';
 import { isTxUsed, markTxUsed } from '@/lib/redis';
@@ -277,32 +277,47 @@ export async function POST(req: NextRequest) {
 
   if (walletClient && metadataUrl && NFT_CONTRACT !== '0x0000000000000000000000000000000000000000') {
     try {
-      const mintHash = await walletClient.writeContract({
-        address: NFT_CONTRACT,
-        abi: [
-          {
-            type: 'function',
-            name: 'mint',
-            inputs: [
-              { name: 'to', type: 'address' },
-              { name: 'tokenURI', type: 'string' },
-            ],
-            outputs: [{ name: '', type: 'uint256' }],
-            stateMutability: 'nonpayable',
-          },
-        ] as const,
-        functionName: 'mint',
-        args: [burnerAddress as `0x${string}`, metadataUrl],
+      const mintAbi = [
+        {
+          type: 'function',
+          name: 'mint',
+          inputs: [
+            { name: 'to', type: 'address' },
+            { name: 'tokenURI', type: 'string' },
+          ],
+          outputs: [{ name: '', type: 'uint256' }],
+          stateMutability: 'nonpayable',
+        },
+      ] as const;
+
+      // Prepare transaction request
+      const request = await walletClient.prepareTransactionRequest({
+        account: walletClient.account!,
+        to: NFT_CONTRACT,
+        data: encodeFunctionData({
+          abi: mintAbi,
+          functionName: 'mint',
+          args: [burnerAddress as `0x${string}`, metadataUrl],
+        }),
       });
 
-      const mintReceipt = await viemClient.waitForTransactionReceipt({ hash: mintHash });
+      // Sign the transaction
+      const signedTx = await walletClient.signTransaction(request);
+
+      // Use EIP-7966 eth_sendRawTransactionSync for instant receipt
+      const mintReceipt = (await viemClient.request({
+        method: 'eth_sendRawTransactionSync' as any,
+        params: [signedTx],
+      })) as TransactionReceipt;
 
       // Parse tokenId from Transfer event (ERC-721 Transfer has tokenId in topics[3])
-      const transferLog = mintReceipt.logs.find((log) => {
-        return log.address.toLowerCase() === NFT_CONTRACT.toLowerCase() && log.topics.length >= 4;
-      });
-      if (transferLog && transferLog.topics[3]) {
-        tokenId = BigInt(transferLog.topics[3]).toString();
+      if (mintReceipt?.logs) {
+        const transferLog = mintReceipt.logs.find((log) => {
+          return log.address.toLowerCase() === NFT_CONTRACT.toLowerCase() && log.topics.length >= 4;
+        });
+        if (transferLog?.topics[3]) {
+          tokenId = BigInt(transferLog.topics[3]).toString();
+        }
       }
     } catch (err) {
       console.error('NFT minting failed:', err);
