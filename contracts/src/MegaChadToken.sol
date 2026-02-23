@@ -19,6 +19,7 @@ contract MegaChadToken is ERC20, ERC20Burnable {
 
     /// @notice Burn to create: 50% burned forever, 50% sent to dev wallet
     function burnToCreate(uint256 amount) external {
+        require(amount > 0, "Cannot burn zero tokens");
         uint256 burnHalf = amount / 2;
         uint256 devHalf = amount - burnHalf;
         _burn(msg.sender, burnHalf);

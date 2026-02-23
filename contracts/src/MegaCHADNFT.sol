@@ -10,6 +10,8 @@ contract MegaCHADNFT is ERC721URIStorage, Ownable {
     constructor() ERC721("MegaCHAD Looksmaxx", "MCHADNFT") Ownable(msg.sender) {}
 
     function mint(address to, string memory tokenURI) external onlyOwner returns (uint256) {
+        require(to != address(0), "Cannot mint to zero address");
+        require(bytes(tokenURI).length > 0, "URI cannot be empty");
         uint256 tokenId = _nextTokenId++;
         _mint(to, tokenId);
         _setTokenURI(tokenId, tokenURI);

@@ -128,5 +128,10 @@ contract MegaChadTokenTest is Test {
         new MegaChadToken("Test", "T", address(0));
     }
 
+    function test_cannotBurnToCreateZeroAmount() public {
+        vm.expectRevert("Cannot burn zero tokens");
+        token.burnToCreate(0);
+    }
+
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
