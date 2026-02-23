@@ -14,6 +14,7 @@ interface ChadboardImage {
 
 interface ChadboardEntry {
   address: string;
+  megaName?: string; // .mega domain if registered
   totalBurns: number;
   totalBurned: number;
   latestImage: string;
@@ -31,6 +32,10 @@ interface ChatMessage {
 
 function truncAddr(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
+function displayName(entry: ChadboardEntry): string {
+  return entry.megaName || truncAddr(entry.address);
 }
 
 const TEST_CID = 'bafkreia6nhohfylww3stb3vou6kynvrpdov6vrfhromuwwbmzuwptrzd3u';
@@ -344,12 +349,12 @@ export default function ChadboardPage() {
                     <div className="cb-test-placeholder">TEST</div>
                   ) : (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={entry.latestImage} alt={`Latest by ${truncAddr(entry.address)}`} />
+                    <img src={entry.latestImage} alt={`Latest by ${displayName(entry)}`} />
                   )}
                   {i === 0 && <div className="cb-crown">MOGGER</div>}
                 </div>
                 <div className="chad-name">#{i + 1} LooksMaxxer</div>
-                <div className="chad-role">{truncAddr(entry.address)}</div>
+                <div className="chad-role">{displayName(entry)}</div>
                 <div className="cb-card-stats">
                   <div className="cb-card-stat">
                     <span className="cb-card-stat-value">{entry.totalBurns}</span>
@@ -376,7 +381,18 @@ export default function ChadboardPage() {
                 <div className="cb-detail-rank">
                   #{entries.indexOf(selectedWallet) + 1} LooksMaxxer
                 </div>
-                <div className="cb-detail-address">{selectedWallet.address}</div>
+                <div className="cb-detail-address">
+                  {selectedWallet.megaName ? (
+                    <>
+                      <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{selectedWallet.megaName}</span>
+                      <span style={{ color: 'var(--text-dim)', fontSize: '.75rem', marginLeft: '.5rem' }}>
+                        ({truncAddr(selectedWallet.address)})
+                      </span>
+                    </>
+                  ) : (
+                    selectedWallet.address
+                  )}
+                </div>
               </div>
               <div className="cb-detail-stats">
                 <div className="cb-card-stat">

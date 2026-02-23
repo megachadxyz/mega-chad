@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export interface ChadboardEntry {
   address: string;
+  megaName?: string; // .mega domain if registered
   totalBurns: number;
   totalBurned: number;
   latestImage: string;
@@ -15,6 +16,8 @@ export interface ChadboardEntry {
 
 const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
+const MEGANAMES_CONTRACT = '0x5B424C6CCba77b32b9625a6fd5A30D409d20d997' as `0x${string}`;
 
 const viemClient = createPublicClient({
   chain: megaeth,
@@ -26,6 +29,16 @@ const NFT_ABI = [
     type: 'function',
     name: 'tokenURI',
     inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+  },
+] as const;
+
+const MEGANAMES_ABI = [
+  {
+    type: 'function',
+    name: 'getName',
+    inputs: [{ name: 'addr', type: 'address' }],
     outputs: [{ name: '', type: 'string' }],
     stateMutability: 'view',
   },
@@ -151,6 +164,25 @@ export async function GET() {
     // Sort by total burns descending
     const entries = Array.from(walletMap.values()).sort(
       (a, b) => b.totalBurns - a.totalBurns || b.totalBurned - a.totalBurned
+    );
+
+    // Resolve .mega names for all addresses
+    await Promise.all(
+      entries.map(async (entry) => {
+        try {
+          const megaName = await viemClient.readContract({
+            address: MEGANAMES_CONTRACT,
+            abi: MEGANAMES_ABI,
+            functionName: 'getName',
+            args: [entry.address as `0x${string}`],
+          });
+          if (megaName && megaName.length > 0) {
+            entry.megaName = megaName;
+          }
+        } catch {
+          // No .mega name registered for this address
+        }
+      })
     );
 
     return NextResponse.json({ entries });
