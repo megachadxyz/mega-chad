@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, http, parseAbiItem } from 'viem';
 import { megaeth } from '@/lib/wagmi';
 
 export const dynamic = 'force-dynamic';
@@ -32,16 +32,6 @@ const viemClient = createPublicClient({
   transport: http(),
 });
 
-const NFT_ABI = [
-  {
-    type: 'function',
-    name: 'ownerOf',
-    inputs: [{ name: 'tokenId', type: 'uint256' }],
-    outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view',
-  },
-] as const;
-
 export async function GET() {
   try {
     const { Redis } = await import('@upstash/redis');
@@ -63,52 +53,68 @@ export async function GET() {
       typeof item === 'string' ? JSON.parse(item) : item
     ) as BurnRecord[];
 
-    // Separate burns with and without tokenIds
-    const burnsWithTokens = burns.filter((b) => b.tokenId);
-    const burnsWithoutTokens = burns.filter((b) => !b.tokenId);
-
-    console.log(`Total burns: ${burns.length}, With tokenIds: ${burnsWithTokens.length}, Without: ${burnsWithoutTokens.length}`);
-
-    // Query current NFT ownership from blockchain for burns with tokenIds
-    const ownershipPromises = burnsWithTokens.map(async (burn) => {
-      try {
-        const owner = await viemClient.readContract({
-          address: NFT_CONTRACT,
-          abi: NFT_ABI,
-          functionName: 'ownerOf',
-          args: [BigInt(burn.tokenId!)],
-        });
-        return {
-          ...burn,
-          currentOwner: owner.toLowerCase(),
-        };
-      } catch {
-        // NFT doesn't exist or error querying - fall back to original burner
-        return {
-          ...burn,
-          currentOwner: burn.burner.toLowerCase(),
-        };
-      }
+    // Query all Transfer events from NFT contract to get current ownership
+    const transferLogs = await viemClient.getLogs({
+      address: NFT_CONTRACT,
+      event: parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)'),
+      fromBlock: 0n,
+      toBlock: 'latest',
     });
 
-    const ownershipResults = await Promise.all(ownershipPromises);
+    // Build map of tokenId -> current owner
+    const currentOwners = new Map<string, string>();
+    // Build map of tokenId -> original minter (from address = 0x0 means mint)
+    const originalMinters = new Map<string, string>();
 
-    // For burns without tokenIds (old burns), use original burner address
-    const burnsWithoutTokensWithOwner = burnsWithoutTokens.map((burn) => ({
-      ...burn,
-      currentOwner: burn.burner.toLowerCase(),
-    }));
+    for (const log of transferLogs) {
+      const { from, to, tokenId } = log.args as { from: string; to: string; tokenId: bigint };
+      const tokenIdStr = tokenId.toString();
 
-    // Combine both sets
-    const validBurns = [...ownershipResults, ...burnsWithoutTokensWithOwner];
+      // Track mints (from = zero address)
+      if (from === '0x0000000000000000000000000000000000000000') {
+        originalMinters.set(tokenIdStr, to.toLowerCase());
+      }
 
-    // Group by current owner (not original burner)
+      // Track current owner
+      currentOwners.set(tokenIdStr, to.toLowerCase());
+    }
+
+    // Map tokenId -> burn record (for metadata like image, timestamp)
+    const tokenToBurnMap = new Map<string, BurnRecord & { tokenId: string }>();
+
+    // First, map burns that have tokenIds
+    for (const burn of burns) {
+      if (burn.tokenId) {
+        tokenToBurnMap.set(burn.tokenId, { ...burn, tokenId: burn.tokenId });
+      }
+    }
+
+    // For old burns without tokenIds, try to match them with minted NFTs
+    const burnsWithoutTokens = burns.filter((b) => !b.tokenId);
+    for (const burn of burnsWithoutTokens) {
+      const burnerLower = burn.burner.toLowerCase();
+
+      // Find an NFT that was minted to this burner and hasn't been mapped yet
+      for (const [tokenId, minter] of originalMinters.entries()) {
+        if (minter === burnerLower && !tokenToBurnMap.has(tokenId)) {
+          tokenToBurnMap.set(tokenId, { ...burn, tokenId });
+          break; // Only assign one NFT per burn
+        }
+      }
+    }
+
+    // Build entries by current owner
     const walletMap = new Map<string, ChadboardEntry>();
     const burnAmountPerBurn = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') / 2;
 
-    for (const burn of validBurns) {
-      const addr = burn.currentOwner;
-      const existing = walletMap.get(addr);
+    for (const [tokenId, owner] of currentOwners.entries()) {
+      // Skip burned NFTs (sent to dead address)
+      if (owner === '0x000000000000000000000000000000000000dead') continue;
+
+      const burn = tokenToBurnMap.get(tokenId);
+      if (!burn) continue; // NFT exists but no burn record (shouldn't happen)
+
+      const existing = walletMap.get(owner);
 
       const imageEntry = {
         ipfsUrl: burn.ipfsUrl,
@@ -120,14 +126,13 @@ export async function GET() {
         existing.totalBurns += 1;
         existing.totalBurned += burnAmountPerBurn;
         existing.images.push(imageEntry);
-        // Update latest if this burn is newer
         if (burn.timestamp > existing.latestTimestamp) {
           existing.latestImage = burn.ipfsUrl;
           existing.latestTimestamp = burn.timestamp;
         }
       } else {
-        walletMap.set(addr, {
-          address: burn.currentOwner,
+        walletMap.set(owner, {
+          address: owner,
           totalBurns: 1,
           totalBurned: burnAmountPerBurn,
           latestImage: burn.ipfsUrl,
