@@ -280,7 +280,7 @@ export default function ChadboardPage() {
 
       {/* ─── NAV ─────────────────────────────────────── */}
       <nav className="nav">
-        <Link href="/" className="nav-logo">
+        <Link href="/main" className="nav-logo">
           <Image
             src="/images/megachad-logo.png"
             alt="$MEGACHAD"
@@ -291,10 +291,10 @@ export default function ChadboardPage() {
           />
         </Link>
         <ul className={`nav-links ${mobileNav ? 'open' : ''}`}>
-          <li><Link href="/#about" onClick={() => setMobileNav(false)}>About</Link></li>
-          <li><Link href="/#burn" onClick={() => setMobileNav(false)}>Burn</Link></li>
-          <li><Link href="/#roadmap" onClick={() => setMobileNav(false)}>Roadmap</Link></li>
-          <li><Link href="/#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>
+          <li><Link href="/main#about" onClick={() => setMobileNav(false)}>About</Link></li>
+          <li><Link href="/main#burn" onClick={() => setMobileNav(false)}>Burn</Link></li>
+          <li><Link href="/main#roadmap" onClick={() => setMobileNav(false)}>Roadmap</Link></li>
+          <li><Link href="/main#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>
           <li className="nav-divider">|</li>
           <li><Link href="/chadboard" onClick={() => setMobileNav(false)} className="nav-link-active">Chadboard</Link></li>
         </ul>
@@ -325,7 +325,7 @@ export default function ChadboardPage() {
             <div style={{ color: 'var(--text-dim)', fontSize: '.85rem' }}>
               No burns yet. Be the first to claim the #1 LooksMaxxer spot.
             </div>
-            <Link href="/#burn" className="btn btn-primary" style={{ marginTop: '1.5rem' }}>
+            <Link href="/main#burn" className="btn btn-primary" style={{ marginTop: '1.5rem' }}>
               Burn & Looksmaxx
             </Link>
           </div>
@@ -433,10 +433,10 @@ export default function ChadboardPage() {
           </div>
           <div className="footer-right">
             <ul className="footer-links">
-              <li><Link href="/#about">About</Link></li>
-              <li><Link href="/#burn">Burn</Link></li>
-              <li><Link href="/#roadmap">Roadmap</Link></li>
-              <li><Link href="/#chads">Chads</Link></li>
+              <li><Link href="/main#about">About</Link></li>
+              <li><Link href="/main#burn">Burn</Link></li>
+              <li><Link href="/main#roadmap">Roadmap</Link></li>
+              <li><Link href="/main#chads">Chads</Link></li>
               <li className="footer-divider">|</li>
               <li><Link href="/chadboard">Chadboard</Link></li>
             </ul>
