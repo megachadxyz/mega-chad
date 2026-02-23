@@ -63,10 +63,11 @@ export async function GET() {
       typeof item === 'string' ? JSON.parse(item) : item
     ) as BurnRecord[];
 
-    // Filter burns that have tokenIds (NFTs were minted)
+    // Separate burns with and without tokenIds
     const burnsWithTokens = burns.filter((b) => b.tokenId);
+    const burnsWithoutTokens = burns.filter((b) => !b.tokenId);
 
-    // Query current NFT ownership from blockchain
+    // Query current NFT ownership from blockchain for burns with tokenIds
     const ownershipPromises = burnsWithTokens.map(async (burn) => {
       try {
         const owner = await viemClient.readContract({
@@ -80,13 +81,24 @@ export async function GET() {
           currentOwner: owner.toLowerCase(),
         };
       } catch {
-        // NFT doesn't exist or error querying - skip this burn
-        return null;
+        // NFT doesn't exist or error querying - fall back to original burner
+        return {
+          ...burn,
+          currentOwner: burn.burner.toLowerCase(),
+        };
       }
     });
 
     const ownershipResults = await Promise.all(ownershipPromises);
-    const validBurns = ownershipResults.filter((b) => b !== null);
+
+    // For burns without tokenIds (old burns), use original burner address
+    const burnsWithoutTokensWithOwner = burnsWithoutTokens.map((burn) => ({
+      ...burn,
+      currentOwner: burn.burner.toLowerCase(),
+    }));
+
+    // Combine both sets
+    const validBurns = [...ownershipResults, ...burnsWithoutTokensWithOwner];
 
     // Group by current owner (not original burner)
     const walletMap = new Map<string, ChadboardEntry>();
