@@ -32,10 +32,10 @@ export default function GalleryPage() {
     <>
       {/* Nav (simplified for gallery) */}
       <nav className="nav">
-        <Link href="/" className="nav-logo" style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--pink)', textShadow: 'var(--pink-glow)', textDecoration: 'none' }}>
+        <Link href="/main" className="nav-logo" style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--pink)', textShadow: 'var(--pink-glow)', textDecoration: 'none' }}>
           $MEGACHAD
         </Link>
-        <Link href="/" className="btn btn-outline" style={{ fontSize: '.65rem' }}>
+        <Link href="/main" className="btn btn-outline" style={{ fontSize: '.65rem' }}>
           Back to Home
         </Link>
       </nav>
@@ -58,7 +58,7 @@ export default function GalleryPage() {
             <div style={{ color: 'var(--text-dim)', fontSize: '.85rem' }}>
               No burns yet. Be the first to burn tokens and create art.
             </div>
-            <Link href="/#burn" className="btn btn-primary" style={{ marginTop: '1.5rem' }}>
+            <Link href="/main#burn" className="btn btn-primary" style={{ marginTop: '1.5rem' }}>
               Burn & Create
             </Link>
           </div>
