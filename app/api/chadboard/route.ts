@@ -67,6 +67,8 @@ export async function GET() {
     const burnsWithTokens = burns.filter((b) => b.tokenId);
     const burnsWithoutTokens = burns.filter((b) => !b.tokenId);
 
+    console.log(`Total burns: ${burns.length}, With tokenIds: ${burnsWithTokens.length}, Without: ${burnsWithoutTokens.length}`);
+
     // Query current NFT ownership from blockchain for burns with tokenIds
     const ownershipPromises = burnsWithTokens.map(async (burn) => {
       try {
