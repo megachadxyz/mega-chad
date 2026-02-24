@@ -94,14 +94,21 @@ export async function GET() {
           tokenURI,
           blockNumber: data.blockNumber,
         } as NFTWithOwner;
-      } catch {
-        return null;
+      } catch (err) {
+        console.error(`[Chadboard] Failed to fetch tokenURI for NFT #${tokenId}:`, err instanceof Error ? err.message : String(err));
+        // Return with empty tokenURI instead of null - we still want to show the NFT
+        return {
+          tokenId,
+          owner: data.owner,
+          tokenURI: '',
+          blockNumber: data.blockNumber,
+        } as NFTWithOwner;
       }
     });
 
-    const nftData = (await Promise.all(nftDataPromises)).filter((d) => d !== null) as NFTWithOwner[];
+    const nftData = (await Promise.all(nftDataPromises));
 
-    console.log('[Chadboard] Successfully fetched', nftData.length, 'NFT metadata');
+    console.log('[Chadboard] Successfully processed', nftData.length, 'NFTs from', currentOwners.size, 'total transfers');
 
     // Fetch metadata from IPFS to get images
     const nftsWithImages = await Promise.all(
@@ -109,6 +116,17 @@ export async function GET() {
         try {
           // tokenURI might be IPFS or custom metadata endpoint
           let metadataUrl = nft.tokenURI;
+
+          // Handle empty tokenURI - NFT exists but metadata not set
+          if (!metadataUrl || metadataUrl.trim() === '') {
+            console.warn(`[Chadboard] NFT #${nft.tokenId} has empty tokenURI, including with placeholder`);
+            return {
+              ...nft,
+              imageUrl: '',
+              name: `MegaChad #${nft.tokenId}`,
+              description: 'Metadata pending',
+            };
+          }
 
           // If it's an IPFS URL, convert to gateway URL
           if (metadataUrl.startsWith('ipfs://')) {
@@ -134,7 +152,7 @@ export async function GET() {
           return {
             ...nft,
             imageUrl,
-            name: metadata.name || '',
+            name: metadata.name || `MegaChad #${nft.tokenId}`,
             description: metadata.description || '',
           };
         } catch (err) {
@@ -142,8 +160,8 @@ export async function GET() {
           return {
             ...nft,
             imageUrl: '',
-            name: '',
-            description: '',
+            name: `MegaChad #${nft.tokenId}`,
+            description: 'Metadata fetch failed',
           };
         }
       })
@@ -198,7 +216,8 @@ export async function GET() {
     }
 
     console.log('[Chadboard] Skipped', skippedDeadAddress, 'NFTs sent to dead address');
-    console.log('[Chadboard] Found', skippedEmptyImage, 'NFTs with empty images (included anyway)');
+    console.log('[Chadboard] Processed', nftsWithImages.length, 'total NFTs');
+    console.log('[Chadboard] Included in entries:', nftsWithImages.length - skippedDeadAddress, 'NFTs');
 
     // Sort by total burns descending
     const entries = Array.from(walletMap.values()).sort(
@@ -206,6 +225,11 @@ export async function GET() {
     );
 
     console.log('[Chadboard] Grouped into', entries.length, 'wallet entries');
+
+    // Calculate total NFTs in entries for verification
+    const totalNFTsInEntries = entries.reduce((sum, entry) => sum + entry.totalBurns, 0);
+    console.log('[Chadboard] Total NFTs in final entries:', totalNFTsInEntries);
+    console.log('[Chadboard] Expected NFTs (excluding dead):', nftsWithImages.length - skippedDeadAddress);
 
     // Resolve .mega names for all addresses
     await Promise.all(

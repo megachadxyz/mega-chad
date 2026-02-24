@@ -100,7 +100,9 @@ export default function ChadboardPage() {
   const fetchChadboard = useCallback(() => {
     fetch('/api/chadboard')
       .then((r) => r.json())
-      .then((data) => setEntries(data.entries || []))
+      .then((data) => {
+        setEntries(data.entries || []);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
