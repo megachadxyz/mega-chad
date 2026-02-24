@@ -24,7 +24,7 @@ export default function AboutPage() {
           <ol>
             <li><strong>Burn Tokens:</strong> Users burn 225,000 $MEGACHAD tokens per creation</li>
             <li><strong>AI Generation:</strong> Our AI (Flux 2 Max) generates a professional looksmaxxed portrait</li>
-            <li><strong>IPFS Storage:</strong> Your image is permanently stored on IPFS via Pinata</li>
+            <li><strong>Storage Options:</strong> Choose between free IPFS storage or permanent on-chain storage via Warren Protocol (~$5)</li>
             <li><strong>NFT Minting:</strong> Receive an NFT representing your unique creation</li>
           </ol>
         </section>
@@ -50,7 +50,12 @@ export default function AboutPage() {
             <li><strong>Blockchain:</strong> MegaETH (ultra-fast L2)</li>
             <li><strong>Smart Contracts:</strong> ERC-20 token with custom burn mechanism, ERC-721 NFTs</li>
             <li><strong>AI:</strong> Replicate (Flux 2 Max model)</li>
-            <li><strong>Storage:</strong> IPFS via Pinata for permanent, decentralized storage</li>
+            <li><strong>Storage:</strong> Dual-tier storage system
+              <ul>
+                <li>Free: IPFS via Pinata (decentralized, permanent)</li>
+                <li>Premium: Warren Protocol (on-chain, immutable, censorship-resistant)</li>
+              </ul>
+            </li>
             <li><strong>Frontend:</strong> Next.js 14 with Web3 integration</li>
           </ul>
         </section>
