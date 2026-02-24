@@ -5,6 +5,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { pinImage, pinMetadata } from '@/lib/pinata';
 import { isTxUsed, markTxUsed } from '@/lib/redis';
 import { megaeth } from '@/lib/wagmi';
+import { estimateWarrenFee } from '@/lib/warren';
 
 export const maxDuration = 120;
 
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
   const devTxHash = formData.get('devTxHash') as string | null;
   const burnerAddress = formData.get('burnerAddress') as string | null;
   const imageFile = formData.get('image') as File | null;
+  const useWarren = formData.get('useWarren') === 'true'; // Optional: enable Warren storage
 
   if (!burnTxHash || !burnTxHash.startsWith('0x')) {
     return NextResponse.json({ error: 'Missing or invalid burnTxHash' }, { status: 400 });
@@ -250,6 +252,51 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     // fallback to 1
+  }
+
+  // ── Warren Storage (Optional) ─────────────────────────
+  if (useWarren) {
+    console.log('[Generate] Warren storage requested, estimating cost...');
+
+    try {
+      // Get image buffer for Warren
+      const imgRes = await fetch(imageUrl);
+      const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+      const imageSize = imgBuffer.length;
+
+      // Estimate Warren cost
+      const warrenEstimate = await estimateWarrenFee(imageSize);
+
+      console.log('[Generate] Warren estimate:', warrenEstimate);
+
+      // Convert image to base64 for Warren
+      const imageBase64 = imgBuffer.toString('base64');
+
+      // Return estimate and data needed for Warren deployment
+      // Frontend will prompt user to pay, then call /api/warren/deploy
+      return NextResponse.json({
+        imageUrl,
+        ipfsCid,
+        ipfsUrl,
+        warrenEstimate: {
+          totalEth: warrenEstimate.totalEth,
+          totalWei: warrenEstimate.totalWei,
+          relayerAddress: warrenEstimate.relayerAddress,
+          imageSize,
+        },
+        // Data needed for Warren deploy step
+        pendingWarrenDeploy: {
+          imageBase64,
+          burnerAddress,
+          burnTxHash,
+          devTxHash,
+          ipfsUrl,
+        },
+      });
+    } catch (err) {
+      console.error('[Generate] Warren estimate failed, falling back to IPFS:', err);
+      // Fall through to regular IPFS minting
+    }
   }
 
   // ── Pin NFT metadata to IPFS ───────────────────────────

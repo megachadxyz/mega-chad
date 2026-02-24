@@ -21,6 +21,17 @@ export interface BurnRecord {
   timestamp: string;
   burnAmount?: number; // total tokens burned (human-readable, e.g. 11250)
   tokenId?: string; // NFT token ID if minted
+  warrenTokenId?: number; // Warren on-chain storage token ID
+}
+
+export interface NFTMetadata {
+  tokenId: string;
+  warrenTokenId?: number;
+  ipfsUrl: string;
+  burner: string;
+  burnTxHash: string;
+  devTxHash?: string;
+  timestamp: string;
 }
 
 const TX_PREFIX = 'burn:tx:';
@@ -78,4 +89,14 @@ export async function getRecentBurns(
   return results.map((item) =>
     typeof item === 'string' ? JSON.parse(item) : item
   ) as BurnRecord[];
+}
+
+/**
+ * Store NFT metadata for custom metadata endpoint
+ * Used by /api/metadata/[tokenId] to serve ERC-721 metadata
+ */
+export async function storeNFTMetadata(metadata: NFTMetadata): Promise<void> {
+  const r = getRedis();
+  const key = `nft:metadata:${metadata.tokenId}`;
+  await r.set(key, JSON.stringify(metadata));
 }
