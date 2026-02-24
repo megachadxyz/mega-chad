@@ -107,12 +107,29 @@ export async function GET() {
     const nftsWithImages = await Promise.all(
       nftData.map(async (nft) => {
         try {
-          // tokenURI is an IPFS URL like ipfs://...
-          const ipfsUrl = nft.tokenURI.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
-          const response = await fetch(ipfsUrl);
-          const metadata = await response.json();
+          // tokenURI might be IPFS or custom metadata endpoint
+          let metadataUrl = nft.tokenURI;
 
+          // If it's an IPFS URL, convert to gateway URL
+          if (metadataUrl.startsWith('ipfs://')) {
+            metadataUrl = metadataUrl.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+          }
+
+          console.log(`[Chadboard] Fetching metadata for NFT #${nft.tokenId} from:`, metadataUrl);
+
+          const response = await fetch(metadataUrl, {
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+          });
+
+          if (!response.ok) {
+            console.error(`[Chadboard] Failed to fetch metadata for NFT #${nft.tokenId}:`, response.status);
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const metadata = await response.json();
           const imageUrl = metadata.image?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
+
+          console.log(`[Chadboard] NFT #${nft.tokenId} image:`, imageUrl);
 
           return {
             ...nft,
@@ -120,7 +137,8 @@ export async function GET() {
             name: metadata.name || '',
             description: metadata.description || '',
           };
-        } catch {
+        } catch (err) {
+          console.error(`[Chadboard] Error fetching metadata for NFT #${nft.tokenId}:`, err instanceof Error ? err.message : String(err));
           return {
             ...nft,
             imageUrl: '',
@@ -135,14 +153,26 @@ export async function GET() {
     const walletMap = new Map<string, ChadboardEntry>();
     const burnAmountPerBurn = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') / 2;
 
+    let skippedDeadAddress = 0;
+    let skippedEmptyImage = 0;
+
     for (const nft of nftsWithImages) {
       // Skip burned NFTs (sent to dead address)
-      if (nft.owner === '0x000000000000000000000000000000000000dead') continue;
+      if (nft.owner === '0x000000000000000000000000000000000000dead') {
+        skippedDeadAddress++;
+        continue;
+      }
+
+      // Include NFTs even if imageUrl is empty (will show placeholder)
+      // This ensures we don't lose NFTs due to temporary IPFS issues
+      if (!nft.imageUrl) {
+        console.warn(`[Chadboard] NFT #${nft.tokenId} has no image URL, but including anyway`);
+      }
 
       const existing = walletMap.get(nft.owner);
 
       const imageEntry = {
-        ipfsUrl: nft.imageUrl,
+        ipfsUrl: nft.imageUrl || '', // Include even if empty
         timestamp: new Date(Number(nft.blockNumber) * 12000).toISOString(), // Approximate timestamp
         txHash: `0x${nft.tokenId}`, // Use tokenId as placeholder
       };
@@ -152,7 +182,7 @@ export async function GET() {
         existing.totalBurned += burnAmountPerBurn;
         existing.images.push(imageEntry);
         if (imageEntry.timestamp > existing.latestTimestamp) {
-          existing.latestImage = nft.imageUrl;
+          existing.latestImage = nft.imageUrl || existing.latestImage; // Keep old image if new one is empty
           existing.latestTimestamp = imageEntry.timestamp;
         }
       } else {
@@ -160,12 +190,15 @@ export async function GET() {
           address: nft.owner,
           totalBurns: 1,
           totalBurned: burnAmountPerBurn,
-          latestImage: nft.imageUrl,
+          latestImage: nft.imageUrl || '',
           latestTimestamp: imageEntry.timestamp,
           images: [imageEntry],
         });
       }
     }
+
+    console.log('[Chadboard] Skipped', skippedDeadAddress, 'NFTs sent to dead address');
+    console.log('[Chadboard] Found', skippedEmptyImage, 'NFTs with empty images (included anyway)');
 
     // Sort by total burns descending
     const entries = Array.from(walletMap.values()).sort(
