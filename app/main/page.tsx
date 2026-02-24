@@ -28,6 +28,8 @@ type BurnStatus =
   | 'generating'
   | 'pinning'
   | 'minting'
+  | 'warren-payment'
+  | 'warren-deploying'
   | 'done'
   | 'error';
 
@@ -40,6 +42,8 @@ const STATUS_LABELS: Record<BurnStatus, string> = {
   generating: 'LOOKSMAXXING IN PROCESS...',
   pinning: 'Pinning to IPFS...',
   minting: 'Minting your NFT...',
+  'warren-payment': 'PAY FOR ON-CHAIN STORAGE...',
+  'warren-deploying': 'DEPLOYING TO WARREN...',
   done: 'Your Mega Chad is immortalized.',
   error: 'Something went wrong.',
 };
@@ -120,6 +124,17 @@ export default function Home() {
     cid: string;
     tokenId?: string;
   } | null>(null);
+
+  // Warren Protocol integration
+  const [useWarren, setUseWarren] = useState(false);
+  const [warrenEstimate, setWarrenEstimate] = useState<{
+    totalEth: string;
+    totalWei: string;
+    relayerAddress: string;
+    imageSize: number;
+  } | null>(null);
+  const [warrenData, setWarrenData] = useState<any>(null);
+  const [showWarrenPayment, setShowWarrenPayment] = useState(false);
 
   const HALF_AMOUNT = BURN_AMOUNT / 2n;
 
@@ -270,6 +285,7 @@ export default function Home() {
       formData.append('devTxHash', devHash);
       formData.append('burnerAddress', address!);
       formData.append('image', imageFile!);
+      formData.append('useWarren', useWarren.toString());
 
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -278,6 +294,16 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
 
+      // If Warren storage requested, show payment modal
+      if (useWarren && data.warrenEstimate) {
+        setWarrenEstimate(data.warrenEstimate);
+        setWarrenData(data.pendingWarrenDeploy);
+        setShowWarrenPayment(true);
+        setStatus('warren-payment');
+        return;
+      }
+
+      // Regular IPFS-only flow
       setStatus('done');
       setResult({
         imageUrl: data.imageUrl || data.ipfsUrl,
