@@ -3,6 +3,7 @@ import { createPublicClient, http, parseAbiItem } from 'viem';
 import { megaeth } from '@/lib/wagmi';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export interface ChadboardEntry {
   address: string;
@@ -106,9 +107,9 @@ export async function GET() {
       }
     });
 
-    const nftData = (await Promise.all(nftDataPromises));
+    const nftData = (await Promise.all(nftDataPromises)).filter(nft => nft !== null);
 
-    console.log('[Chadboard] Successfully processed', nftData.length, 'NFTs from', currentOwners.size, 'total transfers');
+    console.log('[Chadboard] Successfully processed', nftData.length, 'NFTs from', currentOwners.size, 'total');
 
     // Fetch metadata from IPFS to get images
     const nftsWithImages = await Promise.all(
@@ -133,10 +134,11 @@ export async function GET() {
             metadataUrl = metadataUrl.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
           }
 
-          console.log(`[Chadboard] Fetching metadata for NFT #${nft.tokenId} from:`, metadataUrl);
-
           const response = await fetch(metadataUrl, {
-            signal: AbortSignal.timeout(10000) // 10 second timeout
+            signal: AbortSignal.timeout(15000), // 15 second timeout (increased)
+            headers: {
+              'Accept': 'application/json',
+            }
           });
 
           if (!response.ok) {
@@ -146,8 +148,6 @@ export async function GET() {
 
           const metadata = await response.json();
           const imageUrl = metadata.image?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
-
-          console.log(`[Chadboard] NFT #${nft.tokenId} image:`, imageUrl);
 
           return {
             ...nft,
@@ -172,20 +172,15 @@ export async function GET() {
     const burnAmountPerBurn = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') / 2;
 
     let skippedDeadAddress = 0;
-    let skippedEmptyImage = 0;
 
     for (const nft of nftsWithImages) {
-      // Skip burned NFTs (sent to dead address)
+      // Skip burned NFTs (sent to dead address) - owner is already lowercase from line 76
       if (nft.owner === '0x000000000000000000000000000000000000dead') {
         skippedDeadAddress++;
         continue;
       }
 
-      // Include NFTs even if imageUrl is empty (will show placeholder)
-      // This ensures we don't lose NFTs due to temporary IPFS issues
-      if (!nft.imageUrl) {
-        console.warn(`[Chadboard] NFT #${nft.tokenId} has no image URL, but including anyway`);
-      }
+      // Include NFTs even if imageUrl is empty
 
       const existing = walletMap.get(nft.owner);
 
@@ -215,21 +210,12 @@ export async function GET() {
       }
     }
 
-    console.log('[Chadboard] Skipped', skippedDeadAddress, 'NFTs sent to dead address');
-    console.log('[Chadboard] Processed', nftsWithImages.length, 'total NFTs');
-    console.log('[Chadboard] Included in entries:', nftsWithImages.length - skippedDeadAddress, 'NFTs');
-
     // Sort by total burns descending
     const entries = Array.from(walletMap.values()).sort(
       (a, b) => b.totalBurns - a.totalBurns || b.totalBurned - a.totalBurned
     );
 
-    console.log('[Chadboard] Grouped into', entries.length, 'wallet entries');
-
-    // Calculate total NFTs in entries for verification
-    const totalNFTsInEntries = entries.reduce((sum, entry) => sum + entry.totalBurns, 0);
-    console.log('[Chadboard] Total NFTs in final entries:', totalNFTsInEntries);
-    console.log('[Chadboard] Expected NFTs (excluding dead):', nftsWithImages.length - skippedDeadAddress);
+    console.log('[Chadboard] Returning', entries.length, 'entries from', nftsWithImages.length, 'total NFTs');
 
     // Resolve .mega names for all addresses
     await Promise.all(

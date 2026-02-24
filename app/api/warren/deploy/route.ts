@@ -37,6 +37,13 @@ const NFT_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'nonpayable',
   },
+  {
+    type: 'function',
+    name: '_nextTokenId',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 /**
@@ -74,14 +81,23 @@ export async function POST(req: NextRequest) {
 
     console.log('[Warren Deploy] Minting NFT...');
 
-    // Mint NFT with our custom metadata endpoint
+    // Get next tokenId before minting
+    const nextTokenId = await viemClient.readContract({
+      address: NFT_CONTRACT,
+      abi: NFT_ABI,
+      functionName: '_nextTokenId',
+    });
+
+    console.log('[Warren Deploy] Next tokenId will be:', nextTokenId.toString());
+
+    // Mint NFT with correct metadata URL (using predicted tokenId)
     const mintHash = await walletClient.writeContract({
       address: NFT_CONTRACT,
       abi: NFT_ABI,
       functionName: 'mint',
       args: [
         burnerAddress as `0x${string}`,
-        `https://megachad.xyz/api/metadata/PLACEHOLDER`, // Will be updated with actual tokenId
+        `https://megachad.xyz/api/metadata/${nextTokenId}`,
       ],
     });
 

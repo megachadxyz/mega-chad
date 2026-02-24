@@ -23,6 +23,14 @@ export async function GET(
 ) {
   const { tokenId } = params;
 
+  // Handle legacy PLACEHOLDER URLs
+  if (tokenId === 'PLACEHOLDER') {
+    return NextResponse.json(
+      { error: 'Invalid tokenId - please refresh NFT metadata on OpenSea' },
+      { status: 404 }
+    );
+  }
+
   try {
     // Fetch NFT metadata from Redis
     const { Redis } = await import('@upstash/redis');
@@ -51,7 +59,7 @@ export async function GET(
 
     // Build ERC-721 metadata JSON
     const response = {
-      name: `$MEGACHAD ${String(tokenId).padStart(4, '0')}`,
+      name: `MegaChad #${tokenId}`,
       description: `Looksmaxxed by ${metadata.burner}. Burn tx: ${metadata.burnTxHash}`,
       // Primary: Warren on-chain image, Fallback: IPFS
       image: metadata.warrenTokenId
