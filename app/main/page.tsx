@@ -18,6 +18,7 @@ import {
   BURN_ADDRESS,
   TREN_FUND_WALLET,
 } from '@/lib/contracts';
+import WarrenPaymentModal from '@/components/WarrenPaymentModal';
 
 type BurnStatus =
   | 'idle'
@@ -318,6 +319,35 @@ export default function Home() {
     }
   }
 
+  const handleWarrenSuccess = (warrenResult: {
+    tokenId: string;
+    warrenTokenId: number;
+    warrenRegistry: string;
+    mintTxHash: string;
+  }) => {
+    setShowWarrenPayment(false);
+    setStatus('done');
+    setResult({
+      imageUrl: `https://thewarren.app/api/onchain-image/registry?registry=${warrenResult.warrenRegistry}&id=${warrenResult.warrenTokenId}`,
+      ipfsUrl: warrenData?.ipfsUrl || '',
+      cid: '',
+      tokenId: warrenResult.tokenId,
+    });
+    refetchBalance();
+  };
+
+  const handleWarrenCancel = () => {
+    setShowWarrenPayment(false);
+    setStatus('error');
+    setError('Warren payment cancelled. Please try again with IPFS storage.');
+  };
+
+  const handleWarrenError = (errorMsg: string) => {
+    setShowWarrenPayment(false);
+    setStatus('error');
+    setError(errorMsg);
+  };
+
   const resetFlow = () => {
     setStatus('idle');
     setError(null);
@@ -325,6 +355,11 @@ export default function Home() {
     removeImage();
     resetBurn1();
     resetDev();
+    // Reset Warren state
+    setUseWarren(false);
+    setWarrenEstimate(null);
+    setWarrenData(null);
+    setShowWarrenPayment(false);
   };
 
   const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
@@ -614,6 +649,23 @@ export default function Home() {
               )}
             </div>
 
+            {/* Warren Protocol checkbox */}
+            {status === 'idle' && imageFile && (
+              <label className="warren-checkbox">
+                <input
+                  type="checkbox"
+                  checked={useWarren}
+                  onChange={(e) => setUseWarren(e.target.checked)}
+                />
+                <span className="warren-checkbox-label">
+                  ⚡ Store on-chain permanently with Warren (~$5)
+                </span>
+                <span className="warren-checkbox-hint">
+                  Your NFT will use permanent on-chain storage instead of IPFS
+                </span>
+              </label>
+            )}
+
             <button
               className={`btn btn-primary burn-submit ${
                 status === 'idle' && imageFile && hasEnough ? 'pulse-glow' : ''
@@ -813,6 +865,17 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* ─── WARREN PAYMENT MODAL ────────────────────── */}
+      {showWarrenPayment && warrenEstimate && warrenData && (
+        <WarrenPaymentModal
+          estimate={warrenEstimate}
+          warrenData={warrenData}
+          onSuccess={handleWarrenSuccess}
+          onCancel={handleWarrenCancel}
+          onError={handleWarrenError}
+        />
+      )}
     </>
   );
 }
