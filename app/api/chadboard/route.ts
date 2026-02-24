@@ -126,6 +126,7 @@ export async function GET() {
               imageUrl: '',
               name: `MegaChad #${nft.tokenId}`,
               description: 'Metadata pending',
+              timestamp: new Date().toISOString(),
             };
           }
 
@@ -149,11 +150,16 @@ export async function GET() {
           const metadata = await response.json();
           const imageUrl = metadata.image?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
 
+          // Extract timestamp from metadata attributes
+          const timestampAttr = metadata.attributes?.find((attr: any) => attr.trait_type === 'Timestamp');
+          const timestamp = timestampAttr?.value || new Date().toISOString();
+
           return {
             ...nft,
             imageUrl,
             name: metadata.name || `MegaChad #${nft.tokenId}`,
             description: metadata.description || '',
+            timestamp,
           };
         } catch (err) {
           console.error(`[Chadboard] Error fetching metadata for NFT #${nft.tokenId}:`, err instanceof Error ? err.message : String(err));
@@ -162,6 +168,7 @@ export async function GET() {
             imageUrl: '',
             name: `MegaChad #${nft.tokenId}`,
             description: 'Metadata fetch failed',
+            timestamp: new Date().toISOString(),
           };
         }
       })
@@ -186,7 +193,7 @@ export async function GET() {
 
       const imageEntry = {
         ipfsUrl: nft.imageUrl || '', // Include even if empty
-        timestamp: new Date(Number(nft.blockNumber) * 12000).toISOString(), // Approximate timestamp
+        timestamp: (nft as any).timestamp || new Date().toISOString(), // Use actual mint timestamp
         txHash: `0x${nft.tokenId}`, // Use tokenId as placeholder
       };
 
