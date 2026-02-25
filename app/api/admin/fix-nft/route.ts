@@ -9,6 +9,18 @@ const BURN_TX = '0x6397e65c7503df9c1e6a96ca095482f71c0ad0773f85d41cb4d02ae3b2b59
 const DEV_TX = '0xd59b70ac5b8ed94af4242cc5a033208e8650a02215ec36dfb2e593b09d1afe73';
 const TIMESTAMP = '2026-02-24T21:14:26.102Z';
 
+const GATEWAYS = [
+  // Pinata with auth (bypasses rate limits)
+  (jwt: string) => ({
+    url: `https://gateway.pinata.cloud/ipfs/${IMAGE_CID}`,
+    headers: { Authorization: `Bearer ${jwt}` },
+  }),
+  // Public gateways
+  () => ({ url: `https://ipfs.io/ipfs/${IMAGE_CID}`, headers: {} }),
+  () => ({ url: `https://dweb.link/ipfs/${IMAGE_CID}`, headers: {} }),
+  () => ({ url: `https://w3s.link/ipfs/${IMAGE_CID}`, headers: {} }),
+];
+
 export async function GET(req: NextRequest) {
   const jwt = process.env.PINATA_JWT;
   const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
@@ -20,35 +32,71 @@ export async function GET(req: NextRequest) {
 
   const results: Record<string, unknown> = {};
 
-  // 1. Download image from cloudflare IPFS and re-upload to Pinata
-  let pinnedImageCid = IMAGE_CID;
+  // 1. Check if CID is already pinned (v2 API)
   try {
-    const imgRes = await fetch(`https://cloudflare-ipfs.com/ipfs/${IMAGE_CID}`, {
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!imgRes.ok) throw new Error(`Fetch failed: ${imgRes.status}`);
-    const imgBuffer = await imgRes.arrayBuffer();
-    const contentType = imgRes.headers.get('content-type') || 'image/webp';
-    const ext = contentType.includes('webp') ? 'webp' : 'png';
-
-    const formData = new FormData();
-    formData.append('file', new Blob([imgBuffer], { type: contentType }), `megachad-${TOKEN_ID}.${ext}`);
-    formData.append('pinataMetadata', JSON.stringify({ name: `megachad-nft-${TOKEN_ID}-image`, keyvalues: { tokenId: TOKEN_ID, burner: BURNER } }));
-    formData.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
-
-    const uploadRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-      method: 'POST',
+    const pinListRes = await fetch(`https://api.pinata.cloud/data/pinList?status=pinned&hashContains=${IMAGE_CID}`, {
       headers: { Authorization: `Bearer ${jwt}` },
-      body: formData,
     });
-    const uploadData = await uploadRes.json();
-    pinnedImageCid = uploadData.IpfsHash || IMAGE_CID;
-    results.pinImage = { status: uploadRes.status, body: uploadData };
+    const pinListData = await pinListRes.json();
+    results.pinCheck = { status: pinListRes.status, count: pinListData.count, rows: pinListData.rows?.length };
+    if (pinListData.count > 0) {
+      results.alreadyPinned = true;
+    }
   } catch (e: any) {
-    results.pinImage = { error: e.message };
+    results.pinCheck = { error: e.message };
   }
 
-  // 2. Pin metadata JSON
+  // 2. Download image and re-upload to Pinata (try multiple gateways)
+  let pinnedImageCid = IMAGE_CID;
+  let imgDownloaded = false;
+
+  for (const makeGateway of GATEWAYS) {
+    if (imgDownloaded) break;
+    const { url, headers } = makeGateway(jwt);
+    try {
+      const imgRes = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!imgRes.ok) {
+        results[`gateway_${url.slice(8, 30)}`] = imgRes.status;
+        continue;
+      }
+      const imgBuffer = await imgRes.arrayBuffer();
+      const contentType = imgRes.headers.get('content-type') || 'image/webp';
+      const ext = contentType.includes('webp') ? 'webp' : contentType.includes('png') ? 'png' : 'jpg';
+
+      const formData = new FormData();
+      formData.append('file', new Blob([imgBuffer], { type: contentType }), `megachad-${TOKEN_ID}.${ext}`);
+      formData.append('pinataMetadata', JSON.stringify({
+        name: `megachad-nft-${TOKEN_ID}-image`,
+        keyvalues: { tokenId: TOKEN_ID, burner: BURNER },
+      }));
+      formData.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
+
+      const uploadRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${jwt}` },
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+      if (uploadRes.ok) {
+        pinnedImageCid = uploadData.IpfsHash || IMAGE_CID;
+        imgDownloaded = true;
+        results.pinImage = { status: uploadRes.status, cid: uploadData.IpfsHash, gateway: url };
+      } else {
+        results.pinImage = { status: uploadRes.status, body: uploadData };
+      }
+    } catch (e: any) {
+      results[`gateway_err_${url.slice(8, 30)}`] = e.message;
+    }
+  }
+
+  if (!imgDownloaded) {
+    results.pinImage = results.pinImage || { error: 'All gateways failed — keeping original CID' };
+  }
+
+  // 3. Pin metadata JSON
   let metadataCid = '';
   try {
     const metadataJson = {
@@ -75,12 +123,12 @@ export async function GET(req: NextRequest) {
     });
     const uploadData = await uploadRes.json();
     metadataCid = uploadData.IpfsHash || '';
-    results.pinMetadata = { status: uploadRes.status, body: uploadData };
+    results.pinMetadata = { status: uploadRes.status, cid: metadataCid };
   } catch (e: any) {
     results.pinMetadata = { error: e.message };
   }
 
-  // 3. Update Redis entry
+  // 4. Update Redis entry
   const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinnedImageCid}`;
   const metadataIpfsUrl = metadataCid ? `https://gateway.pinata.cloud/ipfs/${metadataCid}` : undefined;
 
@@ -109,6 +157,7 @@ export async function GET(req: NextRequest) {
 
   results.ipfsUrl = ipfsUrl;
   results.metadataIpfsUrl = metadataIpfsUrl;
+  results.imagePinnedCid = pinnedImageCid;
 
   return NextResponse.json(results);
 }
