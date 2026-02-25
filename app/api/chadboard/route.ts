@@ -133,9 +133,10 @@ export async function GET() {
 
           // ── Warren / custom metadata: query Upstash REST API directly ───
           // Avoids unreliable same-domain HTTP calls and SDK runtime issues
-          const customMatch = metadataUrl.match(/\/api\/metadata\/(\d+)$/);
-          if (customMatch && upstashUrl && upstashToken) {
-            const tokenId = customMatch[1];
+          // Use nft.tokenId (from Transfer events) — URL may contain PLACEHOLDER
+          const isCustomMetadata = metadataUrl.includes('/api/metadata/');
+          if (isCustomMetadata && upstashUrl && upstashToken) {
+            const tokenId = nft.tokenId;
             try {
               const key = `nft:metadata:${tokenId}`;
               const redisResp = await fetch(upstashUrl, {
