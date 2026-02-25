@@ -148,7 +148,11 @@ export async function GET() {
           }
 
           const metadata = await response.json();
-          const imageUrl = metadata.image?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
+          // Prefer IPFS backup over Warren URL — Warren on-chain image endpoint can be unreliable
+          const rawImage = (metadata.image?.includes('thewarren.app') && metadata.properties?.ipfs_backup)
+            ? metadata.properties.ipfs_backup
+            : metadata.image;
+          const imageUrl = rawImage?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
 
           // Extract timestamp from metadata attributes
           const timestampAttr = metadata.attributes?.find((attr: any) => attr.trait_type === 'Timestamp');
