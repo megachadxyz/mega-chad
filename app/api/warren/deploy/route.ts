@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deployToWarren } from '@/lib/warren';
-import { storeNFTMetadata } from '@/lib/redis';
+import { storeNFTMetadata, markTxUsed } from '@/lib/redis';
 import { pinMetadata } from '@/lib/pinata';
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -157,6 +157,25 @@ export async function POST(req: NextRequest) {
     });
 
     console.log('[Warren Deploy] Metadata stored in Redis');
+
+    // Mark burn TX as used in gallery (non-fatal)
+    try {
+      const imageCidForRecord = ipfsUrl?.split('/ipfs/')[1] || '';
+      await markTxUsed({
+        txHash: burnTxHash,
+        burner: burnerAddress,
+        prompt: 'looksmaxx',
+        cid: imageCidForRecord,
+        ipfsUrl: ipfsUrl || '',
+        timestamp: new Date().toISOString(),
+        burnAmount: Number(BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '225000')) / 2,
+        tokenId: tokenId || undefined,
+        warrenTokenId: warrenResult.tokenId,
+      });
+      console.log('[Warren Deploy] Burn TX marked as used in gallery');
+    } catch (err) {
+      console.error('[Warren Deploy] Failed to mark TX as used (non-fatal):', err);
+    }
 
     return NextResponse.json({
       success: true,

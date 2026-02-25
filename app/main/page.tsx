@@ -336,10 +336,42 @@ export default function Home() {
     refetchBalance();
   };
 
-  const handleWarrenCancel = () => {
+  const handleWarrenCancel = async () => {
     setShowWarrenPayment(false);
-    setStatus('error');
-    setError('Warren payment cancelled. Please try again with IPFS storage.');
+    // Tokens are already burned — fall back to IPFS minting automatically
+    if (!warrenData?.metadataUrl) {
+      setStatus('error');
+      setError('Warren cancelled. No IPFS metadata available — contact support.');
+      return;
+    }
+    setStatus('minting');
+    try {
+      const res = await fetch('/api/ipfs-mint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          burnerAddress: warrenData.burnerAddress,
+          burnTxHash: warrenData.burnTxHash,
+          devTxHash: warrenData.devTxHash,
+          metadataUrl: warrenData.metadataUrl,
+          ipfsUrl: warrenData.ipfsUrl,
+          ipfsCid: warrenData.ipfsCid,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'IPFS mint failed');
+      setStatus('done');
+      setResult({
+        imageUrl: warrenData.ipfsUrl,
+        ipfsUrl: warrenData.ipfsUrl,
+        cid: warrenData.ipfsCid,
+        tokenId: data.tokenId,
+      });
+      refetchBalance();
+    } catch (e) {
+      setStatus('error');
+      setError(e instanceof Error ? e.message : 'IPFS fallback mint failed');
+    }
   };
 
   const handleWarrenError = (errorMsg: string) => {

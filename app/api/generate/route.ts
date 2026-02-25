@@ -254,6 +254,28 @@ export async function POST(req: NextRequest) {
     // fallback to 1
   }
 
+  // ── Pin NFT metadata to IPFS ───────────────────────────
+  // Done before Warren check so Warren cancel can fall back to IPFS minting
+  const paddedNumber = String(mintNumber).padStart(4, '0');
+  let metadataUrl = '';
+  let metadataCid = '';
+  try {
+    const metaResult = await pinMetadata({
+      name: `$MEGACHAD ${paddedNumber}`,
+      description: `Looksmaxxed by ${burnerAddress}. Burn tx: ${burnTxHash}`,
+      imageCid: ipfsCid,
+      attributes: [
+        { trait_type: 'Burner', value: burnerAddress },
+        { trait_type: 'Burn Tx', value: burnTxHash },
+        { trait_type: 'Dev Tx', value: devTxHash },
+      ],
+    });
+    metadataUrl = metaResult.url;
+    metadataCid = metaResult.cid;
+  } catch (err) {
+    console.error('NFT metadata pinning failed:', err);
+  }
+
   // ── Warren Storage (Optional) ─────────────────────────
   if (useWarren) {
     console.log('[Generate] Warren storage requested, estimating cost...');
@@ -274,6 +296,7 @@ export async function POST(req: NextRequest) {
 
       // Return estimate and data needed for Warren deployment
       // Frontend will prompt user to pay, then call /api/warren/deploy
+      // metadataUrl included so cancel can fall back to IPFS minting
       return NextResponse.json({
         imageUrl,
         ipfsCid,
@@ -291,31 +314,14 @@ export async function POST(req: NextRequest) {
           burnTxHash,
           devTxHash,
           ipfsUrl,
+          ipfsCid,
+          metadataUrl,
         },
       });
     } catch (err) {
       console.error('[Generate] Warren estimate failed, falling back to IPFS:', err);
       // Fall through to regular IPFS minting
     }
-  }
-
-  // ── Pin NFT metadata to IPFS ───────────────────────────
-  const paddedNumber = String(mintNumber).padStart(4, '0');
-  let metadataUrl = '';
-  try {
-    const metaResult = await pinMetadata({
-      name: `$MEGACHAD ${paddedNumber}`,
-      description: `Looksmaxxed by ${burnerAddress}. Burn tx: ${burnTxHash}`,
-      imageCid: ipfsCid,
-      attributes: [
-        { trait_type: 'Burner', value: burnerAddress },
-        { trait_type: 'Burn Tx', value: burnTxHash },
-        { trait_type: 'Dev Tx', value: devTxHash },
-      ],
-    });
-    metadataUrl = metaResult.url;
-  } catch (err) {
-    console.error('NFT metadata pinning failed:', err);
   }
 
   // ── Mint NFT ───────────────────────────────────────────

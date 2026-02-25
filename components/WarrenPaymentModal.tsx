@@ -16,6 +16,8 @@ interface WarrenPaymentModalProps {
     burnTxHash: string;
     devTxHash: string;
     ipfsUrl: string;
+    ipfsCid: string;
+    metadataUrl: string;
   };
   onSuccess: (result: {
     tokenId: string;
@@ -146,7 +148,7 @@ export default function WarrenPaymentModal({
           {deployStatus === 'idle' && (
             <div className="warren-actions">
               <button className="btn btn-outline" onClick={onCancel}>
-                Cancel (Use IPFS)
+                Use IPFS Instead
               </button>
               <button className="btn btn-primary" onClick={handlePayment}>
                 Pay {estimate.totalEth} ETH
