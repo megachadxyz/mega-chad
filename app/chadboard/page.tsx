@@ -438,9 +438,6 @@ export default function ChadboardPage() {
                     <img src={img.ipfsUrl} alt="Looksmaxxed" className="cb-detail-image" />
                   )}
                   <div className="cb-detail-meta">
-                    <div className="cb-detail-date">
-                      {new Date(img.timestamp).toLocaleDateString()}
-                    </div>
                     <a
                       href={img.ipfsUrl}
                       target="_blank"
