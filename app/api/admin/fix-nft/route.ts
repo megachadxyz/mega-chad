@@ -20,17 +20,30 @@ export async function GET(req: NextRequest) {
 
   const results: Record<string, unknown> = {};
 
-  // 1. Pin image CID by hash
+  // 1. Download image from cloudflare IPFS and re-upload to Pinata
+  let pinnedImageCid = IMAGE_CID;
   try {
-    const pinRes = await fetch('https://api.pinata.cloud/pinning/pinByHash', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        hashToPin: IMAGE_CID,
-        pinataMetadata: { name: `megachad-nft-${TOKEN_ID}-image`, keyvalues: { tokenId: TOKEN_ID, burner: BURNER } },
-      }),
+    const imgRes = await fetch(`https://cloudflare-ipfs.com/ipfs/${IMAGE_CID}`, {
+      signal: AbortSignal.timeout(30000),
     });
-    results.pinImage = { status: pinRes.status, body: await pinRes.json() };
+    if (!imgRes.ok) throw new Error(`Fetch failed: ${imgRes.status}`);
+    const imgBuffer = await imgRes.arrayBuffer();
+    const contentType = imgRes.headers.get('content-type') || 'image/webp';
+    const ext = contentType.includes('webp') ? 'webp' : 'png';
+
+    const formData = new FormData();
+    formData.append('file', new Blob([imgBuffer], { type: contentType }), `megachad-${TOKEN_ID}.${ext}`);
+    formData.append('pinataMetadata', JSON.stringify({ name: `megachad-nft-${TOKEN_ID}-image`, keyvalues: { tokenId: TOKEN_ID, burner: BURNER } }));
+    formData.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
+
+    const uploadRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jwt}` },
+      body: formData,
+    });
+    const uploadData = await uploadRes.json();
+    pinnedImageCid = uploadData.IpfsHash || IMAGE_CID;
+    results.pinImage = { status: uploadRes.status, body: uploadData };
   } catch (e: any) {
     results.pinImage = { error: e.message };
   }
@@ -41,7 +54,7 @@ export async function GET(req: NextRequest) {
     const metadataJson = {
       name: `$MEGACHAD ${TOKEN_ID.padStart(4, '0')}`,
       description: `Looksmaxxed by ${BURNER}. Burn tx: ${BURN_TX}`,
-      image: `ipfs://${IMAGE_CID}`,
+      image: `ipfs://${pinnedImageCid}`,
       attributes: [
         { trait_type: 'Burner', value: BURNER },
         { trait_type: 'Burn Tx', value: BURN_TX },
@@ -68,7 +81,7 @@ export async function GET(req: NextRequest) {
   }
 
   // 3. Update Redis entry
-  const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${IMAGE_CID}`;
+  const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinnedImageCid}`;
   const metadataIpfsUrl = metadataCid ? `https://gateway.pinata.cloud/ipfs/${metadataCid}` : undefined;
 
   const metadata = {
