@@ -128,8 +128,8 @@ export async function GET(req: NextRequest) {
     results.pinMetadata = { error: e.message };
   }
 
-  // 4. Update Redis entry
-  const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinnedImageCid}`;
+  // 4. Update Redis entry — use ipfs.io for display (pinata public gateway rate-limits 429)
+  const ipfsUrl = `https://ipfs.io/ipfs/${pinnedImageCid}`;
   const metadataIpfsUrl = metadataCid ? `https://gateway.pinata.cloud/ipfs/${metadataCid}` : undefined;
 
   const metadata = {
