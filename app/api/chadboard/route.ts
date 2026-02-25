@@ -138,13 +138,15 @@ export async function GET() {
             const tokenId = customMatch[1];
             try {
               const key = `nft:metadata:${tokenId}`;
-              const redisResp = await fetch(
-                `${upstashUrl}/get/${encodeURIComponent(key)}`,
-                {
-                  headers: { Authorization: `Bearer ${upstashToken}` },
-                  cache: 'no-store',
-                }
-              );
+              const redisResp = await fetch(upstashUrl, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${upstashToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(['GET', key]),
+                cache: 'no-store',
+              });
               if (redisResp.ok) {
                 const { result } = await redisResp.json();
                 if (result) {
