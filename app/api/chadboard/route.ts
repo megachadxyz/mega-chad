@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http, parseAbiItem } from 'viem';
 import { megaeth } from '@/lib/wagmi';
-import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -112,13 +111,8 @@ export async function GET() {
 
     console.log('[Chadboard] Successfully processed', nftData.length, 'NFTs from', currentOwners.size, 'total');
 
-    // Initialise Redis once for all Warren-metadata lookups
-    let redis: Redis | null = null;
-    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-    if (redisUrl && redisToken) {
-      redis = new Redis({ url: redisUrl, token: redisToken });
-    }
+    const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
     // Fetch metadata for each NFT
     const nftsWithImages = await Promise.all(
@@ -137,22 +131,45 @@ export async function GET() {
             };
           }
 
-          // ── Warren / custom metadata: read directly from Redis ──────────
-          // Avoids unreliable server-to-server HTTP calls on the same domain
+          // ── Warren / custom metadata: query Upstash REST API directly ───
+          // Avoids unreliable same-domain HTTP calls and SDK runtime issues
           const customMatch = metadataUrl.match(/\/api\/metadata\/(\d+)$/);
-          if (customMatch && redis) {
+          if (customMatch && upstashUrl && upstashToken) {
             const tokenId = customMatch[1];
-            const stored = await redis.get<any>(`nft:metadata:${tokenId}`);
-            if (stored) {
-              const imageUrl = stored.ipfsUrl?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
-              return {
-                ...nft,
-                imageUrl,
-                name: `$MEGACHAD ${tokenId.padStart(4, '0')}`,
-                description: `Looksmaxxed by ${stored.burner}`,
-                timestamp: stored.timestamp || new Date().toISOString(),
-              };
+            try {
+              const key = `nft:metadata:${tokenId}`;
+              const redisResp = await fetch(
+                `${upstashUrl}/get/${encodeURIComponent(key)}`,
+                {
+                  headers: { Authorization: `Bearer ${upstashToken}` },
+                  cache: 'no-store',
+                }
+              );
+              if (redisResp.ok) {
+                const { result } = await redisResp.json();
+                if (result) {
+                  const stored = typeof result === 'string' ? JSON.parse(result) : result;
+                  const imageUrl = stored.ipfsUrl?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
+                  return {
+                    ...nft,
+                    imageUrl,
+                    name: `$MEGACHAD ${tokenId.padStart(4, '0')}`,
+                    description: `Looksmaxxed by ${stored.burner}`,
+                    timestamp: stored.timestamp || new Date().toISOString(),
+                  };
+                }
+              }
+            } catch (redisErr) {
+              console.error(`[Chadboard] Upstash lookup failed for NFT #${nft.tokenId}:`, redisErr instanceof Error ? redisErr.message : String(redisErr));
             }
+            // If Upstash lookup failed, skip HTTP self-call — return placeholder
+            return {
+              ...nft,
+              imageUrl: '',
+              name: `$MEGACHAD ${nft.tokenId.padStart(4, '0')}`,
+              description: 'Metadata unavailable',
+              timestamp: new Date().toISOString(),
+            };
           }
 
           // ── IPFS metadata: fetch via HTTP ────────────────────────────────
@@ -164,6 +181,7 @@ export async function GET() {
           const response = await fetch(fetchUrl, {
             signal: AbortSignal.timeout(15000),
             headers: { 'Accept': 'application/json' },
+            cache: 'no-store',
           });
 
           if (!response.ok) {

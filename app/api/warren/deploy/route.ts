@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     console.log('[Warren Deploy] Minting NFT...');
 
-    // Get next tokenId before minting
+    // Get next tokenId before minting so we can use it in the metadata name
     const nextTokenId = await viemClient.readContract({
       address: NFT_CONTRACT,
       abi: NFT_ABI,
@@ -91,14 +91,39 @@ export async function POST(req: NextRequest) {
 
     console.log('[Warren Deploy] Next tokenId will be:', nextTokenId.toString());
 
-    // Mint NFT with correct metadata URL (using predicted tokenId)
+    // Pin metadata to IPFS first so we can use it as the tokenURI
+    // This avoids custom-endpoint tokenURIs that require unreliable self-HTTP-calls
+    let metadataIpfsUrl: string | undefined;
+    let tokenURI = `https://megachad.xyz/api/metadata/${nextTokenId}`; // fallback
+    try {
+      const imageCid = ipfsUrl?.split('/ipfs/')[1];
+      if (imageCid) {
+        const metadataPin = await pinMetadata({
+          name: `$MEGACHAD ${nextTokenId.toString().padStart(4, '0')}`,
+          description: `Looksmaxxed by ${burnerAddress}. Burn tx: ${burnTxHash}`,
+          imageCid,
+          attributes: [
+            { trait_type: 'Burner', value: burnerAddress },
+            { trait_type: 'Burn Tx', value: burnTxHash },
+            ...(devTxHash ? [{ trait_type: 'Dev Tx', value: devTxHash }] : []),
+          ],
+        });
+        metadataIpfsUrl = metadataPin.url;
+        tokenURI = metadataPin.url; // use IPFS URL directly as tokenURI
+        console.log('[Warren Deploy] Metadata pinned to IPFS, using as tokenURI:', tokenURI);
+      }
+    } catch (pinError) {
+      console.error('[Warren Deploy] Metadata pin failed, falling back to custom endpoint:', pinError);
+    }
+
+    // Mint NFT
     const mintHash = await walletClient.writeContract({
       address: NFT_CONTRACT,
       abi: NFT_ABI,
       functionName: 'mint',
       args: [
         burnerAddress as `0x${string}`,
-        `https://megachad.xyz/api/metadata/${nextTokenId}`,
+        tokenURI,
       ],
     });
 
@@ -119,30 +144,6 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('[Warren Deploy] NFT minted! TokenId:', tokenId);
-
-    // Pin metadata JSON to IPFS as backup (non-fatal if it fails)
-    let metadataIpfsUrl: string | undefined;
-    try {
-      const imageCid = ipfsUrl?.split('/ipfs/')[1];
-      if (imageCid) {
-        const metadataPin = await pinMetadata({
-          name: `$MEGACHAD ${tokenId.padStart(4, '0')}`,
-          description: `Looksmaxxed by ${burnerAddress}. Burn tx: ${burnTxHash}`,
-          imageCid,
-          attributes: [
-            { trait_type: 'Burner', value: burnerAddress },
-            { trait_type: 'Burn Tx', value: burnTxHash },
-            ...(devTxHash ? [{ trait_type: 'Dev Tx', value: devTxHash }] : []),
-          ],
-        });
-        metadataIpfsUrl = metadataPin.url;
-        console.log('[Warren Deploy] Metadata pinned to IPFS:', metadataIpfsUrl);
-      } else {
-        console.warn('[Warren Deploy] No imageCid available, skipping metadata pin');
-      }
-    } catch (pinError) {
-      console.error('[Warren Deploy] Failed to pin metadata to IPFS (non-fatal):', pinError);
-    }
 
     // Store NFT metadata in Redis for our custom metadata endpoint
     await storeNFTMetadata({
