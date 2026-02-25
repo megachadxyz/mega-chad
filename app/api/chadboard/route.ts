@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http, parseAbiItem } from 'viem';
 import { megaeth } from '@/lib/wagmi';
+import { Redis } from '@upstash/redis';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -111,66 +112,81 @@ export async function GET() {
 
     console.log('[Chadboard] Successfully processed', nftData.length, 'NFTs from', currentOwners.size, 'total');
 
-    // Fetch metadata from IPFS to get images
+    // Initialise Redis once for all Warren-metadata lookups
+    let redis: Redis | null = null;
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (redisUrl && redisToken) {
+      redis = new Redis({ url: redisUrl, token: redisToken });
+    }
+
+    // Fetch metadata for each NFT
     const nftsWithImages = await Promise.all(
       nftData.map(async (nft) => {
         try {
-          // tokenURI might be IPFS or custom metadata endpoint
-          let metadataUrl = nft.tokenURI;
+          const metadataUrl = nft.tokenURI;
 
-          // Handle empty tokenURI - NFT exists but metadata not set
+          // Handle empty tokenURI
           if (!metadataUrl || metadataUrl.trim() === '') {
-            console.warn(`[Chadboard] NFT #${nft.tokenId} has empty tokenURI, including with placeholder`);
             return {
               ...nft,
               imageUrl: '',
-              name: `MegaChad #${nft.tokenId}`,
+              name: `$MEGACHAD ${nft.tokenId.padStart(4, '0')}`,
               description: 'Metadata pending',
               timestamp: new Date().toISOString(),
             };
           }
 
-          // If it's an IPFS URL, convert to gateway URL
-          if (metadataUrl.startsWith('ipfs://')) {
-            metadataUrl = metadataUrl.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+          // ── Warren / custom metadata: read directly from Redis ──────────
+          // Avoids unreliable server-to-server HTTP calls on the same domain
+          const customMatch = metadataUrl.match(/\/api\/metadata\/(\d+)$/);
+          if (customMatch && redis) {
+            const tokenId = customMatch[1];
+            const stored = await redis.get<any>(`nft:metadata:${tokenId}`);
+            if (stored) {
+              const imageUrl = stored.ipfsUrl?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
+              return {
+                ...nft,
+                imageUrl,
+                name: `$MEGACHAD ${tokenId.padStart(4, '0')}`,
+                description: `Looksmaxxed by ${stored.burner}`,
+                timestamp: stored.timestamp || new Date().toISOString(),
+              };
+            }
           }
 
-          const response = await fetch(metadataUrl, {
-            signal: AbortSignal.timeout(15000), // 15 second timeout (increased)
-            headers: {
-              'Accept': 'application/json',
-            }
+          // ── IPFS metadata: fetch via HTTP ────────────────────────────────
+          let fetchUrl = metadataUrl;
+          if (fetchUrl.startsWith('ipfs://')) {
+            fetchUrl = fetchUrl.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+          }
+
+          const response = await fetch(fetchUrl, {
+            signal: AbortSignal.timeout(15000),
+            headers: { 'Accept': 'application/json' },
           });
 
           if (!response.ok) {
-            console.error(`[Chadboard] Failed to fetch metadata for NFT #${nft.tokenId}:`, response.status);
             throw new Error(`HTTP ${response.status}`);
           }
 
           const metadata = await response.json();
-          // Prefer IPFS backup over Warren URL — Warren on-chain image endpoint can be unreliable
-          const rawImage = (metadata.image?.includes('thewarren.app') && metadata.properties?.ipfs_backup)
-            ? metadata.properties.ipfs_backup
-            : metadata.image;
-          const imageUrl = rawImage?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
-
-          // Extract timestamp from metadata attributes
+          const imageUrl = metadata.image?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
           const timestampAttr = metadata.attributes?.find((attr: any) => attr.trait_type === 'Timestamp');
-          const timestamp = timestampAttr?.value || new Date().toISOString();
 
           return {
             ...nft,
             imageUrl,
-            name: metadata.name || `MegaChad #${nft.tokenId}`,
+            name: metadata.name || `$MEGACHAD ${nft.tokenId.padStart(4, '0')}`,
             description: metadata.description || '',
-            timestamp,
+            timestamp: timestampAttr?.value || new Date().toISOString(),
           };
         } catch (err) {
           console.error(`[Chadboard] Error fetching metadata for NFT #${nft.tokenId}:`, err instanceof Error ? err.message : String(err));
           return {
             ...nft,
             imageUrl: '',
-            name: `MegaChad #${nft.tokenId}`,
+            name: `$MEGACHAD ${nft.tokenId.padStart(4, '0')}`,
             description: 'Metadata fetch failed',
             timestamp: new Date().toISOString(),
           };
