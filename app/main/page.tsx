@@ -45,7 +45,7 @@ const STATUS_LABELS: Record<BurnStatus, string> = {
   minting: 'Minting your NFT...',
   'warren-payment': 'PAY FOR ON-CHAIN STORAGE...',
   'warren-deploying': 'DEPLOYING TO WARREN...',
-  done: 'Your Mega Chad is immortalized.',
+  done: 'Your NFT is immortalized.',
   error: 'Something went wrong.',
 };
 
