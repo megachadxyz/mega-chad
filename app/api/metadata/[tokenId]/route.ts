@@ -59,7 +59,7 @@ export async function GET(
 
     // Build ERC-721 metadata JSON
     const response = {
-      name: `MegaChad #${tokenId}`,
+      name: `$MEGACHAD ${tokenId.padStart(4, '0')}`,
       description: `Looksmaxxed by ${metadata.burner}. Burn tx: ${metadata.burnTxHash}`,
       // Primary: Warren on-chain image, Fallback: IPFS
       image: metadata.warrenTokenId

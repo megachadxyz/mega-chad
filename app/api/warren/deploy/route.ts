@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deployToWarren } from '@/lib/warren';
 import { storeNFTMetadata } from '@/lib/redis';
+import { pinMetadata } from '@/lib/pinata';
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { megaeth } from '@/lib/wagmi';
@@ -119,11 +120,36 @@ export async function POST(req: NextRequest) {
 
     console.log('[Warren Deploy] NFT minted! TokenId:', tokenId);
 
+    // Pin metadata JSON to IPFS as backup (non-fatal if it fails)
+    let metadataIpfsUrl: string | undefined;
+    try {
+      const imageCid = ipfsUrl?.split('/ipfs/')[1];
+      if (imageCid) {
+        const metadataPin = await pinMetadata({
+          name: `$MEGACHAD ${tokenId.padStart(4, '0')}`,
+          description: `Looksmaxxed by ${burnerAddress}. Burn tx: ${burnTxHash}`,
+          imageCid,
+          attributes: [
+            { trait_type: 'Burner', value: burnerAddress },
+            { trait_type: 'Burn Tx', value: burnTxHash },
+            ...(devTxHash ? [{ trait_type: 'Dev Tx', value: devTxHash }] : []),
+          ],
+        });
+        metadataIpfsUrl = metadataPin.url;
+        console.log('[Warren Deploy] Metadata pinned to IPFS:', metadataIpfsUrl);
+      } else {
+        console.warn('[Warren Deploy] No imageCid available, skipping metadata pin');
+      }
+    } catch (pinError) {
+      console.error('[Warren Deploy] Failed to pin metadata to IPFS (non-fatal):', pinError);
+    }
+
     // Store NFT metadata in Redis for our custom metadata endpoint
     await storeNFTMetadata({
       tokenId,
       warrenTokenId: warrenResult.tokenId,
       ipfsUrl,
+      metadataIpfsUrl,
       burner: burnerAddress,
       burnTxHash,
       devTxHash,

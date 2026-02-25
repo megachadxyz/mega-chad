@@ -28,6 +28,7 @@ export interface NFTMetadata {
   tokenId: string;
   warrenTokenId?: number;
   ipfsUrl: string;
+  metadataIpfsUrl?: string;
   burner: string;
   burnTxHash: string;
   devTxHash?: string;
