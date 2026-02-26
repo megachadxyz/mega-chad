@@ -65,6 +65,9 @@ export default function ChadboardPage() {
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Respect the user's previous choice across pages
+    if (localStorage.getItem('megachad-audio-stopped') === 'true') return;
+
     audio.muted = true;
     audio.volume = 0.3;
 
@@ -88,8 +91,12 @@ export default function ChadboardPage() {
     if (audioPlaying) {
       audioRef.current.pause();
       setAudioPlaying(false);
+      localStorage.setItem('megachad-audio-stopped', 'true');
     } else {
-      audioRef.current.play().then(() => setAudioPlaying(true)).catch(() => {});
+      audioRef.current.play().then(() => {
+        setAudioPlaying(true);
+        localStorage.removeItem('megachad-audio-stopped');
+      }).catch(() => {});
     }
   }, [audioPlaying]);
 
@@ -327,9 +334,6 @@ export default function ChadboardPage() {
           <li><Link href="/chadboard" onClick={() => setMobileNav(false)} className="nav-link-active">Chadboard</Link></li>
         </ul>
         <div className="nav-right">
-          <button className="audio-toggle" onClick={toggleAudio} title={audioPlaying ? 'Mute' : 'Play Music'}>
-            {audioPlaying ? '♫' : '♪'}
-          </button>
           <button className="nav-burger" onClick={() => setMobileNav(!mobileNav)} aria-label="Menu">
             <span /><span /><span />
           </button>
@@ -454,13 +458,18 @@ export default function ChadboardPage() {
         )}
       </section>
 
-      {/* ─── REAL-TIME STATUS ────────────────────────── */}
-      {wsConnected && (
-        <div className="realtime-status" title="Connected to MegaETH WebSocket">
-          <span className="realtime-dot" />
-          <span className="realtime-text">LIVE</span>
-        </div>
-      )}
+      {/* ─── AUDIO + LIVE CONTROLS ───────────────────── */}
+      <div className="realtime-controls">
+        <button className="audio-toggle" onClick={toggleAudio} title={audioPlaying ? 'Mute' : 'Play Music'}>
+          {audioPlaying ? '♫' : '♪'}
+        </button>
+        {wsConnected && (
+          <div className="realtime-status" title="Connected to MegaETH WebSocket">
+            <span className="realtime-dot" />
+            <span className="realtime-text">LIVE</span>
+          </div>
+        )}
+      </div>
 
       {/* ─── NEW MINT NOTIFICATION ───────────────────── */}
       {newMintNotif && (

@@ -1590,11 +1590,18 @@ img { max-width: 100%; height: auto; }
 }
 
 /* ── Real-time Status ────────────────────────────── */
-.realtime-status {
+/* Wrapper that holds audio toggle + LIVE pill together at top-right */
+.realtime-controls {
   position: fixed;
-  top: 24px;
+  top: 20px;
   right: 24px;
   z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.realtime-status {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1693,9 +1700,12 @@ img { max-width: 100%; height: auto; }
 }
 
 @media (max-width: 480px) {
-  .realtime-status {
+  .realtime-controls {
     top: 16px;
     right: 16px;
+  }
+
+  .realtime-status {
     font-size: .6rem;
     padding: 6px 10px;
   }

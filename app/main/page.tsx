@@ -422,6 +422,9 @@ export default function Home() {
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Respect the user's previous choice across pages
+    if (localStorage.getItem('megachad-audio-stopped') === 'true') return;
+
     // Start muted to bypass autoplay restrictions
     audio.muted = true;
     audio.volume = 0.3;
@@ -451,8 +454,12 @@ export default function Home() {
     if (audioPlaying) {
       audioRef.current.pause();
       setAudioPlaying(false);
+      localStorage.setItem('megachad-audio-stopped', 'true');
     } else {
-      audioRef.current.play().then(() => setAudioPlaying(true)).catch(() => {});
+      audioRef.current.play().then(() => {
+        setAudioPlaying(true);
+        localStorage.removeItem('megachad-audio-stopped');
+      }).catch(() => {});
     }
   }, [audioPlaying]);
 
