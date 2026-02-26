@@ -56,7 +56,7 @@ export default function LandingPage() {
             <a href="mailto:megachadtoken@proton.me">Contact</a>
           </div>
           <p className="footer-desc">
-            $MEGACHAD is a meme token and NFT project on MegaETH — the home of looksmaxxing on-chain.
+            $MEGACHAD is a meme token and NFT project — the home of looksmaxxing on MegaETH.
           </p>
           <p className="footer-copy">
             © {new Date().getFullYear()} $MEGACHAD. All rights reserved.
