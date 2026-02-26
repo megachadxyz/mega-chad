@@ -40,17 +40,27 @@ export default function LandingPage() {
           ENTER SITE
         </Link>
 
-        {/* Footer Links */}
+        {/* Footer */}
         <footer className="landing-footer">
-          <Link href="/about">About</Link>
-          <span className="footer-sep">•</span>
-          <Link href="/docs">Docs</Link>
-          <span className="footer-sep">•</span>
-          <a href="https://github.com/megachadxyz/mega-chad" target="_blank" rel="noopener noreferrer">GitHub</a>
-          <span className="footer-sep">•</span>
-          <Link href="/privacy">Privacy</Link>
-          <span className="footer-sep">•</span>
-          <Link href="/terms">Terms</Link>
+          <div className="footer-links">
+            <Link href="/about">About</Link>
+            <span className="footer-sep">•</span>
+            <Link href="/docs">Docs</Link>
+            <span className="footer-sep">•</span>
+            <a href="https://github.com/megachadxyz/mega-chad" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span className="footer-sep">•</span>
+            <Link href="/privacy">Privacy Policy</Link>
+            <span className="footer-sep">•</span>
+            <Link href="/terms">Terms of Service</Link>
+            <span className="footer-sep">•</span>
+            <a href="mailto:megachadtoken@proton.me">Contact</a>
+          </div>
+          <p className="footer-desc">
+            $MEGACHAD is a meme token and NFT project on MegaETH — the home of looksmaxxing on-chain.
+          </p>
+          <p className="footer-copy">
+            © {new Date().getFullYear()} $MEGACHAD. All rights reserved.
+          </p>
         </footer>
       </div>
 
@@ -159,12 +169,22 @@ export default function LandingPage() {
 
         .landing-footer {
           display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: 1rem;
+          gap: 0.75rem;
           font-family: var(--font-body);
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           color: var(--text-dim);
           margin-top: 2rem;
+          text-align: center;
+        }
+
+        .footer-links {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 0.5rem 1rem;
         }
 
         .landing-footer a {
@@ -182,6 +202,19 @@ export default function LandingPage() {
           opacity: 0.5;
         }
 
+        .footer-desc {
+          margin: 0;
+          opacity: 0.6;
+          max-width: 480px;
+          line-height: 1.5;
+        }
+
+        .footer-copy {
+          margin: 0;
+          opacity: 0.4;
+          font-size: 0.8rem;
+        }
+
         @media (max-width: 768px) {
           .landing-content {
             gap: 2rem;
@@ -190,12 +223,6 @@ export default function LandingPage() {
           .enter-button {
             font-size: 2rem;
             padding: 1.2rem 3rem;
-          }
-
-          .landing-footer {
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 0.5rem 1rem;
           }
         }
       `}</style>
