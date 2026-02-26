@@ -152,7 +152,11 @@ export async function GET() {
                 const { result } = await redisResp.json();
                 if (result) {
                   const stored = typeof result === 'string' ? JSON.parse(result) : result;
-                  const imageUrl = stored.ipfsUrl?.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') || '';
+                  const rawUrl: string = stored.ipfsUrl || '';
+                  const imageUrl = rawUrl
+                    .replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+                    .replace('https://ipfs.io/ipfs/', 'https://gateway.pinata.cloud/ipfs/')
+                    .replace('https://cloudflare-ipfs.com/ipfs/', 'https://gateway.pinata.cloud/ipfs/');
                   return {
                     ...nft,
                     imageUrl,
