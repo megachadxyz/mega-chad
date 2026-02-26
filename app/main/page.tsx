@@ -417,49 +417,38 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
 
-  // Aggressive autoplay: start muted, then unmute (bypasses browser restrictions)
+  // ─── Audio ─────────────────────────────────────────
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Respect the user's previous choice across pages
     if (localStorage.getItem('megachad-audio-stopped') === 'true') return;
 
-    // Start muted to bypass autoplay restrictions
-    audio.muted = true;
     audio.volume = 0.3;
-
-    // Play muted audio immediately
-    audio.play().then(() => {
-      setAudioPlaying(true);
-      // Unmute after 100ms
-      setTimeout(() => {
-        audio.muted = false;
-      }, 100);
-    }).catch(() => {
-      // If even muted autoplay fails, try on first interaction
-      const playOnInteraction = () => {
-        audio.muted = false;
-        audio.play().then(() => setAudioPlaying(true)).catch(() => {});
-        window.removeEventListener('click', playOnInteraction);
-        window.removeEventListener('keydown', playOnInteraction);
-      };
-      window.addEventListener('click', playOnInteraction, { once: true });
-      window.addEventListener('keydown', playOnInteraction, { once: true });
-    });
+    audio.muted = true;
+    audio.play()
+      .then(() => {
+        setAudioPlaying(true);
+        setTimeout(() => { audio.muted = false; }, 100);
+      })
+      .catch(() => {});
   }, []);
 
   const toggleAudio = useCallback(() => {
-    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
     if (audioPlaying) {
-      audioRef.current.pause();
+      audio.pause();
       setAudioPlaying(false);
       localStorage.setItem('megachad-audio-stopped', 'true');
     } else {
-      audioRef.current.play().then(() => {
-        setAudioPlaying(true);
-        localStorage.removeItem('megachad-audio-stopped');
-      }).catch(() => {});
+      audio.muted = false;
+      audio.play()
+        .then(() => {
+          setAudioPlaying(true);
+          localStorage.removeItem('megachad-audio-stopped');
+        })
+        .catch(() => {});
     }
   }, [audioPlaying]);
 

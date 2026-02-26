@@ -36,7 +36,11 @@ export default function LandingPage() {
         <h1 className="landing-title">LOOKSMAXXING ON MEGAETH</h1>
 
         {/* Enter Button */}
-        <Link href="/main" className="enter-button">
+        <Link
+          href="/main"
+          className="enter-button"
+          onClick={() => localStorage.removeItem('megachad-audio-stopped')}
+        >
           ENTER SITE
         </Link>
 

@@ -65,38 +65,33 @@ export default function ChadboardPage() {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Respect the user's previous choice across pages
     if (localStorage.getItem('megachad-audio-stopped') === 'true') return;
 
-    audio.muted = true;
     audio.volume = 0.3;
-
-    audio.play().then(() => {
-      setAudioPlaying(true);
-      setTimeout(() => { audio.muted = false; }, 100);
-    }).catch(() => {
-      const playOnInteraction = () => {
-        audio.muted = false;
-        audio.play().then(() => setAudioPlaying(true)).catch(() => {});
-        window.removeEventListener('click', playOnInteraction);
-        window.removeEventListener('keydown', playOnInteraction);
-      };
-      window.addEventListener('click', playOnInteraction, { once: true });
-      window.addEventListener('keydown', playOnInteraction, { once: true });
-    });
+    audio.muted = true;
+    audio.play()
+      .then(() => {
+        setAudioPlaying(true);
+        setTimeout(() => { audio.muted = false; }, 100);
+      })
+      .catch(() => {});
   }, []);
 
   const toggleAudio = useCallback(() => {
-    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
     if (audioPlaying) {
-      audioRef.current.pause();
+      audio.pause();
       setAudioPlaying(false);
       localStorage.setItem('megachad-audio-stopped', 'true');
     } else {
-      audioRef.current.play().then(() => {
-        setAudioPlaying(true);
-        localStorage.removeItem('megachad-audio-stopped');
-      }).catch(() => {});
+      audio.muted = false;
+      audio.play()
+        .then(() => {
+          setAudioPlaying(true);
+          localStorage.removeItem('megachad-audio-stopped');
+        })
+        .catch(() => {});
     }
   }, [audioPlaying]);
 
