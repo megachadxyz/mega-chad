@@ -29,12 +29,6 @@ export const megaeth = defineChain({
   blockExplorers: {
     default: { name: 'MegaETH Explorer', url: 'https://megaexplorer.xyz' },
   },
-  contracts: {
-    // Multicall3 is deployed at the standard address on MegaETH
-    multicall3: {
-      address: '0xcA11bde05977b3631167028862bE2a173976CA11',
-    },
-  },
 });
 
 // wagmi auto-detects injected wallets (MetaMask, Brave, Phantom, etc.)
