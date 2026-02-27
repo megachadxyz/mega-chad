@@ -1,0 +1,18 @@
+# Foundry build artifacts
+out/
+cache/
+broadcast/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
+
+# Foundry lock (optional, keep if you want reproducible builds)
+# foundry.lock
