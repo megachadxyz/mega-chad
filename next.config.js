@@ -7,15 +7,6 @@ const nextConfig = {
       { protocol: 'https', hostname: 'gateway.pinata.cloud', pathname: '/ipfs/**' },
     ],
   },
-  async redirects() {
-    return [
-      {
-        source: '/early',
-        destination: '/early.html',
-        permanent: false,
-      },
-    ];
-  },
   webpack: (config) => {
     // wagmi optional connectors that may not be installed
     config.resolve.fallback = {
