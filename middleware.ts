@@ -10,6 +10,7 @@ const ALLOWED_PAGES = new Set([
   '/chadboard',
   '/gallery',
   '/main',
+  '/early',
 ]);
 
 export function middleware(request: NextRequest) {
