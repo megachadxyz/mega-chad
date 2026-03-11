@@ -303,7 +303,7 @@ export async function GET() {
       <div class="step-title">Connect Wallet</div>
       <div class="step-desc">You need to hold at least some $MEGACHAD or own a looksmaxx NFT to qualify for testnet access.</div>
 
-      <button class="btn" id="metamaskBtn" onclick="connectMetaMask()">Connect MetaMask</button>
+      <button class="btn" id="metamaskBtn" onclick="connectMetaMask()">Connect Wallet</button>
 
       <div class="or-divider">or paste manually</div>
 
@@ -543,7 +543,7 @@ export async function GET() {
       err.textContent = "This wallet doesn't hold any $MEGACHAD or a looksmaxx NFT. You need at least one to qualify.";
       err.style.display = 'block';
       const btn = document.getElementById('metamaskBtn');
-      btn.textContent = 'Connect MetaMask';
+      btn.textContent = 'Connect Wallet';
       btn.disabled = false;
       walletAddress = null;
       return;
@@ -559,7 +559,7 @@ export async function GET() {
     document.getElementById('eligibilityError').style.display = 'none';
 
     if (!window.ethereum) {
-      err.textContent = 'MetaMask not detected. Please paste your wallet address below.';
+      err.textContent = 'No wallet detected. Please paste your wallet address below.';
       err.style.display = 'block';
       return;
     }
@@ -572,7 +572,7 @@ export async function GET() {
       btn.textContent = 'Checking eligibility...';
       await runEligibilityCheck(walletAddress);
     } catch (e) {
-      btn.textContent = 'Connect MetaMask';
+      btn.textContent = 'Connect Wallet';
       btn.disabled = false;
       err.textContent = 'Connection rejected. Try again or paste your address below.';
       err.style.display = 'block';
