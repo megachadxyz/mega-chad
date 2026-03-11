@@ -7,6 +7,7 @@ export async function GET() {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>$MEGACHAD — Early Access</title>
+  <link rel="icon" href="/chadfavicon.jpg" type="image/jpeg"/>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -307,7 +308,7 @@ export async function GET() {
       <div class="or-divider">or paste manually</div>
 
       <input type="text" id="manualWallet" placeholder="0x... your wallet address"/>
-      <button class="btn-ghost" onclick="useManualWallet()">Use This Address \\u2192</button>
+      <button class="btn-ghost" onclick="useManualWallet()">Use This Address &rarr;</button>
 
       <div id="verifyStatus" style="display:none;">
         <div class="verify-badge checking" id="tokenBadge">
@@ -331,7 +332,7 @@ export async function GET() {
 
       <div class="tweet-box">this is my proof of early access to @megachadxyz testnet<br/><br/>bringing defi summer vibes to @megaeth<br/><br/>$MEGACHAD<button class="copy-btn" onclick="copyTweet(this)" style="display:block; margin-top:10px;">Copy</button></div>
 
-      <button class="btn" style="margin-top:0; margin-bottom:18px;" onclick="openTweet()">Post on X \\u2197</button>
+      <button class="btn" style="margin-top:0; margin-bottom:18px;" onclick="openTweet()">Post on X &nearr;</button>
 
       <span class="field-label">Paste your tweet URL</span>
       <input type="text" id="tweetUrlInput" placeholder="https://x.com/yourname/status/..."/>
@@ -351,19 +352,19 @@ export async function GET() {
       <div class="confirm-box">
         <div class="confirm-row">
           <span class="confirm-label">Wallet</span>
-          <span class="confirm-value" id="confirmWallet">\\u2014</span>
+          <span class="confirm-value" id="confirmWallet">&mdash;</span>
         </div>
         <div class="confirm-row">
           <span class="confirm-label">Twitter</span>
-          <span class="confirm-value" id="confirmTwitter">\\u2014</span>
+          <span class="confirm-value" id="confirmTwitter">&mdash;</span>
         </div>
         <div class="confirm-row">
           <span class="confirm-label">Tweet</span>
-          <span class="confirm-value" id="confirmTweet" style="font-size:9px;">\\u2014</span>
+          <span class="confirm-value" id="confirmTweet" style="font-size:9px;">&mdash;</span>
         </div>
         <div class="confirm-row">
           <span class="confirm-label">Referred by</span>
-          <span class="confirm-value" id="confirmRef">\\u2014</span>
+          <span class="confirm-value" id="confirmRef">&mdash;</span>
         </div>
       </div>
 
@@ -374,13 +375,12 @@ export async function GET() {
     <div id="step4" style="display:none;">
       <div class="step-label">Step 04 / 04</div>
       <div class="step-title">Your Referral Link</div>
-      <div class="step-desc">You're in. Now share your link \\u2014 get 3 people to sign up through it and earn a boost on your airdrop.</div>
+      <div class="step-desc">You're in. Now share your link &mdash; get 3 people to sign up through it and earn access to testnet.</div>
 
       <div class="referral-box">
-        <div class="referral-title">Airdrop Boost</div>
+        <div class="referral-title">Testnet Eligibility</div>
         <div class="referral-desc">
-          Get 3 people to sign up using your link.<br/>
-          Each referral counts. 3/3 = airdrop multiplier unlocked.
+          Get 3 referrals to sign up using your link to earn access to testnet.
         </div>
 
         <div class="referral-link-row">
@@ -402,7 +402,7 @@ export async function GET() {
   </div>
 
   <div class="card success-screen" id="successCard">
-    <span class="success-glyph">\\u2726</span>
+    <span class="success-glyph">&#10022;</span>
     <div class="success-title">You're In, Chad.</div>
     <div class="success-desc">
       Your spot has been secured.<br/>
@@ -420,7 +420,7 @@ export async function GET() {
     </div>
   </div>
 
-  <div class="footer">megachad.xyz \\u2014 looksmaxxing on megaeth</div>
+  <div class="footer">megachad.xyz &mdash; looksmaxxing on megaeth</div>
 
 </div>
 
@@ -531,10 +531,10 @@ export async function GET() {
     const nftText = document.getElementById('nftBadgeText');
 
     tokenBadge.className = 'verify-badge ' + (hasTokens ? 'pass' : 'fail');
-    tokenText.innerHTML = hasTokens ? '\\u2713 $MEGACHAD balance confirmed' : '\\u2717 No $MEGACHAD found in this wallet';
+    tokenText.innerHTML = hasTokens ? '\u2713 $MEGACHAD balance confirmed' : '\u2717 No $MEGACHAD found in this wallet';
 
     nftBadge.className = 'verify-badge ' + (hasNFT ? 'pass' : 'fail');
-    nftText.innerHTML = hasNFT ? '\\u2713 Looksmaxx NFT found' : '\\u2717 No looksmaxx NFT found';
+    nftText.innerHTML = hasNFT ? '\u2713 Looksmaxx NFT found' : '\u2717 No looksmaxx NFT found';
 
     const eligible = hasTokens || hasNFT;
 
