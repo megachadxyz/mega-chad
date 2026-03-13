@@ -321,6 +321,9 @@ export async function GET() {
         </div>
       </div>
 
+      <span class="field-label" style="margin-top:18px;">Referral code (optional)</span>
+      <input type="text" id="referralInput" placeholder="e.g. 2ba5e8burg"/>
+
       <div class="error-msg" id="walletError"></div>
       <div class="error-msg" id="eligibilityError"></div>
     </div>
@@ -444,6 +447,7 @@ export async function GET() {
     const ref = params.get('ref');
     if (ref) {
       referredBy = ref;
+      document.getElementById('referralInput').value = ref;
       document.getElementById('confirmRef').textContent = ref;
     }
   });
@@ -596,6 +600,11 @@ export async function GET() {
   }
 
   function goToStep2() {
+    const refInput = document.getElementById('referralInput').value.trim();
+    if (refInput) {
+      referredBy = refInput;
+      document.getElementById('confirmRef').textContent = refInput;
+    }
     document.getElementById('step1').style.display = 'none';
     document.getElementById('step2').style.display = 'block';
     document.getElementById('pb1').classList.replace('active', 'done');
@@ -679,8 +688,7 @@ export async function GET() {
       document.getElementById('pb3').classList.replace('active', 'done');
       document.getElementById('pb4').classList.add('active');
 
-      const referralLink = window.location.origin + window.location.pathname + '?ref=' + myReferralCode;
-      document.getElementById('referralLinkDisplay').textContent = referralLink;
+      document.getElementById('referralLinkDisplay').textContent = myReferralCode;
 
     } catch (e) {
       btn.textContent = 'Secure My Spot';
