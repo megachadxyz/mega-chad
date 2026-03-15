@@ -19,6 +19,7 @@ import {
   TREN_FUND_WALLET,
 } from '@/lib/contracts';
 import WarrenPaymentModal from '@/components/WarrenPaymentModal';
+import SwapModal from '@/components/SwapModal';
 
 type BurnStatus =
   | 'idle'
@@ -472,6 +473,9 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  // ─── Swap modal ───────────────────────────────────
+  const [showSwap, setShowSwap] = useState(false);
+
   // ─── Mobile nav ────────────────────────────────────
   const [mobileNav, setMobileNav] = useState(false);
 
@@ -566,7 +570,7 @@ export default function Home() {
               a chad does what a chad wants
             </h1>
             <div className="hero-ca">CA: 0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888</div>
-            <a href="https://www.kumbaya.xyz/#/launch/0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888" target="_blank" rel="noopener noreferrer" className="btn btn-primary hero-buy">BUY NOW</a>
+            <button className="btn btn-primary hero-buy" onClick={() => setShowSwap(true)}>BUY NOW</button>
           </div>
         </div>
       </section>
@@ -618,7 +622,7 @@ export default function Home() {
             and half go to the tren fund. Every looksmaxx is stored permanently
             on-chain. The more you burn, the rarer everything becomes.
           </p>
-          <a href="https://www.kumbaya.xyz/#/launch/0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888" target="_blank" rel="noopener noreferrer" className="btn btn-outline">Buy $MEGACHAD</a>
+          <button className="btn btn-outline" onClick={() => setShowSwap(true)}>Buy $MEGACHAD</button>
         </div>
       </section>
 
@@ -716,6 +720,14 @@ export default function Home() {
               <div className="error-msg" style={{ marginTop: '1rem' }}>
                 Insufficient balance. You need at least{' '}
                 {BURN_AMOUNT_DISPLAY.toLocaleString()} tokens to burn.
+                <br />
+                <button
+                  className="btn btn-primary"
+                  style={{ marginTop: '0.75rem', fontSize: '0.9rem', padding: '0.6rem 1.5rem' }}
+                  onClick={() => setShowSwap(true)}
+                >
+                  Buy $MEGACHAD
+                </button>
               </div>
             )}
 
@@ -893,6 +905,13 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* ─── SWAP MODAL ──────────────────────────────── */}
+      <SwapModal
+        isOpen={showSwap}
+        onClose={() => setShowSwap(false)}
+        onSwapSuccess={() => refetchBalance()}
+      />
 
       {/* ─── WARREN PAYMENT MODAL ────────────────────── */}
       {showWarrenPayment && warrenEstimate && warrenData && (

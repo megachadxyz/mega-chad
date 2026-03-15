@@ -1259,6 +1259,143 @@ img { max-width: 100%; height: auto; }
   }
 }
 
+/* ── .mega Profile ───────────────────────────────── */
+.cb-profile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.cb-profile-bio {
+  font-family: var(--font-body);
+  font-size: .85rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: .75rem;
+}
+
+.cb-profile-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem .75rem;
+}
+
+.cb-profile-link {
+  font-family: var(--font-body);
+  font-size: .8rem;
+  color: var(--pink);
+  text-decoration: none;
+  padding: .3rem .6rem;
+  border: 1px solid rgba(247, 134, 198, 0.2);
+  transition: all .2s;
+}
+
+.cb-profile-link:hover {
+  background: rgba(247, 134, 198, 0.1);
+  border-color: var(--pink);
+}
+
+/* ── ERC-8004 Reputation ─────────────────────────── */
+.cb-rep-score {
+  color: #00ff88 !important;
+}
+
+.cb-rep-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.cb-rep-header {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--pink);
+  letter-spacing: .03em;
+  margin-bottom: .75rem;
+}
+
+.cb-rep-form {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+
+.cb-rep-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cb-rep-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+
+.cb-rep-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--pink);
+  cursor: pointer;
+  border: none;
+}
+
+.cb-rep-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--pink);
+  cursor: pointer;
+  border: none;
+}
+
+.cb-rep-slider-value {
+  font-family: var(--font-body);
+  font-size: .9rem;
+  font-weight: 700;
+  color: #fff;
+  min-width: 55px;
+  text-align: right;
+}
+
+.cb-rep-btn-sm {
+  font-size: .8rem !important;
+  padding: .5rem 1rem !important;
+  width: fit-content;
+}
+
+.cb-rep-done {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cb-rep-done-text {
+  font-family: var(--font-body);
+  font-size: .85rem;
+  color: #00ff88;
+}
+
+.cb-rep-error {
+  font-family: var(--font-body);
+  font-size: .8rem;
+  color: #ff4444;
+}
+
+.cb-rep-hint {
+  font-family: var(--font-body);
+  font-size: .7rem;
+  color: var(--text-dim);
+  opacity: .6;
+}
+
 /* ── ChadChat ────────────────────────────────────── */
 .chadchat-toggle {
   position: fixed;

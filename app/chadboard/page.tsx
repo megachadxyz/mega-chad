@@ -3,8 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import * as Ably from 'ably';
+import {
+  ERC8004_REPUTATION_REGISTRY,
+  REPUTATION_REGISTRY_ABI,
+} from '@/lib/erc8004';
 import { useRealtimeNFTMints } from '@/hooks/useRealtimeNFTMints';
 
 interface ChadboardImage {
@@ -13,14 +17,25 @@ interface ChadboardImage {
   txHash: string;
 }
 
+interface MegaNameProfile {
+  avatar?: string;
+  description?: string;
+  twitter?: string;
+  github?: string;
+  telegram?: string;
+  url?: string;
+}
+
 interface ChadboardEntry {
   address: string;
-  megaName?: string; // .mega domain if registered
+  megaName?: string;
+  megaProfile?: MegaNameProfile;
   totalBurns: number;
   totalBurned: number;
   latestImage: string;
   latestTimestamp: string;
   images: ChadboardImage[];
+  reputation?: { score: number | null; count: number };
 }
 
 interface ChatMessage {
@@ -104,6 +119,7 @@ export default function ChadboardPage() {
       .then((r) => r.json())
       .then((data) => {
         setEntries(data.entries || []);
+        if (data.agentId) setAgentId(data.agentId);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -135,6 +151,82 @@ export default function ChadboardPage() {
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const ablyClientRef = useRef<Ably.Realtime | null>(null);
   const channelRef = useRef<Ably.RealtimeChannel | null>(null);
+
+  // ─── Reputation state ─────────────────────────────
+  const [agentId, setAgentId] = useState<string | null>(null);
+  const [ratingValue, setRatingValue] = useState(80);
+  const [ratingStatus, setRatingStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [ratingError, setRatingError] = useState<string | null>(null);
+
+  const {
+    writeContract: writeReputation,
+    data: repTxHash,
+    error: repError,
+    reset: resetRep,
+  } = useWriteContract();
+
+  const { isSuccess: repConfirmed, isError: repFailed } =
+    useWaitForTransactionReceipt({
+      hash: repTxHash,
+      query: { enabled: !!repTxHash },
+    });
+
+  useEffect(() => {
+    if (repTxHash && ratingStatus === 'sending') {
+      // tx submitted, waiting for confirmation
+    }
+  }, [repTxHash, ratingStatus]);
+
+  useEffect(() => {
+    if (repConfirmed && ratingStatus === 'sending') {
+      setRatingStatus('done');
+    }
+    if (repFailed && ratingStatus === 'sending') {
+      setRatingStatus('error');
+      setRatingError('Transaction failed on-chain');
+    }
+  }, [repConfirmed, repFailed, ratingStatus]);
+
+  useEffect(() => {
+    if (repError && ratingStatus === 'sending') {
+      setRatingStatus('error');
+      setRatingError(
+        repError.message.includes('User rejected')
+          ? 'Transaction rejected.'
+          : 'Failed to submit rating.'
+      );
+    }
+  }, [repError, ratingStatus]);
+
+  const handleRate = () => {
+    if (!agentId || !isConnected) return;
+    setRatingStatus('sending');
+    setRatingError(null);
+    resetRep();
+
+    writeReputation({
+      address: ERC8004_REPUTATION_REGISTRY,
+      abi: REPUTATION_REGISTRY_ABI,
+      functionName: 'giveFeedback',
+      args: [
+        BigInt(agentId),
+        BigInt(ratingValue),
+        0, // valueDecimals (integer)
+        'starred', // tag1
+        '', // tag2
+        '', // endpoint
+        '', // feedbackURI
+        '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`, // feedbackHash
+      ],
+    });
+  };
+
+  const resetRating = () => {
+    setRatingStatus('idle');
+    setRatingError(null);
+    setRatingValue(80);
+    resetRep();
+  };
 
   // ─── Name popup state ──────────────────────────────
   const [showNamePopup, setShowNamePopup] = useState(false);
@@ -386,6 +478,12 @@ export default function ChadboardPage() {
                     <span className="cb-card-stat-value">{entry.totalBurned.toLocaleString()}</span>
                     <span className="cb-card-stat-label">Burned</span>
                   </div>
+                  {entry.reputation && entry.reputation.score !== null && (
+                    <div className="cb-card-stat">
+                      <span className="cb-card-stat-value cb-rep-score">{entry.reputation.score}</span>
+                      <span className="cb-card-stat-label">Rep ({entry.reputation.count})</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -425,8 +523,106 @@ export default function ChadboardPage() {
                   <span className="cb-card-stat-value">{selectedWallet.totalBurned.toLocaleString()}</span>
                   <span className="cb-card-stat-label">Tokens Burned</span>
                 </div>
+                {selectedWallet.reputation && selectedWallet.reputation.score !== null && (
+                  <div className="cb-card-stat">
+                    <span className="cb-card-stat-value cb-rep-score">{selectedWallet.reputation.score}/100</span>
+                    <span className="cb-card-stat-label">Reputation ({selectedWallet.reputation.count})</span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* ─── MEGA PROFILE ─────────────────────────── */}
+            {selectedWallet.megaProfile && (
+              <div className="cb-profile">
+                {selectedWallet.megaProfile.description && (
+                  <div className="cb-profile-bio">
+                    {selectedWallet.megaProfile.description}
+                  </div>
+                )}
+                <div className="cb-profile-links">
+                  {selectedWallet.megaProfile.twitter && (
+                    <a
+                      href={`https://x.com/${selectedWallet.megaProfile.twitter.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cb-profile-link"
+                    >
+                      X: {selectedWallet.megaProfile.twitter}
+                    </a>
+                  )}
+                  {selectedWallet.megaProfile.github && (
+                    <a
+                      href={`https://github.com/${selectedWallet.megaProfile.github.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cb-profile-link"
+                    >
+                      GitHub: {selectedWallet.megaProfile.github}
+                    </a>
+                  )}
+                  {selectedWallet.megaProfile.telegram && (
+                    <a
+                      href={`https://t.me/${selectedWallet.megaProfile.telegram.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cb-profile-link"
+                    >
+                      Telegram: {selectedWallet.megaProfile.telegram}
+                    </a>
+                  )}
+                  {selectedWallet.megaProfile.url && (
+                    <a
+                      href={selectedWallet.megaProfile.url.startsWith('http') ? selectedWallet.megaProfile.url : `https://${selectedWallet.megaProfile.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="cb-profile-link"
+                    >
+                      {selectedWallet.megaProfile.url}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ─── REPUTATION RATING ──────────────────────── */}
+            {agentId && isConnected && address?.toLowerCase() !== selectedWallet.address.toLowerCase() && (
+              <div className="cb-rep-section">
+                <div className="cb-rep-header">Rate this LooksMaxxer</div>
+                {ratingStatus === 'done' ? (
+                  <div className="cb-rep-done">
+                    <span className="cb-rep-done-text">Rating submitted on-chain!</span>
+                    <button className="btn btn-outline cb-rep-btn-sm" onClick={resetRating}>Rate Again</button>
+                  </div>
+                ) : (
+                  <div className="cb-rep-form">
+                    <div className="cb-rep-slider-row">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={ratingValue}
+                        onChange={(e) => setRatingValue(Number(e.target.value))}
+                        className="cb-rep-slider"
+                        disabled={ratingStatus === 'sending'}
+                      />
+                      <span className="cb-rep-slider-value">{ratingValue}/100</span>
+                    </div>
+                    <button
+                      className="btn btn-primary cb-rep-btn-sm"
+                      onClick={handleRate}
+                      disabled={ratingStatus === 'sending'}
+                    >
+                      {ratingStatus === 'sending' ? 'Submitting...' : 'Submit Rating'}
+                    </button>
+                    {ratingError && <div className="cb-rep-error">{ratingError}</div>}
+                    <div className="cb-rep-hint">
+                      Recorded on-chain via ERC-8004 Reputation Registry
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="cb-detail-grid">
               {selectedWallet.images.map((img) => (
                 <div key={img.txHash} className="cb-detail-item">

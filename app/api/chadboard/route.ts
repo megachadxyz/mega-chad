@@ -1,24 +1,44 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, http, parseAbiItem } from 'viem';
+import { createPublicClient, http, parseAbiItem, keccak256, encodePacked, toBytes } from 'viem';
 import { megaeth } from '@/lib/wagmi';
+import {
+  ERC8004_REPUTATION_REGISTRY,
+  REPUTATION_REGISTRY_ABI,
+} from '@/lib/erc8004';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+export interface MegaNameProfile {
+  avatar?: string;
+  description?: string;
+  twitter?: string;
+  github?: string;
+  telegram?: string;
+  url?: string;
+}
+
 export interface ChadboardEntry {
   address: string;
-  megaName?: string; // .mega domain if registered
+  megaName?: string;
+  megaProfile?: MegaNameProfile;
   totalBurns: number;
   totalBurned: number;
   latestImage: string;
   latestTimestamp: string;
   images: { ipfsUrl: string; timestamp: string; txHash: string }[];
+  reputation?: { score: number | null; count: number };
 }
 
 const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
 const MEGANAMES_CONTRACT = '0x5B424C6CCba77b32b9625a6fd5A30D409d20d997' as `0x${string}`;
+
+// MegaChad agent ID for reputation queries (set when registered on-chain)
+const MEGACHAD_AGENT_ID = process.env.MEGACHAD_AGENT_ID
+  ? BigInt(process.env.MEGACHAD_AGENT_ID)
+  : null;
 
 const viemClient = createPublicClient({
   chain: megaeth,
@@ -43,7 +63,31 @@ const MEGANAMES_ABI = [
     outputs: [{ name: '', type: 'string' }],
     stateMutability: 'view',
   },
+  {
+    type: 'function',
+    name: 'getText',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'key', type: 'string' },
+    ],
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+  },
 ] as const;
+
+// MegaNames tokenId computation (ENS-style namehash)
+const MEGA_NODE = keccak256(encodePacked(['bytes32', 'bytes32'], [
+  '0x0000000000000000000000000000000000000000000000000000000000000000',
+  keccak256(toBytes('mega')),
+]));
+
+function getTokenId(label: string): bigint {
+  return BigInt(keccak256(encodePacked(['bytes32', 'bytes32'], [
+    MEGA_NODE, keccak256(toBytes(label.toLowerCase())),
+  ])));
+}
+
+const TEXT_RECORD_KEYS = ['avatar', 'description', 'com.twitter', 'com.github', 'org.telegram', 'url'] as const;
 
 interface NFTWithOwner {
   tokenId: string;
@@ -269,7 +313,7 @@ export async function GET() {
 
     console.log('[Chadboard] Returning', entries.length, 'entries from', nftsWithImages.length, 'total NFTs');
 
-    // Resolve .mega names for all addresses
+    // Resolve .mega names and text records for all addresses
     await Promise.all(
       entries.map(async (entry) => {
         try {
@@ -281,6 +325,36 @@ export async function GET() {
           });
           if (megaName && megaName.length > 0) {
             entry.megaName = megaName;
+
+            // Fetch text records for this .mega name
+            const tokenId = getTokenId(megaName);
+            const records = await Promise.allSettled(
+              TEXT_RECORD_KEYS.map((key) =>
+                viemClient.readContract({
+                  address: MEGANAMES_CONTRACT,
+                  abi: MEGANAMES_ABI,
+                  functionName: 'getText',
+                  args: [tokenId, key],
+                })
+              )
+            );
+
+            const profile: MegaNameProfile = {};
+            TEXT_RECORD_KEYS.forEach((key, i) => {
+              const result = records[i];
+              if (result.status === 'fulfilled' && result.value && result.value.length > 0) {
+                if (key === 'com.twitter') profile.twitter = result.value;
+                else if (key === 'com.github') profile.github = result.value;
+                else if (key === 'org.telegram') profile.telegram = result.value;
+                else if (key === 'avatar') profile.avatar = result.value;
+                else if (key === 'description') profile.description = result.value;
+                else if (key === 'url') profile.url = result.value;
+              }
+            });
+
+            if (Object.keys(profile).length > 0) {
+              entry.megaProfile = profile;
+            }
           }
         } catch {
           // No .mega name registered for this address
@@ -288,8 +362,40 @@ export async function GET() {
       })
     );
 
+    // Resolve ERC-8004 reputation for burners (if agent is registered)
+    if (MEGACHAD_AGENT_ID !== null) {
+      // Get all burner addresses as trusted clients for Sybil-resistant queries
+      const burnerAddresses = entries.map((e) => e.address as `0x${string}`);
+
+      await Promise.all(
+        entries.map(async (entry) => {
+          try {
+            // Query aggregated reputation from other burners (Sybil-resistant)
+            const summary = await viemClient.readContract({
+              address: ERC8004_REPUTATION_REGISTRY,
+              abi: REPUTATION_REGISTRY_ABI,
+              functionName: 'getSummary',
+              args: [
+                MEGACHAD_AGENT_ID,
+                burnerAddresses,
+                'starred',
+                '',
+              ],
+            });
+
+            entry.reputation = {
+              score: Number(summary[0]) > 0 ? Number(summary[1]) : null,
+              count: Number(summary[0]),
+            };
+          } catch {
+            entry.reputation = { score: null, count: 0 };
+          }
+        })
+      );
+    }
+
     console.log('[Chadboard] Returning', entries.length, 'entries');
-    return NextResponse.json({ entries });
+    return NextResponse.json({ entries, agentId: MEGACHAD_AGENT_ID?.toString() ?? null });
   } catch (err) {
     console.error('[Chadboard] FATAL ERROR:', err);
     console.error('[Chadboard] Error details:', err instanceof Error ? err.message : String(err));

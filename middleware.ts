@@ -11,6 +11,7 @@ const ALLOWED_PAGES = new Set([
   '/gallery',
   '/main',
   '/early',
+  '/agent',
 ]);
 
 export function middleware(request: NextRequest) {
