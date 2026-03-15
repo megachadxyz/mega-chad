@@ -208,20 +208,9 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
           <div className="swap-field-header">
             <span className="swap-field-label">You Pay</span>
             {ethBalance && (
-              <button
-                className="swap-max"
-                onClick={() => {
-                  const max = Math.max(0, ethBalanceNum - 0.001);
-                  const val = max > 0 ? max.toFixed(6) : '';
-                  setEthAmount(val);
-                  if (val) {
-                    if (quoteTimer.current) clearTimeout(quoteTimer.current);
-                    fetchQuote(val);
-                  }
-                }}
-              >
-                Max: {ethBalanceNum.toFixed(4)} ETH
-              </button>
+              <span className="swap-balance">
+                Balance: {ethBalanceNum.toFixed(4)} ETH
+              </span>
             )}
           </div>
           <div className="swap-input-row">
@@ -452,18 +441,6 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
             font-family: var(--font-body);
             font-size: 0.75rem;
             color: var(--pink);
-          }
-          .swap-max {
-            background: none;
-            border: none;
-            color: var(--pink);
-            font-family: var(--font-body);
-            font-size: 0.75rem;
-            cursor: pointer;
-            padding: 0;
-          }
-          .swap-max:hover {
-            text-decoration: underline;
           }
           .swap-input-row {
             display: flex;
