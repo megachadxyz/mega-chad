@@ -37,6 +37,8 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
   const [ethAmount, setEthAmount] = useState('');
   const [quoteAmount, setQuoteAmount] = useState<bigint | null>(null);
   const [activeFee, setActiveFee] = useState(DEFAULT_FEE);
+  const [slippage, setSlippage] = useState(2);
+  const [showSlippage, setShowSlippage] = useState(false);
   const [status, setStatus] = useState<SwapStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -147,8 +149,8 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
     resetSwap();
 
     const amountIn = parseEther(ethAmount);
-    // 2% slippage protection
-    const amountOutMinimum = quoteAmount * 98n / 100n;
+    const slippageBps = BigInt(Math.round(slippage * 100));
+    const amountOutMinimum = quoteAmount * (10000n - slippageBps) / 10000n;
 
     executeSwap({
       address: KUMBAYA_SWAP_ROUTER,
@@ -172,6 +174,7 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
     setError(null);
     setEthAmount('');
     setQuoteAmount(null);
+    setShowSlippage(false);
     resetSwap();
   };
 
@@ -200,9 +203,13 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
               <button
                 className="swap-max"
                 onClick={() => {
-                  // Leave some ETH for gas
                   const max = Math.max(0, ethBalanceNum - 0.001);
-                  setEthAmount(max > 0 ? max.toFixed(6) : '');
+                  const val = max > 0 ? max.toFixed(6) : '';
+                  setEthAmount(val);
+                  if (val) {
+                    if (quoteTimer.current) clearTimeout(quoteTimer.current);
+                    fetchQuote(val);
+                  }
                 }}
               >
                 Max: {ethBalanceNum.toFixed(4)} ETH
@@ -255,6 +262,41 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
           </div>
         </div>
 
+        {/* Slippage Settings */}
+        <div className="swap-slippage-row">
+          <button className="swap-slippage-toggle" onClick={() => setShowSlippage(!showSlippage)}>
+            Slippage: {slippage}% {showSlippage ? '\u25B4' : '\u25BE'}
+          </button>
+        </div>
+        {showSlippage && (
+          <div className="swap-slippage-panel">
+            {[0.5, 1, 2, 5].map((val) => (
+              <button
+                key={val}
+                className={`swap-slippage-btn ${slippage === val ? 'active' : ''}`}
+                onClick={() => setSlippage(val)}
+              >
+                {val}%
+              </button>
+            ))}
+            <div className="swap-slippage-custom">
+              <input
+                type="number"
+                className="swap-slippage-input"
+                value={slippage}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  if (!isNaN(v) && v >= 0 && v <= 50) setSlippage(v);
+                }}
+                step="0.1"
+                min="0"
+                max="50"
+              />
+              <span>%</span>
+            </div>
+          </div>
+        )}
+
         {/* Swap Info */}
         {quoteAmount && ethAmount && parseFloat(ethAmount) > 0 && (
           <div className="swap-info">
@@ -265,8 +307,8 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
               </span>
             </div>
             <div className="swap-info-row">
-              <span>Slippage</span>
-              <span>2%</span>
+              <span>Max Slippage</span>
+              <span>{slippage}%</span>
             </div>
             <div className="swap-info-row">
               <span>Via</span>
@@ -463,6 +505,78 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
             justify-content: center;
             padding: 0.5rem 0;
             color: var(--text-dim);
+          }
+          .swap-slippage-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+          }
+          .swap-slippage-toggle {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 0.25rem 0;
+          }
+          .swap-slippage-toggle:hover {
+            color: var(--pink);
+          }
+          .swap-slippage-panel {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0;
+            flex-wrap: wrap;
+          }
+          .swap-slippage-btn {
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.35rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.15s;
+          }
+          .swap-slippage-btn.active {
+            background: var(--pink);
+            color: #000;
+            border-color: var(--pink);
+          }
+          .swap-slippage-btn:not(.active):hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.25);
+          }
+          .swap-slippage-custom {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-left: auto;
+            color: var(--text-dim);
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+          }
+          .swap-slippage-input {
+            width: 3.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+            padding: 0.35rem 0.4rem;
+            text-align: right;
+            outline: none;
+          }
+          .swap-slippage-input:focus {
+            border-color: var(--pink);
+          }
+          .swap-slippage-input::-webkit-outer-spin-button,
+          .swap-slippage-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
           }
           .swap-info {
             margin-top: 1rem;
