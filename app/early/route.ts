@@ -301,7 +301,7 @@ export async function GET() {
     <div id="step1">
       <div class="step-label">Step 01 / 04</div>
       <div class="step-title">Connect Wallet</div>
-      <div class="step-desc">You need to hold at least some $MEGACHAD or own a looksmaxx NFT to qualify for testnet access.</div>
+      <div class="step-desc">Hold <strong style="color:var(--pink);">3 looksmaxxed NFTs</strong> for instant testnet access, or hold any <strong style="color:var(--pink);">$MEGACHAD</strong> and refer 3 people to earn your spot.</div>
 
       <button class="btn" id="metamaskBtn" onclick="connectMetaMask()">Connect Wallet</button>
 
@@ -317,7 +317,7 @@ export async function GET() {
         </div>
         <div class="verify-badge checking" id="nftBadge">
           <span class="verify-dot"></span>
-          <span id="nftBadgeText"><span class="spinner"></span> Checking looksmaxx NFT...</span>
+          <span id="nftBadgeText"><span class="spinner"></span> Checking looksmaxxed NFTs...</span>
         </div>
       </div>
 
@@ -378,11 +378,11 @@ export async function GET() {
     <div id="step4" style="display:none;">
       <div class="step-label">Step 04 / 04</div>
       <div class="step-title">Your Referral Link</div>
-      <div class="step-desc">You're in. Now share your link &mdash; get 3 people to sign up through it and earn access to testnet.</div>
+      <div class="step-desc" id="step4Desc">You're in. Now share your link &mdash; get 3 people to sign up through it and earn access to testnet.</div>
 
-      <div class="referral-box">
+      <div class="referral-box" id="referralBox">
         <div class="referral-title">Testnet Eligibility</div>
-        <div class="referral-desc">
+        <div class="referral-desc" id="referralDesc">
           Get 3 referrals to sign up using your link to earn access to testnet.
         </div>
 
@@ -486,7 +486,7 @@ export async function GET() {
     return true;
   }
 
-  async function checkNFTBalance(address) {
+  async function checkNFTCount(address) {
     const NFT_CONTRACT = '0x1f1eFd3476b95091B9332b2d36a24bDE12CC6296';
     const data = '0x70a08231' + address.slice(2).toLowerCase().padStart(64, '0');
     const rpcs = [
@@ -510,7 +510,7 @@ export async function GET() {
         if (json.result && json.result !== '0x' && json.result !== '0x' + '0'.repeat(64)) {
           const balance = BigInt(json.result);
           console.log('NFT Balance:', balance.toString());
-          return balance > 0n;
+          return Number(balance);
         }
       } catch (e) {
         console.log('NFT RPC failed:', rpc, e.message);
@@ -518,16 +518,21 @@ export async function GET() {
       }
     }
     console.warn('All NFT RPCs failed — failing open');
-    return true;
+    return 3;
   }
+
+  let hasInstantAccess = false;
 
   async function runEligibilityCheck(address) {
     document.getElementById('verifyStatus').style.display = 'block';
 
-    const [hasTokens, hasNFT] = await Promise.all([
+    const [hasTokens, nftCount] = await Promise.all([
       checkTokenBalance(address),
-      checkNFTBalance(address)
+      checkNFTCount(address)
     ]);
+
+    const has3NFTs = nftCount >= 3;
+    hasInstantAccess = has3NFTs;
 
     const tokenBadge = document.getElementById('tokenBadge');
     const nftBadge = document.getElementById('nftBadge');
@@ -535,16 +540,20 @@ export async function GET() {
     const nftText = document.getElementById('nftBadgeText');
 
     tokenBadge.className = 'verify-badge ' + (hasTokens ? 'pass' : 'fail');
-    tokenText.innerHTML = hasTokens ? '\u2713 $MEGACHAD balance confirmed' : '\u2717 No $MEGACHAD found in this wallet';
+    tokenText.innerHTML = hasTokens
+      ? '\u2713 $MEGACHAD balance confirmed (referral path)'
+      : '\u2717 No $MEGACHAD found in this wallet';
 
-    nftBadge.className = 'verify-badge ' + (hasNFT ? 'pass' : 'fail');
-    nftText.innerHTML = hasNFT ? '\u2713 Looksmaxx NFT found' : '\u2717 No looksmaxx NFT found';
+    nftBadge.className = 'verify-badge ' + (has3NFTs ? 'pass' : 'fail');
+    nftText.innerHTML = has3NFTs
+      ? '\u2713 ' + nftCount + ' looksmaxxed NFTs found (instant access)'
+      : '\u2717 ' + nftCount + '/3 looksmaxxed NFTs (need 3 for instant access)';
 
-    const eligible = hasTokens || hasNFT;
+    const eligible = hasTokens || has3NFTs;
 
     if (!eligible) {
       const err = document.getElementById('eligibilityError');
-      err.textContent = "This wallet doesn't hold any $MEGACHAD or a looksmaxx NFT. You need at least one to qualify.";
+      err.textContent = "You need $MEGACHAD tokens (referral path) or 3 looksmaxxed NFTs (instant access) to qualify.";
       err.style.display = 'block';
       const btn = document.getElementById('metamaskBtn');
       btn.textContent = 'Connect Wallet';
@@ -685,11 +694,18 @@ export async function GET() {
       });
 
       document.getElementById('step3').style.display = 'none';
-      document.getElementById('step4').style.display = 'block';
       document.getElementById('pb3').classList.replace('active', 'done');
       document.getElementById('pb4').classList.add('active');
 
-      document.getElementById('referralLinkDisplay').textContent = myReferralCode;
+      if (hasInstantAccess) {
+        // 3+ NFTs — show success screen directly
+        document.getElementById('mainCard').style.display = 'none';
+        document.getElementById('successCard').classList.add('visible');
+      } else {
+        // Referral path — show referral code
+        document.getElementById('step4').style.display = 'block';
+        document.getElementById('referralLinkDisplay').textContent = myReferralCode;
+      }
 
     } catch (e) {
       btn.textContent = 'Secure My Spot';
