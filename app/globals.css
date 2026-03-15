@@ -431,6 +431,86 @@ img { max-width: 100%; height: auto; }
   margin-bottom: 2rem;
 }
 
+.bridge-card {
+  background: rgba(13, 13, 20, 0.6);
+  border: 1px solid rgba(247, 134, 198, 0.15);
+  max-width: 440px;
+  width: 100%;
+  padding: 2rem;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 0 40px rgba(247, 134, 198, 0.08);
+  text-align: left;
+}
+
+.bridge-header {
+  margin-bottom: 0.75rem;
+}
+
+.bridge-label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pink);
+  opacity: 0.8;
+}
+
+.bridge-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--pink);
+  margin: 0.25rem 0 0;
+  letter-spacing: 0.03em;
+}
+
+.bridge-desc {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.bridge-chains {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.bridge-chain {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bridge-chain-mega {
+  color: var(--pink);
+  border-color: rgba(247, 134, 198, 0.25);
+}
+
+.bridge-chain-arrow {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.bridge-btn {
+  width: 100%;
+  text-align: center;
+  display: block;
+}
+
+.buy-step-label {
+  max-width: 440px;
+  margin: 0 auto 0.5rem;
+  text-align: left;
+}
+
 /* ── Burn ─────────────────────────────────────────── */
 .burn {
   border-top: 1px solid var(--border);

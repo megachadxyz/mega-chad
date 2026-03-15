@@ -627,7 +627,34 @@ export default function Home() {
       {/* ─── BUY / SWAP ──────────────────────────────── */}
       <section id="buy" className="section buy-section">
         <h2 className="section-heading">Buy $MEGACHAD</h2>
-        <p className="buy-subtitle">Swap ETH for $MEGACHAD directly. No bridges, no CEX.</p>
+        <p className="buy-subtitle">Swap ETH for $MEGACHAD directly. No CEX.</p>
+
+        {/* Bridge Card */}
+        <div className="bridge-card">
+          <div className="bridge-header">
+            <span className="bridge-label">Step 1</span>
+            <h3 className="bridge-title">Bridge to MegaETH</h3>
+          </div>
+          <p className="bridge-desc">
+            Bridge ETH from Ethereum, Arbitrum, Base, or other chains to MegaETH.
+          </p>
+          <div className="bridge-chains">
+            <span className="bridge-chain">Ethereum</span>
+            <span className="bridge-chain-arrow">&rarr;</span>
+            <span className="bridge-chain bridge-chain-mega">MegaETH</span>
+          </div>
+          <a
+            href="https://rabbithole.megaeth.com/bridge"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline bridge-btn"
+          >
+            Open Rabbithole Bridge
+          </a>
+        </div>
+
+        {/* Swap Widget */}
+        <div className="buy-step-label"><span className="bridge-label">Step 2</span></div>
         <SwapModal inline onSwapSuccess={() => refetchBalance()} />
       </section>
 
