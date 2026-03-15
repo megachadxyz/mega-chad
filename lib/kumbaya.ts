@@ -61,5 +61,5 @@ export const SWAP_ROUTER_ABI = [
 ] as const;
 
 // Fee tiers available
-export const FEE_TIERS = [500, 3000, 10000] as const;
-export const DEFAULT_FEE = 3000; // 0.3% — standard pairs
+export const FEE_TIERS = [10000, 3000, 500] as const;
+export const DEFAULT_FEE = 10000; // 1% — MEGACHAD/WETH pool

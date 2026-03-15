@@ -3,19 +3,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   useAccount,
-  useReadContract,
+  useBalance,
   useWriteContract,
   useWaitForTransactionReceipt,
   usePublicClient,
 } from 'wagmi';
-import { parseUnits, formatUnits, erc20Abi } from 'viem';
+import { parseEther, formatEther, formatUnits } from 'viem';
 import {
   KUMBAYA_QUOTER_V2,
   KUMBAYA_SWAP_ROUTER,
-  USDM,
-  USDM_DECIMALS,
+  WETH,
   QUOTER_V2_ABI,
   SWAP_ROUTER_ABI,
+  FEE_TIERS,
   DEFAULT_FEE,
 } from '@/lib/kumbaya';
 import { MEGACHAD_ADDRESS } from '@/lib/contracts';
@@ -27,50 +27,20 @@ interface SwapModalProps {
   inline?: boolean;
 }
 
-type SwapStatus = 'idle' | 'quoting' | 'approving' | 'swapping' | 'confirming' | 'done' | 'error';
+type SwapStatus = 'idle' | 'quoting' | 'swapping' | 'confirming' | 'done' | 'error';
 
 export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: SwapModalProps) {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
+  const { data: ethBalance } = useBalance({ address });
 
-  const [usdmAmount, setUsdmAmount] = useState('');
+  const [ethAmount, setEthAmount] = useState('');
   const [quoteAmount, setQuoteAmount] = useState<bigint | null>(null);
+  const [activeFee, setActiveFee] = useState(DEFAULT_FEE);
   const [status, setStatus] = useState<SwapStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Read USDm balance
-  const { data: usdmBalance, refetch: refetchUsdmBalance } = useReadContract({
-    address: USDM,
-    abi: erc20Abi,
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
-    query: { enabled: !!address },
-  });
-
-  // Read USDm allowance for swap router
-  const { data: usdmAllowance, refetch: refetchAllowance } = useReadContract({
-    address: USDM,
-    abi: erc20Abi,
-    functionName: 'allowance',
-    args: address ? [address, KUMBAYA_SWAP_ROUTER] : undefined,
-    query: { enabled: !!address },
-  });
-
-  // Approve USDm
-  const {
-    writeContract: writeApprove,
-    data: approveTxHash,
-    error: approveError,
-    reset: resetApprove,
-  } = useWriteContract();
-
-  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({
-    hash: approveTxHash,
-    query: { enabled: !!approveTxHash },
-  });
-
-  // Swap
   const {
     writeContract: executeSwap,
     data: swapTxHash,
@@ -84,13 +54,7 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
       query: { enabled: !!swapTxHash },
     });
 
-  const amountInWei = usdmAmount && parseFloat(usdmAmount) > 0
-    ? parseUnits(usdmAmount, USDM_DECIMALS)
-    : 0n;
-
-  const needsApproval = usdmAllowance !== undefined && amountInWei > 0n && usdmAllowance < amountInWei;
-
-  // Fetch quote when USDm amount changes (debounced)
+  // Fetch quote when ETH amount changes (debounced)
   const fetchQuote = useCallback(async (amount: string) => {
     if (!publicClient || !amount || parseFloat(amount) <= 0) {
       setQuoteAmount(null);
@@ -100,16 +64,17 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
     setStatus('quoting');
     setError(null);
 
-    const amountIn = parseUnits(amount, USDM_DECIMALS);
+    const amountIn = parseEther(amount);
 
-    for (const fee of [DEFAULT_FEE, 500, 10000]) {
+    // Try fee tiers in order (10000 first since that's where MEGACHAD pool is)
+    for (const fee of FEE_TIERS) {
       try {
         const result = await publicClient.simulateContract({
           address: KUMBAYA_QUOTER_V2,
           abi: QUOTER_V2_ABI,
           functionName: 'quoteExactInputSingle',
           args: [{
-            tokenIn: USDM,
+            tokenIn: WETH,
             tokenOut: MEGACHAD_ADDRESS,
             fee,
             amountIn,
@@ -118,6 +83,7 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
         });
 
         setQuoteAmount(result.result[0]);
+        setActiveFee(fee);
         setStatus('idle');
         return;
       } catch {
@@ -132,59 +98,34 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
 
   useEffect(() => {
     if (quoteTimer.current) clearTimeout(quoteTimer.current);
-    if (!usdmAmount || parseFloat(usdmAmount) <= 0) {
+    if (!ethAmount || parseFloat(ethAmount) <= 0) {
       setQuoteAmount(null);
       return;
     }
-    quoteTimer.current = setTimeout(() => fetchQuote(usdmAmount), 400);
+    quoteTimer.current = setTimeout(() => fetchQuote(ethAmount), 400);
     return () => {
       if (quoteTimer.current) clearTimeout(quoteTimer.current);
     };
-  }, [usdmAmount, fetchQuote]);
+  }, [ethAmount, fetchQuote]);
 
-  // Handle approve confirmation → trigger swap
-  useEffect(() => {
-    if (approveConfirmed && status === 'approving') {
-      refetchAllowance();
-      doSwap();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approveConfirmed, status]);
-
-  // Handle approve errors
-  useEffect(() => {
-    if (approveError && status === 'approving') {
-      setStatus('error');
-      setError(
-        approveError.message.includes('User rejected')
-          ? 'Approval rejected.'
-          : approveError.message.slice(0, 120)
-      );
-    }
-  }, [approveError, status]);
-
-  // Handle swap tx hash → confirming
+  // Handle swap execution result
   useEffect(() => {
     if (swapTxHash && status === 'swapping') {
       setStatus('confirming');
     }
   }, [swapTxHash, status]);
 
-  // Handle swap confirmation
   useEffect(() => {
     if (swapConfirmed && status === 'confirming') {
       setStatus('done');
-      refetchUsdmBalance();
       onSwapSuccess?.();
     }
     if (swapFailed && status === 'confirming') {
       setStatus('error');
       setError('Swap transaction failed on-chain');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [swapConfirmed, swapFailed, status]);
+  }, [swapConfirmed, swapFailed, status, onSwapSuccess]);
 
-  // Handle swap errors
   useEffect(() => {
     if (swapError && status === 'swapping') {
       setStatus('error');
@@ -196,12 +137,15 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
     }
   }, [swapError, status]);
 
-  function doSwap() {
-    if (!address || !quoteAmount) return;
+  const handleSwap = () => {
+    if (!ethAmount || !quoteAmount || !address) return;
 
     setStatus('swapping');
+    setError(null);
     resetSwap();
 
+    const amountIn = parseEther(ethAmount);
+    // 2% slippage protection
     const amountOutMinimum = quoteAmount * 98n / 100n;
 
     executeSwap({
@@ -209,44 +153,24 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
       abi: SWAP_ROUTER_ABI,
       functionName: 'exactInputSingle',
       args: [{
-        tokenIn: USDM,
+        tokenIn: WETH,
         tokenOut: MEGACHAD_ADDRESS,
-        fee: DEFAULT_FEE,
+        fee: activeFee,
         recipient: address,
-        amountIn: amountInWei,
+        amountIn,
         amountOutMinimum,
         sqrtPriceLimitX96: 0n,
       }],
+      value: amountIn, // Send native ETH — router wraps to WETH
     });
-  }
-
-  const handleSwap = () => {
-    if (!usdmAmount || !quoteAmount || !address) return;
-
-    setError(null);
-
-    if (needsApproval) {
-      // Approve first, then swap on confirmation
-      setStatus('approving');
-      resetApprove();
-      writeApprove({
-        address: USDM,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [KUMBAYA_SWAP_ROUTER, amountInWei],
-      });
-    } else {
-      doSwap();
-    }
   };
 
   const handleReset = () => {
     setStatus('idle');
     setError(null);
-    setUsdmAmount('');
+    setEthAmount('');
     setQuoteAmount(null);
     resetSwap();
-    resetApprove();
   };
 
   const handleClose = () => {
@@ -256,28 +180,30 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
 
   if (!inline && !isOpen) return null;
 
-  const isBusy = status === 'quoting' || status === 'approving' || status === 'swapping' || status === 'confirming';
-  const canSwap = isConnected && usdmAmount && parseFloat(usdmAmount) > 0 && quoteAmount && !isBusy;
-  const usdmBalanceNum = usdmBalance !== undefined ? parseFloat(formatUnits(usdmBalance, USDM_DECIMALS)) : 0;
-  const hasEnough = usdmAmount ? parseFloat(usdmAmount) <= usdmBalanceNum : true;
+  const isBusy = status === 'quoting' || status === 'swapping' || status === 'confirming';
+  const canSwap = isConnected && ethAmount && parseFloat(ethAmount) > 0 && quoteAmount && !isBusy;
+  const ethBalanceNum = ethBalance ? parseFloat(formatEther(ethBalance.value)) : 0;
+  const hasEnoughEth = ethAmount ? parseFloat(ethAmount) <= ethBalanceNum : true;
 
   const swapContent = (
     <>
         <h2 className="swap-title">Buy $MEGACHAD</h2>
-        <p className="swap-subtitle">Swap USDm for $MEGACHAD via Kumbaya DEX</p>
+        <p className="swap-subtitle">Swap ETH for $MEGACHAD via Kumbaya DEX</p>
 
-        {/* USDm Input */}
+        {/* ETH Input */}
         <div className="swap-field">
           <div className="swap-field-header">
             <span className="swap-field-label">You Pay</span>
-            {usdmBalance !== undefined && (
+            {ethBalance && (
               <button
                 className="swap-max"
                 onClick={() => {
-                  setUsdmAmount(usdmBalanceNum > 0 ? usdmBalanceNum.toFixed(2) : '');
+                  // Leave some ETH for gas
+                  const max = Math.max(0, ethBalanceNum - 0.001);
+                  setEthAmount(max > 0 ? max.toFixed(6) : '');
                 }}
               >
-                Max: {usdmBalanceNum.toFixed(2)} USDm
+                Max: {ethBalanceNum.toFixed(4)} ETH
               </button>
             )}
           </div>
@@ -285,17 +211,17 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
             <input
               type="number"
               className="swap-input"
-              placeholder="0.00"
-              value={usdmAmount}
-              onChange={(e) => setUsdmAmount(e.target.value)}
+              placeholder="0.0"
+              value={ethAmount}
+              onChange={(e) => setEthAmount(e.target.value)}
               disabled={isBusy}
-              step="0.01"
+              step="0.001"
               min="0"
             />
-            <span className="swap-token">USDm</span>
+            <span className="swap-token">ETH</span>
           </div>
-          {usdmAmount && !hasEnough && (
-            <div className="swap-insufficient">Insufficient USDm balance</div>
+          {ethAmount && !hasEnoughEth && (
+            <div className="swap-insufficient">Insufficient ETH balance</div>
           )}
         </div>
 
@@ -328,12 +254,12 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
         </div>
 
         {/* Swap Info */}
-        {quoteAmount && usdmAmount && parseFloat(usdmAmount) > 0 && (
+        {quoteAmount && ethAmount && parseFloat(ethAmount) > 0 && (
           <div className="swap-info">
             <div className="swap-info-row">
               <span>Rate</span>
               <span>
-                1 USDm = {Number(formatUnits(quoteAmount * parseUnits('1', USDM_DECIMALS) / amountInWei, 18)).toLocaleString(undefined, { maximumFractionDigits: 0 })} $MEGACHAD
+                1 ETH = {Number(formatUnits(quoteAmount * parseEther('1') / parseEther(ethAmount), 18)).toLocaleString(undefined, { maximumFractionDigits: 0 })} $MEGACHAD
               </span>
             </div>
             <div className="swap-info-row">
@@ -358,26 +284,22 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
           </div>
         ) : (
           <button
-            className={`btn btn-primary swap-btn ${canSwap && hasEnough ? 'pulse-glow' : ''}`}
+            className={`btn btn-primary swap-btn ${canSwap && hasEnoughEth ? 'pulse-glow' : ''}`}
             onClick={handleSwap}
-            disabled={!canSwap || !hasEnough}
+            disabled={!canSwap || !hasEnoughEth}
           >
             {!isConnected
               ? 'Connect Wallet First'
-              : status === 'approving'
-              ? 'Approving USDm...'
               : status === 'swapping'
               ? 'Confirm in Wallet...'
               : status === 'confirming'
               ? 'Confirming Swap...'
-              : !usdmAmount || parseFloat(usdmAmount) <= 0
+              : !ethAmount || parseFloat(ethAmount) <= 0
               ? 'Enter Amount'
-              : !hasEnough
-              ? 'Insufficient USDm'
+              : !hasEnoughEth
+              ? 'Insufficient ETH'
               : !quoteAmount
               ? 'Enter Amount'
-              : needsApproval
-              ? 'Approve & Swap'
               : 'SWAP'}
           </button>
         )}
