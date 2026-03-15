@@ -301,7 +301,7 @@ export async function GET() {
     <div id="step1">
       <div class="step-label">Step 01 / 04</div>
       <div class="step-title">Connect Wallet</div>
-      <div class="step-desc">Hold <strong style="color:var(--pink);">3 looksmaxxed NFTs</strong> for instant testnet access, or hold any <strong style="color:var(--pink);">$MEGACHAD</strong> and refer 3 people to earn your spot.</div>
+      <div class="step-desc">Hold <strong style="color:var(--pink);">3 looksmaxxed NFTs</strong> for instant testnet access, or hold any <strong style="color:var(--pink);">$MEGACHAD or looksmaxxed NFT</strong> and refer 3 people to earn your spot.</div>
 
       <button class="btn" id="metamaskBtn" onclick="connectMetaMask()">Connect Wallet</button>
 
@@ -544,16 +544,19 @@ export async function GET() {
       ? '\u2713 $MEGACHAD balance confirmed (referral path)'
       : '\u2717 No $MEGACHAD found in this wallet';
 
-    nftBadge.className = 'verify-badge ' + (has3NFTs ? 'pass' : 'fail');
+    nftBadge.className = 'verify-badge ' + (hasAnyNFT ? 'pass' : 'fail');
     nftText.innerHTML = has3NFTs
       ? '\u2713 ' + nftCount + ' looksmaxxed NFTs found (instant access)'
-      : '\u2717 ' + nftCount + '/3 looksmaxxed NFTs (need 3 for instant access)';
+      : hasAnyNFT
+      ? '\u2713 ' + nftCount + '/3 looksmaxxed NFTs (referral path — need 3 for instant)'
+      : '\u2717 No looksmaxxed NFTs found';
 
-    const eligible = hasTokens || has3NFTs;
+    const hasAnyNFT = nftCount >= 1;
+    const eligible = hasTokens || hasAnyNFT;
 
     if (!eligible) {
       const err = document.getElementById('eligibilityError');
-      err.textContent = "You need $MEGACHAD tokens (referral path) or 3 looksmaxxed NFTs (instant access) to qualify.";
+      err.textContent = "You need $MEGACHAD tokens or at least 1 looksmaxxed NFT to qualify.";
       err.style.display = 'block';
       const btn = document.getElementById('metamaskBtn');
       btn.textContent = 'Connect Wallet';
