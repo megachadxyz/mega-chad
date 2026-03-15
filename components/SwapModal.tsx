@@ -20,14 +20,15 @@ import {
 import { MEGACHAD_ADDRESS } from '@/lib/contracts';
 
 interface SwapModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   onSwapSuccess?: () => void;
+  inline?: boolean;
 }
 
 type SwapStatus = 'idle' | 'quoting' | 'swapping' | 'confirming' | 'done' | 'error';
 
-export default function SwapModal({ isOpen, onClose, onSwapSuccess }: SwapModalProps) {
+export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: SwapModalProps) {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: ethBalance } = useBalance({ address });
@@ -191,23 +192,18 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess }: SwapModalP
 
   const handleClose = () => {
     handleReset();
-    onClose();
+    onClose?.();
   };
 
-  if (!isOpen) return null;
+  if (!inline && !isOpen) return null;
 
   const isBusy = status === 'quoting' || status === 'swapping' || status === 'confirming';
   const canSwap = isConnected && ethAmount && parseFloat(ethAmount) > 0 && quoteAmount && !isBusy;
   const ethBalanceNum = ethBalance ? parseFloat(formatEther(ethBalance.value)) : 0;
   const hasEnoughEth = ethAmount ? parseFloat(ethAmount) <= ethBalanceNum : true;
 
-  return (
-    <div className="swap-overlay" onClick={handleClose}>
-      <div className="swap-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="swap-close" onClick={handleClose} aria-label="Close">
-          &times;
-        </button>
-
+  const swapContent = (
+    <>
         <h2 className="swap-title">Buy $MEGACHAD</h2>
         <p className="swap-subtitle">Swap ETH for $MEGACHAD via Kumbaya DEX</p>
 
@@ -355,6 +351,16 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess }: SwapModalP
             padding: 2rem;
             position: relative;
             box-shadow: 0 0 60px rgba(247, 134, 198, 0.1);
+          }
+          .swap-inline {
+            background: rgba(13, 13, 20, 0.6);
+            border: 1px solid rgba(247, 134, 198, 0.15);
+            max-width: 440px;
+            width: 100%;
+            padding: 2rem;
+            position: relative;
+            box-shadow: 0 0 40px rgba(247, 134, 198, 0.08);
+            margin: 0 auto;
           }
           .swap-close {
             position: absolute;
@@ -532,7 +538,7 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess }: SwapModalP
             text-decoration: underline;
           }
           @media (max-width: 480px) {
-            .swap-modal {
+            .swap-modal, .swap-inline {
               padding: 1.5rem;
             }
             .swap-input, .swap-output {
@@ -540,6 +546,24 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess }: SwapModalP
             }
           }
         `}</style>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="swap-inline">
+        {swapContent}
+      </div>
+    );
+  }
+
+  return (
+    <div className="swap-overlay" onClick={handleClose}>
+      <div className="swap-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="swap-close" onClick={handleClose} aria-label="Close">
+          &times;
+        </button>
+        {swapContent}
       </div>
     </div>
   );

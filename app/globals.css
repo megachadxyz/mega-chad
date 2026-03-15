@@ -418,6 +418,19 @@ img { max-width: 100%; height: auto; }
   margin-top: 2rem;
 }
 
+/* ── Buy / Swap ──────────────────────────────────── */
+.buy-section {
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.buy-subtitle {
+  color: var(--text-dim);
+  font-size: .85rem;
+  margin-top: 0.5rem;
+  margin-bottom: 2rem;
+}
+
 /* ── Burn ─────────────────────────────────────────── */
 .burn {
   border-top: 1px solid var(--border);

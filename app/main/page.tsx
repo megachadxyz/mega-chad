@@ -473,9 +473,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // ─── Swap modal ───────────────────────────────────
-  const [showSwap, setShowSwap] = useState(false);
-
   // ─── Mobile nav ────────────────────────────────────
   const [mobileNav, setMobileNav] = useState(false);
 
@@ -501,6 +498,7 @@ export default function Home() {
         </a>
         <ul className={`nav-links ${mobileNav ? 'open' : ''}`}>
           <li><a href="#about" onClick={() => setMobileNav(false)}>About</a></li>
+          <li><a href="#buy" onClick={() => setMobileNav(false)}>Buy</a></li>
           <li><a href="#burn" onClick={() => setMobileNav(false)}>Burn</a></li>
           <li><a href="#roadmap" onClick={() => setMobileNav(false)}>Roadmap</a></li>
           <li><a href="#chads" onClick={() => setMobileNav(false)}>Chads</a></li>
@@ -570,7 +568,7 @@ export default function Home() {
               a chad does what a chad wants
             </h1>
             <div className="hero-ca">CA: 0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888</div>
-            <button className="btn btn-primary hero-buy" onClick={() => setShowSwap(true)}>BUY NOW</button>
+            <a className="btn btn-primary hero-buy" href="#buy">BUY NOW</a>
           </div>
         </div>
       </section>
@@ -622,8 +620,15 @@ export default function Home() {
             and half go to the tren fund. Every looksmaxx is stored permanently
             on-chain. The more you burn, the rarer everything becomes.
           </p>
-          <button className="btn btn-outline" onClick={() => setShowSwap(true)}>Buy $MEGACHAD</button>
+          <a className="btn btn-outline" href="#buy">Buy $MEGACHAD</a>
         </div>
+      </section>
+
+      {/* ─── BUY / SWAP ──────────────────────────────── */}
+      <section id="buy" className="section buy-section">
+        <h2 className="section-heading">Buy $MEGACHAD</h2>
+        <p className="buy-subtitle">Swap ETH for $MEGACHAD directly. No bridges, no CEX.</p>
+        <SwapModal inline onSwapSuccess={() => refetchBalance()} />
       </section>
 
       {/* ─── BURN TO LOOKSMAXX ──────────────────────── */}
@@ -721,13 +726,13 @@ export default function Home() {
                 Insufficient balance. You need at least{' '}
                 {BURN_AMOUNT_DISPLAY.toLocaleString()} tokens to burn.
                 <br />
-                <button
+                <a
                   className="btn btn-primary"
-                  style={{ marginTop: '0.75rem', fontSize: '0.9rem', padding: '0.6rem 1.5rem' }}
-                  onClick={() => setShowSwap(true)}
+                  style={{ marginTop: '0.75rem', fontSize: '0.9rem', padding: '0.6rem 1.5rem', display: 'inline-block' }}
+                  href="#buy"
                 >
                   Buy $MEGACHAD
-                </button>
+                </a>
               </div>
             )}
 
@@ -905,13 +910,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
-      {/* ─── SWAP MODAL ──────────────────────────────── */}
-      <SwapModal
-        isOpen={showSwap}
-        onClose={() => setShowSwap(false)}
-        onSwapSuccess={() => refetchBalance()}
-      />
 
       {/* ─── WARREN PAYMENT MODAL ────────────────────── */}
       {showWarrenPayment && warrenEstimate && warrenData && (
