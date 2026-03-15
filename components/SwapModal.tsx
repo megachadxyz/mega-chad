@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   useAccount,
   useBalance,
+  useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
   usePublicClient,
@@ -18,7 +19,7 @@ import {
   FEE_TIERS,
   DEFAULT_FEE,
 } from '@/lib/kumbaya';
-import { MEGACHAD_ADDRESS } from '@/lib/contracts';
+import { MEGACHAD_ADDRESS, MEGACHAD_ABI } from '@/lib/contracts';
 
 interface SwapModalProps {
   isOpen?: boolean;
@@ -33,6 +34,13 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: ethBalance } = useBalance({ address });
+  const { data: chadBalance } = useReadContract({
+    address: MEGACHAD_ADDRESS,
+    abi: MEGACHAD_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
 
   const [ethAmount, setEthAmount] = useState('');
   const [quoteAmount, setQuoteAmount] = useState<bigint | null>(null);
@@ -245,6 +253,11 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
         <div className="swap-field">
           <div className="swap-field-header">
             <span className="swap-field-label">You Receive</span>
+            {chadBalance !== undefined && (
+              <span className="swap-balance">
+                Balance: {Number(chadBalance / 10n ** 18n).toLocaleString()} $MEGACHAD
+              </span>
+            )}
           </div>
           <div className="swap-input-row">
             <div className="swap-output">
@@ -434,6 +447,11 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 0.06em;
+          }
+          .swap-balance {
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+            color: var(--pink);
           }
           .swap-max {
             background: none;
