@@ -67,9 +67,11 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
     const amountIn = parseEther(amount);
 
     // Try fee tiers in order (10000 first since that's where MEGACHAD pool is)
+    // Use readContract (eth_call) instead of simulateContract because
+    // UniV3 QuoterV2 is nonpayable and internally reverts after quoting
     for (const fee of FEE_TIERS) {
       try {
-        const result = await publicClient.simulateContract({
+        const result = await publicClient.readContract({
           address: KUMBAYA_QUOTER_V2,
           abi: QUOTER_V2_ABI,
           functionName: 'quoteExactInputSingle',
@@ -82,7 +84,7 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
           }],
         });
 
-        setQuoteAmount(result.result[0]);
+        setQuoteAmount(result[0]);
         setActiveFee(fee);
         setStatus('idle');
         return;
