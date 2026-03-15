@@ -20,8 +20,8 @@ export const QUOTER_V2_ABI = [
         components: [
           { name: 'tokenIn', type: 'address' },
           { name: 'tokenOut', type: 'address' },
-          { name: 'fee', type: 'uint24' },
           { name: 'amountIn', type: 'uint256' },
+          { name: 'fee', type: 'uint24' },
           { name: 'sqrtPriceLimitX96', type: 'uint160' },
         ],
       },
