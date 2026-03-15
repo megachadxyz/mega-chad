@@ -5,6 +5,8 @@
 export const KUMBAYA_QUOTER_V2 = '0x1F1a8dC7E138C34b503Ca080962aC10B75384a27' as const;
 export const KUMBAYA_SWAP_ROUTER = '0xE5BbEF8De2DB447a7432A47EBa58924d94eE470e' as const;
 export const WETH = '0x4200000000000000000000000000000000000006' as const;
+export const USDM = '0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7' as const;
+export const USDM_DECIMALS = 18;
 
 // ABIs (minimal subsets for quoting + swapping)
 export const QUOTER_V2_ABI = [
