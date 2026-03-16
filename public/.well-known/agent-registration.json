@@ -3,26 +3,49 @@
   "name": "MegaChad",
   "description": "Burn-to-create looksmaxxing engine on MegaETH. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation.",
   "image": "https://megachad.xyz/images/megachad-logo.png",
+  "openapi": "https://megachad.xyz/.well-known/openapi.json",
   "services": [
+    {
+      "name": "SwapQuote",
+      "endpoint": "https://megachad.xyz/api/x402/quote",
+      "version": "1.0.0",
+      "description": "Get swap quote and instructions for buying $MEGACHAD with ETH"
+    },
+    {
+      "name": "Looksmaxx",
+      "endpoint": "https://megachad.xyz/api/x402/looksmaxx",
+      "version": "1.0.0",
+      "description": "x402 payment-gated burn-to-create looksmaxxing (burn $MEGACHAD + pay 1 USDm)"
+    },
     {
       "name": "BurnToCreate",
       "endpoint": "https://megachad.xyz/api/generate",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "description": "Standard burn-to-create looksmaxxing (FormData upload)"
     },
     {
       "name": "Chadboard",
       "endpoint": "https://megachad.xyz/api/chadboard",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "description": "Burner leaderboard with ERC-8004 reputation scores"
     },
     {
       "name": "Stats",
       "endpoint": "https://megachad.xyz/api/stats",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "description": "Token supply, burn count, and circulating supply"
     },
     {
       "name": "Gallery",
       "endpoint": "https://megachad.xyz/api/gallery",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "description": "Paginated gallery of recent looksmaxxed burns"
+    },
+    {
+      "name": "AgentInfo",
+      "endpoint": "https://megachad.xyz/api/agent/info",
+      "version": "1.0.0",
+      "description": "ERC-8004 agent identity and on-chain registration status"
     }
   ],
   "x402Support": true,

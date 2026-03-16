@@ -1,0 +1,516 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MegaChad Agent API",
+    "version": "1.0.0",
+    "description": "Burn-to-create looksmaxxing engine on MegaETH. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation. All endpoints run on MegaETH (chain ID 4326, RPC: https://mainnet.megaeth.com/rpc).",
+    "contact": {
+      "name": "MegaChad",
+      "url": "https://megachad.xyz"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://megachad.xyz",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/api/x402/quote": {
+      "get": {
+        "operationId": "getSwapQuote",
+        "summary": "Get a swap quote for buying $MEGACHAD with ETH",
+        "description": "Returns DEX swap instructions and quote from Kumbaya (Uniswap V3 fork). Without ethAmount, returns general swap info and contract addresses. With ethAmount, returns a live quote with pre-built transaction parameters.",
+        "parameters": [
+          {
+            "name": "ethAmount",
+            "in": "query",
+            "required": false,
+            "description": "Amount of ETH to swap (e.g. \"0.1\" or wei string). Omit for general swap info.",
+            "schema": { "type": "string", "example": "0.1" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Swap quote and transaction parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "quote": {
+                      "type": "object",
+                      "properties": {
+                        "ethIn": { "type": "string", "description": "ETH amount (human readable)" },
+                        "ethInWei": { "type": "string", "description": "ETH amount in wei" },
+                        "megachadOut": { "type": "number", "description": "Estimated $MEGACHAD output" },
+                        "megachadOutWei": { "type": "string", "description": "$MEGACHAD output in wei" },
+                        "hasEnoughForBurn": { "type": "boolean", "description": "Whether output covers the 225,000 burn requirement" },
+                        "burnRequirement": { "type": "number", "description": "Required burn amount (225000)" },
+                        "gasEstimate": { "type": "string" }
+                      }
+                    },
+                    "swap": {
+                      "type": "object",
+                      "description": "Pre-built transaction parameters for exactInputSingle",
+                      "properties": {
+                        "router": { "type": "string", "description": "Kumbaya SwapRouter address" },
+                        "functionName": { "type": "string", "enum": ["exactInputSingle"] },
+                        "params": {
+                          "type": "object",
+                          "properties": {
+                            "tokenIn": { "type": "string" },
+                            "tokenOut": { "type": "string" },
+                            "fee": { "type": "integer" },
+                            "recipient": { "type": "string", "description": "Replace with your wallet address" },
+                            "amountIn": { "type": "string" },
+                            "amountOutMinimum": { "type": "string", "description": "2% slippage applied" },
+                            "sqrtPriceLimitX96": { "type": "string" }
+                          }
+                        },
+                        "value": { "type": "string", "description": "Native ETH to send as msg.value" }
+                      }
+                    },
+                    "chain": {
+                      "type": "object",
+                      "properties": {
+                        "name": { "type": "string" },
+                        "chainId": { "type": "integer" },
+                        "rpc": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid ethAmount parameter" },
+          "502": { "description": "DEX quote failed (liquidity issue)" }
+        }
+      }
+    },
+    "/api/x402/looksmaxx": {
+      "get": {
+        "operationId": "getLooksmaxxRequirements",
+        "summary": "Get payment and burn requirements for looksmaxxing",
+        "description": "Returns HTTP 402 with x402 payment requirements (1 USDm via Meridian) and $MEGACHAD burn requirements (225,000 tokens split between burn address and tren fund).",
+        "responses": {
+          "402": {
+            "description": "Payment required — contains x402 payment requirements and burn instructions",
+            "headers": {
+              "X-Payment-Required": { "schema": { "type": "string", "enum": ["true"] } },
+              "X-402-Version": { "schema": { "type": "string", "enum": ["1"] } }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "x402Version": { "type": "integer", "enum": [1] },
+                    "accepts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "scheme": { "type": "string" },
+                          "network": { "type": "string", "enum": ["megaeth"] },
+                          "asset": { "type": "string", "description": "USDm Forwarder address" },
+                          "payTo": { "type": "string", "description": "Meridian Facilitator address" },
+                          "maxAmountRequired": { "type": "string", "description": "1 USDm in wei (1000000000000000000)" },
+                          "resource": { "type": "string" },
+                          "description": { "type": "string" },
+                          "mimeType": { "type": "string" },
+                          "maxTimeoutSeconds": { "type": "integer" },
+                          "extra": { "type": "object" }
+                        }
+                      }
+                    },
+                    "burnRequirements": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string", "description": "$MEGACHAD contract address" },
+                        "totalAmount": { "type": "string", "description": "Total burn in wei" },
+                        "burnAddress": { "type": "string", "description": "0x...dEaD" },
+                        "burnAmount": { "type": "string", "description": "Half to burn address (wei)" },
+                        "trenFundWallet": { "type": "string" },
+                        "trenFundAmount": { "type": "string", "description": "Half to tren fund (wei)" }
+                      }
+                    },
+                    "instructions": {
+                      "type": "object",
+                      "properties": {
+                        "step1": { "type": "string" },
+                        "step2": { "type": "string" },
+                        "step3": { "type": "string" },
+                        "step4": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "submitLooksmaxx",
+        "summary": "Submit burn proof + x402 payment + image for looksmaxxing",
+        "description": "Verifies on-chain burns, settles x402 USDm payment via Meridian, generates AI looksmaxxed portrait via Replicate, pins to IPFS, and mints NFT to the burner address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["burnTxHash", "devTxHash", "burnerAddress", "image", "paymentPayload"],
+                "properties": {
+                  "burnTxHash": { "type": "string", "description": "Tx hash of 112,500 $MEGACHAD transfer to 0x...dEaD", "pattern": "^0x[a-fA-F0-9]{64}$" },
+                  "devTxHash": { "type": "string", "description": "Tx hash of 112,500 $MEGACHAD transfer to tren fund wallet", "pattern": "^0x[a-fA-F0-9]{64}$" },
+                  "burnerAddress": { "type": "string", "description": "Wallet address that sent both transfers", "pattern": "^0x[a-fA-F0-9]{40}$" },
+                  "image": { "type": "string", "description": "Base64-encoded portrait image (JPEG/PNG/WebP, max 4MB)" },
+                  "imageType": { "type": "string", "enum": ["image/jpeg", "image/png", "image/webp"], "default": "image/png" },
+                  "paymentPayload": {
+                    "type": "object",
+                    "description": "x402 TransferWithAuthorization payment payload",
+                    "required": ["payload"],
+                    "properties": {
+                      "x402Version": { "type": "integer" },
+                      "scheme": { "type": "string" },
+                      "network": { "type": "string" },
+                      "payload": {
+                        "type": "object",
+                        "required": ["signature"],
+                        "properties": {
+                          "signature": { "type": "string", "description": "EIP-712 signature for USDm TransferWithAuthorization" },
+                          "authorization": {
+                            "type": "object",
+                            "properties": {
+                              "from": { "type": "string" },
+                              "to": { "type": "string" },
+                              "value": { "type": "string" },
+                              "validAfter": { "type": "string" },
+                              "validBefore": { "type": "string" },
+                              "nonce": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Looksmaxx successful — image generated, pinned, and NFT minted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "enum": [true] },
+                    "source": { "type": "string", "enum": ["x402-agent"] },
+                    "imageUrl": { "type": "string", "description": "Generated looksmaxxed image URL" },
+                    "ipfsCid": { "type": "string", "description": "IPFS content identifier" },
+                    "ipfsUrl": { "type": "string", "description": "IPFS gateway URL" },
+                    "tokenId": { "type": "string", "nullable": true, "description": "Minted NFT token ID" },
+                    "burnTxHash": { "type": "string" },
+                    "devTxHash": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid input, missing fields, or burn verification failed" },
+          "402": { "description": "x402 payment settlement failed" },
+          "409": { "description": "Burn transaction already used (replay protection)" },
+          "502": { "description": "On-chain RPC or image generation failure" }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "operationId": "getTokenStats",
+        "summary": "Get $MEGACHAD token statistics",
+        "description": "Returns total supply, circulating supply, tokens burned, and total burn count.",
+        "responses": {
+          "200": {
+            "description": "Token statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalSupply": { "type": "number", "nullable": true },
+                    "circulatingSupply": { "type": "number" },
+                    "tokensBurned": { "type": "number", "nullable": true },
+                    "totalBurns": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gallery": {
+      "get": {
+        "operationId": "getGallery",
+        "summary": "Get recent looksmaxxed burns",
+        "description": "Returns a paginated list of recent burns with IPFS image URLs.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20, "maximum": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": { "type": "integer", "default": 0, "minimum": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gallery entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "burns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "txHash": { "type": "string" },
+                          "burner": { "type": "string" },
+                          "prompt": { "type": "string" },
+                          "cid": { "type": "string" },
+                          "ipfsUrl": { "type": "string" },
+                          "timestamp": { "type": "string", "format": "date-time" },
+                          "burnAmount": { "type": "number" },
+                          "tokenId": { "type": "string" }
+                        }
+                      }
+                    },
+                    "limit": { "type": "integer" },
+                    "offset": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chadboard": {
+      "get": {
+        "operationId": "getChadboard",
+        "summary": "Get burner leaderboard with ERC-8004 reputation scores",
+        "description": "Returns ranked list of top $MEGACHAD burners with burn counts, images, .mega names, profiles, and on-chain reputation scores from the ERC-8004 Reputation Registry.",
+        "responses": {
+          "200": {
+            "description": "Leaderboard entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": { "type": "string" },
+                          "megaName": { "type": "string", "nullable": true, "description": ".mega domain name" },
+                          "megaProfile": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "avatar": { "type": "string" },
+                              "description": { "type": "string" },
+                              "twitter": { "type": "string" },
+                              "url": { "type": "string" }
+                            }
+                          },
+                          "totalBurns": { "type": "integer" },
+                          "totalBurned": { "type": "number" },
+                          "latestImage": { "type": "string" },
+                          "latestTimestamp": { "type": "string", "format": "date-time" },
+                          "images": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "ipfsUrl": { "type": "string" },
+                                "timestamp": { "type": "string" },
+                                "txHash": { "type": "string" }
+                              }
+                            }
+                          },
+                          "reputation": {
+                            "type": "object",
+                            "properties": {
+                              "score": { "type": "number", "nullable": true },
+                              "count": { "type": "integer" }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "agentId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/info": {
+      "get": {
+        "operationId": "getAgentInfo",
+        "summary": "Get MegaChad agent registration and on-chain identity",
+        "description": "Returns ERC-8004 registration metadata, on-chain identity details, and contract addresses.",
+        "responses": {
+          "200": {
+            "description": "Agent info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "registration": {
+                      "type": "object",
+                      "properties": {
+                        "type": { "type": "string" },
+                        "name": { "type": "string" },
+                        "description": { "type": "string" },
+                        "image": { "type": "string" },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "endpoint": { "type": "string" },
+                              "version": { "type": "string" }
+                            }
+                          }
+                        },
+                        "x402Support": { "type": "boolean" },
+                        "active": { "type": "boolean" }
+                      }
+                    },
+                    "onChain": {
+                      "type": "object",
+                      "properties": {
+                        "agentId": { "type": "string", "nullable": true },
+                        "agentURI": { "type": "string", "nullable": true },
+                        "owner": { "type": "string", "nullable": true },
+                        "wallet": { "type": "string", "nullable": true },
+                        "reputationClients": { "type": "integer" }
+                      }
+                    },
+                    "contracts": {
+                      "type": "object",
+                      "properties": {
+                        "identityRegistry": { "type": "string" },
+                        "reputationRegistry": { "type": "string" }
+                      }
+                    },
+                    "status": { "type": "string", "enum": ["registered", "pending_registration"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/metadata/{tokenId}": {
+      "get": {
+        "operationId": "getNftMetadata",
+        "summary": "Get ERC-721 metadata for a looksmaxxed NFT",
+        "description": "Returns standard ERC-721 metadata including image URL (Warren on-chain or IPFS), attributes, and storage properties.",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "NFT metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "description": { "type": "string" },
+                    "image": { "type": "string" },
+                    "image_url": { "type": "string" },
+                    "external_url": { "type": "string" },
+                    "attributes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "trait_type": { "type": "string" },
+                          "value": { "type": "string" }
+                        }
+                      }
+                    },
+                    "properties": {
+                      "type": "object",
+                      "properties": {
+                        "ipfs_backup": { "type": "string" },
+                        "warren_token_id": { "type": "integer", "nullable": true },
+                        "on_chain": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Token not found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChainInfo": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "MegaETH" },
+          "chainId": { "type": "integer", "example": 4326 },
+          "rpc": { "type": "string", "example": "https://mainnet.megaeth.com/rpc" }
+        }
+      },
+      "ContractAddresses": {
+        "type": "object",
+        "description": "Key contract addresses on MegaETH (chain ID 4326)",
+        "properties": {
+          "megachadToken": { "type": "string", "example": "0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888" },
+          "nftContract": { "type": "string", "example": "0x1f1eFd3476b95091B9332b2d36a24bDE12CC6296" },
+          "burnAddress": { "type": "string", "example": "0x000000000000000000000000000000000000dEaD" },
+          "trenFundWallet": { "type": "string", "example": "0x85bf9272DEA7dff1781F71473187b96c6f2f370C" },
+          "kumbayaSwapRouter": { "type": "string", "example": "0xE5BbEF8De2DB447a7432A47EBa58924d94eE470e" },
+          "kumbayaQuoter": { "type": "string", "example": "0x1F1a8dC7E138C34b503Ca080962aC10B75384a27" },
+          "weth": { "type": "string", "example": "0x4200000000000000000000000000000000000006" },
+          "usdmToken": { "type": "string", "example": "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7" },
+          "identityRegistry": { "type": "string", "example": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" },
+          "reputationRegistry": { "type": "string", "example": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63" }
+        }
+      }
+    }
+  }
+}

@@ -16,7 +16,18 @@ export const MEGACHAD_AGENT_REGISTRATION = {
   name: 'MegaChad',
   description: 'Burn-to-create looksmaxxing engine on MegaETH. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation.',
   image: 'https://megachad.xyz/images/megachad-logo.png',
+  openapi: 'https://megachad.xyz/.well-known/openapi.json',
   services: [
+    {
+      name: 'SwapQuote',
+      endpoint: 'https://megachad.xyz/api/x402/quote',
+      version: '1.0.0',
+    },
+    {
+      name: 'Looksmaxx',
+      endpoint: 'https://megachad.xyz/api/x402/looksmaxx',
+      version: '1.0.0',
+    },
     {
       name: 'BurnToCreate',
       endpoint: 'https://megachad.xyz/api/generate',
@@ -37,10 +48,20 @@ export const MEGACHAD_AGENT_REGISTRATION = {
       endpoint: 'https://megachad.xyz/api/gallery',
       version: '1.0.0',
     },
+    {
+      name: 'AgentInfo',
+      endpoint: 'https://megachad.xyz/api/agent/info',
+      version: '1.0.0',
+    },
   ],
   x402Support: true,
   active: true,
-  registrations: [],  // Will be populated after on-chain registration
+  registrations: [
+    {
+      agentId: 12408,
+      agentRegistry: `eip155:4326:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`,
+    },
+  ],
   supportedTrust: ['reputation'],
 } as const;
 
