@@ -1,3 +1,37 @@
 {
-  "registrations": []
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "MegaChad",
+  "description": "Burn-to-create looksmaxxing engine on MegaETH. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation.",
+  "image": "https://megachad.xyz/images/megachad-logo.png",
+  "services": [
+    {
+      "name": "BurnToCreate",
+      "endpoint": "https://megachad.xyz/api/generate",
+      "version": "1.0.0"
+    },
+    {
+      "name": "Chadboard",
+      "endpoint": "https://megachad.xyz/api/chadboard",
+      "version": "1.0.0"
+    },
+    {
+      "name": "Stats",
+      "endpoint": "https://megachad.xyz/api/stats",
+      "version": "1.0.0"
+    },
+    {
+      "name": "Gallery",
+      "endpoint": "https://megachad.xyz/api/gallery",
+      "version": "1.0.0"
+    }
+  ],
+  "x402Support": true,
+  "active": true,
+  "registrations": [
+    {
+      "agentId": 12408,
+      "agentRegistry": "eip155:4326:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+    }
+  ],
+  "supportedTrust": ["reputation"]
 }
