@@ -28,6 +28,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/.well-known/') ||
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml' ||
+    pathname === '/llms.txt' ||
     pathname === '/favicon.jpg' ||
     pathname === '/chadfavicon.jpg'
   ) {

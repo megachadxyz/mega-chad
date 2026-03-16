@@ -9,19 +9,22 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@safe-global/safe-apps-provider": "^0.18.6",
     "@safe-global/safe-apps-sdk": "^9.1.0",
     "@tanstack/react-query": "^5.90.20",
     "@upstash/redis": "^1.36.2",
     "@walletconnect/ethereum-provider": "^2.23.4",
     "ably": "^2.17.1",
+    "mcp-handler": "^1.0.7",
     "next": "^14.2.0",
     "pinata": "^2.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "replicate": "^0.25.0",
     "viem": "^2.45.1",
-    "wagmi": "^3.4.2"
+    "wagmi": "^3.4.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

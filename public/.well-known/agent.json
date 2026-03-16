@@ -1,0 +1,95 @@
+{
+  "name": "MegaChad",
+  "description": "Burn-to-create looksmaxxing engine on MegaETH. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation.",
+  "url": "https://megachad.xyz/api/agent",
+  "version": "1.0.0",
+  "documentationUrl": "https://megachad.xyz/.well-known/openapi.json",
+  "provider": {
+    "organization": "MegaChad",
+    "url": "https://megachad.xyz"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "authentication": {
+    "schemes": ["x402"]
+  },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {
+      "id": "get-swap-quote",
+      "name": "Get Swap Quote",
+      "description": "Get a live swap quote and transaction parameters for buying $MEGACHAD with ETH via Kumbaya DEX on MegaETH. Returns router address, calldata, and slippage-adjusted minimum output.",
+      "tags": ["defi", "swap", "token", "megaeth"],
+      "examples": [
+        "How much $MEGACHAD can I get for 0.1 ETH?",
+        "Get a swap quote for buying MEGACHAD"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "looksmaxx",
+      "name": "Looksmaxx",
+      "description": "Burn 225,000 $MEGACHAD tokens and pay 1 USDm via x402 to generate an AI-enhanced portrait and mint it as an NFT. Requires two on-chain burn transactions and a base64-encoded portrait image.",
+      "tags": ["nft", "ai", "burn", "create", "megaeth", "x402"],
+      "examples": [
+        "Looksmaxx my portrait",
+        "Burn MEGACHAD tokens and create an AI portrait NFT"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "get-stats",
+      "name": "Get Token Stats",
+      "description": "Get current $MEGACHAD token statistics including total supply, circulating supply, tokens burned, and total burn count.",
+      "tags": ["stats", "token", "data"],
+      "examples": [
+        "What are the current MEGACHAD token stats?",
+        "How many tokens have been burned?"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "get-gallery",
+      "name": "Get Gallery",
+      "description": "Browse recent looksmaxxed burns with IPFS image URLs, burner addresses, and timestamps. Supports pagination.",
+      "tags": ["gallery", "nft", "images"],
+      "examples": [
+        "Show me recent looksmaxxed images",
+        "Get the latest burns from the gallery"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "get-chadboard",
+      "name": "Get Chadboard",
+      "description": "Get the burner leaderboard ranked by total burns. Includes ERC-8004 reputation scores, .mega domain names, profile info, and all looksmaxxed images per burner.",
+      "tags": ["leaderboard", "reputation", "erc8004"],
+      "examples": [
+        "Who are the top MEGACHAD burners?",
+        "Show the chadboard leaderboard"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "register-early-access",
+      "name": "Register for Early Access",
+      "description": "Register a wallet address for MegaChad testnet beta access. Requires a wallet address that holds $MEGACHAD tokens or looksmaxxed NFTs. Optionally include a referral code.",
+      "tags": ["beta", "testnet", "register", "early-access"],
+      "examples": [
+        "Sign up for MegaChad beta testing",
+        "Register my wallet for early access"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    }
+  ]
+}

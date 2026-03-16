@@ -483,6 +483,91 @@
           "404": { "description": "Token not found" }
         }
       }
+    },
+    "/api/early/register": {
+      "get": {
+        "operationId": "getEarlyAccessInfo",
+        "summary": "Get early access eligibility requirements",
+        "description": "Returns eligibility criteria, registration instructions, and contract addresses for MegaChad testnet beta access.",
+        "responses": {
+          "200": {
+            "description": "Early access info and registration instructions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "description": { "type": "string" },
+                    "eligibility": {
+                      "type": "object",
+                      "properties": {
+                        "instantAccess": { "type": "string" },
+                        "referralPath": { "type": "string" }
+                      }
+                    },
+                    "registration": { "type": "object" },
+                    "contracts": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "registerEarlyAccess",
+        "summary": "Register a wallet for MegaChad testnet beta access",
+        "description": "Verifies on-chain eligibility ($MEGACHAD balance or looksmaxxed NFTs) and registers the wallet. Returns a referral code and access status.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["wallet"],
+                "properties": {
+                  "wallet": { "type": "string", "description": "Ethereum wallet address (0x...)", "pattern": "^0x[a-fA-F0-9]{40}$" },
+                  "twitter": { "type": "string", "description": "X/Twitter handle (optional for agents)" },
+                  "tweetUrl": { "type": "string", "description": "Tweet URL (optional for agents)" },
+                  "referralCode": { "type": "string", "description": "Referral code from an existing registrant" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "wallet": { "type": "string" },
+                    "eligibility": {
+                      "type": "object",
+                      "properties": {
+                        "hasTokens": { "type": "boolean" },
+                        "nftCount": { "type": "integer" },
+                        "instantAccess": { "type": "boolean" },
+                        "path": { "type": "string", "enum": ["instant", "referral"] }
+                      }
+                    },
+                    "referralCode": { "type": "string" },
+                    "referralLink": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid wallet address" },
+          "403": { "description": "Not eligible — wallet has no $MEGACHAD or NFTs" },
+          "502": { "description": "Registration backend unavailable" }
+        }
+      }
     }
   },
   "components": {

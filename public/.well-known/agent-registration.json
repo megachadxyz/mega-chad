@@ -46,8 +46,20 @@
       "endpoint": "https://megachad.xyz/api/agent/info",
       "version": "1.0.0",
       "description": "ERC-8004 agent identity and on-chain registration status"
+    },
+    {
+      "name": "EarlyAccess",
+      "endpoint": "https://megachad.xyz/api/early/register",
+      "version": "1.0.0",
+      "description": "Register a wallet for testnet beta access"
     }
   ],
+  "protocols": {
+    "mcp": "https://megachad.xyz/api/mcp",
+    "a2a": "https://megachad.xyz/.well-known/agent.json",
+    "openapi": "https://megachad.xyz/.well-known/openapi.json",
+    "llms": "https://megachad.xyz/llms.txt"
+  },
   "x402Support": true,
   "active": true,
   "registrations": [
