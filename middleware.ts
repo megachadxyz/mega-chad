@@ -25,6 +25,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/images/') ||
     pathname.startsWith('/audio/') ||
+    pathname.startsWith('/.well-known/') ||
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml' ||
     pathname === '/favicon.jpg' ||
