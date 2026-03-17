@@ -754,6 +754,83 @@
         }
       }
     },
+    "/api/gasless/burn": {
+      "get": {
+        "operationId": "getGaslessBurnInfo",
+        "summary": "Get EIP-712 typed data for a gasless burn",
+        "description": "Returns the EIP-712 signature payload, approval status, and nonce for a gasless relay burn. Users approve the relayer contract once, then sign typed data to burn without paying gas.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Wallet address (0x...)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gasless burn readiness and EIP-712 typed data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ready": { "type": "boolean", "description": "True if wallet has approval and sufficient balance" },
+                    "approval": { "type": "object", "description": "Approval status and approve transaction if needed" },
+                    "balance": { "type": "object", "description": "Token balance vs required amount" },
+                    "signTypedData": { "type": "object", "description": "EIP-712 domain, types, and message to sign" },
+                    "relayerContract": { "type": "string", "description": "Relayer contract address" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "submitGaslessBurn",
+        "summary": "Submit a signed gasless burn for relay",
+        "description": "Submit an EIP-712 signed burn request. The backend relays the transaction on-chain and pays gas on behalf of the burner.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["burner", "deadline", "signature"],
+                "properties": {
+                  "burner": { "type": "string", "description": "Wallet address that signed the burn request" },
+                  "deadline": { "type": "integer", "description": "Unix timestamp after which the signature expires" },
+                  "signature": { "type": "string", "description": "EIP-712 signature (65-byte hex, 0x-prefixed)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Burn relayed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "txHash": { "type": "string" },
+                    "blockNumber": { "type": "integer" },
+                    "gasUsed": { "type": "string" },
+                    "explorerUrl": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid signature, expired deadline, or insufficient balance/approval" },
+          "500": { "description": "Relay transaction failed" }
+        }
+      }
+    },
     "/api/events": {
       "get": {
         "operationId": "getEventStream",

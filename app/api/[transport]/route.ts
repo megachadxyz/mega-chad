@@ -213,6 +213,24 @@ const handler = createMcpHandler(
       },
     );
 
+    // ── Gasless Burn ────────────────────────────────────────
+    server.registerTool(
+      'gasless_burn_info',
+      {
+        title: 'Get Gasless Burn Info',
+        description:
+          'Get EIP-712 typed data for a gasless burn. Returns the signature payload a wallet must sign, plus approval status. After signing, POST the signature to /api/gasless/burn to relay the burn without paying gas.',
+        inputSchema: {
+          address: z.string().describe('Wallet address (0x...)'),
+        },
+      },
+      async ({ address }) => {
+        const res = await fetch(`https://megachad.xyz/api/gasless/burn?address=${address}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
     // ── Bridge Info ────────────────────────────────────────
     server.registerTool(
       'get_bridge_info',
