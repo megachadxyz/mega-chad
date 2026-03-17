@@ -224,7 +224,7 @@ GET https://megachad.xyz/api/stats`}</pre>
                 </div>
                 <div className="analytics-stat">
                   <span className="analytics-stat-value">{analytics.uniqueCallers.toLocaleString()}</span>
-                  <span className="analytics-stat-label">Unique Agents</span>
+                  <span className="analytics-stat-label">Unique Callers</span>
                 </div>
                 <div className="analytics-stat">
                   <span className="analytics-stat-value">{Object.keys(analytics.endpoints).length}</span>
