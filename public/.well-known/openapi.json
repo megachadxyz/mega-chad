@@ -568,6 +568,208 @@
           "502": { "description": "Registration backend unavailable" }
         }
       }
+    },
+    "/api/price": {
+      "get": {
+        "operationId": "getTokenPrice",
+        "summary": "Get current $MEGACHAD price from DEX",
+        "description": "Returns the current $MEGACHAD price in ETH from the Kumbaya DEX pool, estimated burn cost, and pool info.",
+        "responses": {
+          "200": {
+            "description": "Token price data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "object" },
+                    "price": {
+                      "type": "object",
+                      "properties": {
+                        "megachadPerEth": { "type": "number" },
+                        "ethPerMegachad": { "type": "number" },
+                        "ethPerMillionMegachad": { "type": "string", "nullable": true }
+                      }
+                    },
+                    "burnCost": {
+                      "type": "object",
+                      "properties": {
+                        "tokensRequired": { "type": "integer" },
+                        "estimatedEth": { "type": "number" },
+                        "infraFeeUsdm": { "type": "integer" }
+                      }
+                    },
+                    "pool": { "type": "object" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          },
+          "502": { "description": "DEX quote failed" }
+        }
+      }
+    },
+    "/api/wallet": {
+      "get": {
+        "operationId": "getWalletInfo",
+        "summary": "Check wallet balances and burn eligibility",
+        "description": "Returns ETH balance, $MEGACHAD balance, NFT count, burn eligibility status, and early access qualification for a wallet address.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": { "type": "string" },
+                    "balances": {
+                      "type": "object",
+                      "properties": {
+                        "eth": { "type": "string" },
+                        "megachad": { "type": "number" },
+                        "looksmaxxedNFTs": { "type": "integer" }
+                      }
+                    },
+                    "burnEligibility": {
+                      "type": "object",
+                      "properties": {
+                        "canBurn": { "type": "boolean" },
+                        "burnRequirement": { "type": "integer" },
+                        "tokensNeeded": { "type": "number" },
+                        "message": { "type": "string" }
+                      }
+                    },
+                    "earlyAccess": {
+                      "type": "object",
+                      "properties": {
+                        "instantAccess": { "type": "boolean" },
+                        "referralPath": { "type": "boolean" },
+                        "eligible": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid address" }
+        }
+      }
+    },
+    "/api/agent/looksmaxx": {
+      "get": {
+        "operationId": "getLooksmaxxPlan",
+        "summary": "Get orchestrated looksmaxx flow with pre-built calldata",
+        "description": "Returns a complete, ordered set of transaction instructions for the full looksmaxx flow (swap → burn → tren fund → submit). Each step includes pre-built calldata ready to sign and send. This is the recommended endpoint for agents.",
+        "parameters": [
+          {
+            "name": "wallet",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }
+          },
+          {
+            "name": "ethAmount",
+            "in": "query",
+            "required": false,
+            "description": "ETH to swap. Omit if wallet already has enough $MEGACHAD.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orchestrated looksmaxx plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "wallet": { "type": "string" },
+                    "currentState": {
+                      "type": "object",
+                      "properties": {
+                        "ethBalance": { "type": "string" },
+                        "megachadBalance": { "type": "number" },
+                        "hasEnoughTokens": { "type": "boolean" },
+                        "tokensNeeded": { "type": "number" }
+                      }
+                    },
+                    "steps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "step": { "type": "integer" },
+                          "action": { "type": "string" },
+                          "description": { "type": "string" },
+                          "skip": { "type": "boolean" },
+                          "skipReason": { "type": "string" },
+                          "transaction": { "type": "object" },
+                          "postRequest": { "type": "object" }
+                        }
+                      }
+                    },
+                    "expectedResult": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid wallet" }
+        }
+      }
+    },
+    "/api/bridge": {
+      "get": {
+        "operationId": "getBridgeInfo",
+        "summary": "Get cross-chain bridge information for MegaETH",
+        "description": "Returns bridge options for moving assets from Ethereum, Arbitrum, Base, and other chains to MegaETH.",
+        "responses": {
+          "200": {
+            "description": "Bridge info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "chain": { "type": "object" },
+                    "bridges": { "type": "array", "items": { "type": "object" } },
+                    "tokens": { "type": "object" },
+                    "flow": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "getEventStream",
+        "summary": "Subscribe to real-time protocol events via SSE",
+        "description": "Server-Sent Events stream emitting stats updates, new burns, and heartbeats. Auto-closes after 55s — reconnect to continue.",
+        "responses": {
+          "200": {
+            "description": "SSE event stream",
+            "content": {
+              "text/event-stream": {
+                "schema": { "type": "string", "description": "SSE stream with events: connected, stats, burn, heartbeat, close" }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

@@ -14,25 +14,92 @@ const ALLOWED_PAGES = new Set([
   '/agent',
 ]);
 
+// Rate limit: sliding window per IP (in-memory, resets on cold start)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 120; // requests per window
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+// Cleanup stale entries periodically (prevent memory leak)
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap) {
+    if (now > entry.resetAt) rateLimitMap.delete(ip);
+  }
+}, 60_000);
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Always pass through Next.js internals, API routes, and static assets.
-  // The matcher config below already excludes /_next/*, but being explicit
-  // here makes intent clear.
+  // Always pass through Next.js internals and static assets
   if (
-    pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/images/') ||
     pathname.startsWith('/audio/') ||
-    pathname.startsWith('/.well-known/') ||
-    pathname === '/robots.txt' ||
-    pathname === '/sitemap.xml' ||
-    pathname === '/llms.txt' ||
     pathname === '/favicon.jpg' ||
     pathname === '/chadfavicon.jpg'
   ) {
     return NextResponse.next();
+  }
+
+  // Discovery files — pass through with CORS
+  if (
+    pathname.startsWith('/.well-known/') ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/llms.txt' ||
+    pathname === '/llms-full.txt'
+  ) {
+    const res = NextResponse.next();
+    res.headers.set('Access-Control-Allow-Origin', '*');
+    return res;
+  }
+
+  // API routes — CORS + rate limiting
+  if (pathname.startsWith('/api/')) {
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-402-Version',
+          'Access-Control-Max-Age': '86400',
+        },
+      });
+    }
+
+    // Rate limiting (skip for diag which is admin-ish)
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Max 120 requests per minute.' },
+        {
+          status: 429,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Retry-After': '60',
+          },
+        },
+      );
+    }
+
+    const res = NextResponse.next();
+    res.headers.set('Access-Control-Allow-Origin', '*');
+    return res;
   }
 
   // Known good pages

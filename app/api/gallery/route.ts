@@ -8,7 +8,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const burns = await getRecentBurns(limit, offset);
-    return NextResponse.json({ burns, limit, offset });
+    return NextResponse.json({ burns, limit, offset }, {
+      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' },
+    });
   } catch {
     // Redis not configured — return empty gallery
     return NextResponse.json({ burns: [], limit, offset });

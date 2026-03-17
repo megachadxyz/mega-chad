@@ -154,6 +154,80 @@ const handler = createMcpHandler(
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
       },
     );
+
+    // ── Token Price ────────────────────────────────────────
+    server.registerTool(
+      'get_price',
+      {
+        title: 'Get $MEGACHAD Price',
+        description:
+          'Returns the current $MEGACHAD price in ETH from Kumbaya DEX, plus the estimated ETH cost to burn 225,000 tokens.',
+        inputSchema: {},
+      },
+      async () => {
+        const res = await fetch('https://megachad.xyz/api/price');
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── Wallet Info ────────────────────────────────────────
+    server.registerTool(
+      'get_wallet_info',
+      {
+        title: 'Get Wallet Info',
+        description:
+          'Check a wallet\'s ETH balance, $MEGACHAD balance, NFT count, burn eligibility, and early access status.',
+        inputSchema: {
+          address: z.string().describe('Ethereum wallet address (0x...)'),
+        },
+      },
+      async ({ address }) => {
+        const res = await fetch(`https://megachad.xyz/api/wallet?address=${address}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── Looksmaxx Plan (Intent) ────────────────────────────
+    server.registerTool(
+      'get_looksmaxx_plan',
+      {
+        title: 'Get Looksmaxx Plan',
+        description:
+          'Returns a complete, ordered set of transaction instructions for the full looksmaxx flow: swap → burn → tren fund → submit. Each step includes pre-built calldata ready to sign.',
+        inputSchema: {
+          wallet: z.string().describe('Wallet address (0x...)'),
+          ethAmount: z
+            .string()
+            .optional()
+            .describe('ETH to swap (e.g. "0.5"). Omit if wallet already has enough $MEGACHAD.'),
+        },
+      },
+      async ({ wallet, ethAmount }) => {
+        const params = new URLSearchParams({ wallet });
+        if (ethAmount) params.set('ethAmount', ethAmount);
+        const res = await fetch(`https://megachad.xyz/api/agent/looksmaxx?${params}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── Bridge Info ────────────────────────────────────────
+    server.registerTool(
+      'get_bridge_info',
+      {
+        title: 'Get Bridge Info',
+        description:
+          'Returns bridge information for moving assets to MegaETH from Ethereum, Arbitrum, Base, and other chains. Lists canonical and aggregator bridges.',
+        inputSchema: {},
+      },
+      async () => {
+        const res = await fetch('https://megachad.xyz/api/bridge');
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
   },
   {
     serverInfo: {

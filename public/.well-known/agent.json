@@ -90,6 +90,54 @@
       ],
       "inputModes": ["application/json"],
       "outputModes": ["application/json"]
+    },
+    {
+      "id": "get-price",
+      "name": "Get Token Price",
+      "description": "Get the current $MEGACHAD price in ETH from Kumbaya DEX, plus the estimated ETH cost to complete a burn-to-create.",
+      "tags": ["price", "token", "defi", "data"],
+      "examples": [
+        "What is the current MEGACHAD price?",
+        "How much ETH do I need to looksmaxx?"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "check-wallet",
+      "name": "Check Wallet",
+      "description": "Check a wallet's ETH balance, $MEGACHAD balance, NFT count, burn eligibility, and early access qualification.",
+      "tags": ["wallet", "balance", "eligibility"],
+      "examples": [
+        "Check if my wallet can burn",
+        "What is my MEGACHAD balance?"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "looksmaxx-plan",
+      "name": "Plan Looksmaxx",
+      "description": "Get an orchestrated, step-by-step looksmaxx plan with pre-built transaction calldata for swap, burn, tren fund transfer, and final submission.",
+      "tags": ["looksmaxx", "orchestration", "agent", "plan"],
+      "examples": [
+        "Plan a looksmaxx for my wallet",
+        "Give me the full burn-to-create flow with calldata"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "get-bridge-info",
+      "name": "Get Bridge Info",
+      "description": "Get cross-chain bridge information for moving ETH and other assets to MegaETH from Ethereum, Arbitrum, Base, and other chains.",
+      "tags": ["bridge", "cross-chain", "megaeth"],
+      "examples": [
+        "How do I bridge ETH to MegaETH?",
+        "What bridges support MegaETH?"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"]
     }
   ]
 }

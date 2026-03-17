@@ -52,13 +52,45 @@
       "endpoint": "https://megachad.xyz/api/early/register",
       "version": "1.0.0",
       "description": "Register a wallet for testnet beta access"
+    },
+    {
+      "name": "Price",
+      "endpoint": "https://megachad.xyz/api/price",
+      "version": "1.0.0",
+      "description": "Current $MEGACHAD price in ETH from Kumbaya DEX"
+    },
+    {
+      "name": "Wallet",
+      "endpoint": "https://megachad.xyz/api/wallet",
+      "version": "1.0.0",
+      "description": "Check wallet balances, burn eligibility, and early access status"
+    },
+    {
+      "name": "LooksmaxxPlan",
+      "endpoint": "https://megachad.xyz/api/agent/looksmaxx",
+      "version": "1.0.0",
+      "description": "Orchestrated looksmaxx flow with pre-built calldata for each step"
+    },
+    {
+      "name": "Bridge",
+      "endpoint": "https://megachad.xyz/api/bridge",
+      "version": "1.0.0",
+      "description": "Cross-chain bridge information for moving assets to MegaETH"
+    },
+    {
+      "name": "Events",
+      "endpoint": "https://megachad.xyz/api/events",
+      "version": "1.0.0",
+      "description": "Real-time SSE stream of burns, stats updates, and protocol events"
     }
   ],
   "protocols": {
     "mcp": "https://megachad.xyz/api/mcp",
     "a2a": "https://megachad.xyz/.well-known/agent.json",
     "openapi": "https://megachad.xyz/.well-known/openapi.json",
-    "llms": "https://megachad.xyz/llms.txt"
+    "llms": "https://megachad.xyz/llms.txt",
+    "llmsFull": "https://megachad.xyz/llms-full.txt",
+    "sse": "https://megachad.xyz/api/events"
   },
   "x402Support": true,
   "active": true,

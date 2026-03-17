@@ -46,12 +46,19 @@ export async function GET() {
 
     const circulatingSupply = onChain.totalSupply - onChain.tokensBurned;
 
-    return NextResponse.json({
-      totalSupply: onChain.totalSupply,
-      circulatingSupply,
-      tokensBurned: onChain.tokensBurned,
-      totalBurns,
-    });
+    return NextResponse.json(
+      {
+        totalSupply: onChain.totalSupply,
+        circulatingSupply,
+        tokensBurned: onChain.tokensBurned,
+        totalBurns,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, max-age=30, s-maxage=30',
+        },
+      },
+    );
   } catch (err) {
     console.error('Stats fetch failed:', err);
     return NextResponse.json({

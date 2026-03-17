@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+Allow: /api/
+Allow: /.well-known/
+Allow: /llms.txt
+
+# AI agent crawlers — explicitly allowed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Discovery endpoints
+Sitemap: https://megachad.xyz/sitemap.xml
