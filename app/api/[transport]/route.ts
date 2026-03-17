@@ -1,5 +1,6 @@
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
+import { trackMcpTool } from '@/lib/analytics';
 
 const handler = createMcpHandler(
   (server) => {
@@ -13,6 +14,7 @@ const handler = createMcpHandler(
         inputSchema: {},
       },
       async () => {
+        trackMcpTool('get_megachad_stats').catch(() => {});
         const res = await fetch('https://megachad.xyz/api/stats');
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -34,6 +36,7 @@ const handler = createMcpHandler(
         },
       },
       async ({ ethAmount }) => {
+        trackMcpTool('get_swap_quote').catch(() => {});
         const url = ethAmount
           ? `https://megachad.xyz/api/x402/quote?ethAmount=${ethAmount}`
           : 'https://megachad.xyz/api/x402/quote';
@@ -53,6 +56,7 @@ const handler = createMcpHandler(
         inputSchema: {},
       },
       async () => {
+        trackMcpTool('get_looksmaxx_requirements').catch(() => {});
         const res = await fetch('https://megachad.xyz/api/x402/looksmaxx');
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -72,6 +76,7 @@ const handler = createMcpHandler(
         },
       },
       async ({ limit, offset }) => {
+        trackMcpTool('get_gallery').catch(() => {});
         const params = new URLSearchParams();
         if (limit) params.set('limit', String(limit));
         if (offset) params.set('offset', String(offset));
@@ -91,6 +96,7 @@ const handler = createMcpHandler(
         inputSchema: {},
       },
       async () => {
+        trackMcpTool('get_chadboard').catch(() => {});
         const res = await fetch('https://megachad.xyz/api/chadboard');
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -107,6 +113,7 @@ const handler = createMcpHandler(
         inputSchema: {},
       },
       async () => {
+        trackMcpTool('get_agent_info').catch(() => {});
         const res = await fetch('https://megachad.xyz/api/agent/info');
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -127,6 +134,7 @@ const handler = createMcpHandler(
         },
       },
       async ({ wallet, twitter, referralCode }) => {
+        trackMcpTool('register_early_access').catch(() => {});
         const res = await fetch('https://megachad.xyz/api/early/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -149,6 +157,7 @@ const handler = createMcpHandler(
         },
       },
       async ({ tokenId }) => {
+        trackMcpTool('get_nft_metadata').catch(() => {});
         const res = await fetch(`https://megachad.xyz/api/metadata/${tokenId}`);
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -165,6 +174,7 @@ const handler = createMcpHandler(
         inputSchema: {},
       },
       async () => {
+        trackMcpTool('get_price').catch(() => {});
         const res = await fetch('https://megachad.xyz/api/price');
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -183,6 +193,7 @@ const handler = createMcpHandler(
         },
       },
       async ({ address }) => {
+        trackMcpTool('get_wallet_info').catch(() => {});
         const res = await fetch(`https://megachad.xyz/api/wallet?address=${address}`);
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -205,6 +216,7 @@ const handler = createMcpHandler(
         },
       },
       async ({ wallet, ethAmount }) => {
+        trackMcpTool('get_looksmaxx_plan').catch(() => {});
         const params = new URLSearchParams({ wallet });
         if (ethAmount) params.set('ethAmount', ethAmount);
         const res = await fetch(`https://megachad.xyz/api/agent/looksmaxx?${params}`);
@@ -225,6 +237,7 @@ const handler = createMcpHandler(
         },
       },
       async ({ address }) => {
+        trackMcpTool('gasless_burn_info').catch(() => {});
         const res = await fetch(`https://megachad.xyz/api/gasless/burn?address=${address}`);
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
@@ -241,6 +254,7 @@ const handler = createMcpHandler(
         inputSchema: {},
       },
       async () => {
+        trackMcpTool('get_bridge_info').catch(() => {});
         const res = await fetch('https://megachad.xyz/api/bridge');
         const data = await res.json();
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };

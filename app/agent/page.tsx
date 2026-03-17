@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface AnalyticsData {
+  date: string;
+  totalApiCalls: number;
+  uniqueCallers: number;
+  endpoints: Record<string, number>;
+  mcpTools: Record<string, number>;
+}
+
 interface AgentInfo {
   registration: {
     type: string;
@@ -36,6 +44,8 @@ function truncAddr(addr: string): string {
 export default function AgentPage() {
   const [info, setInfo] = useState<AgentInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/agent/info')
@@ -43,6 +53,12 @@ export default function AgentPage() {
       .then(setInfo)
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    fetch('/api/analytics')
+      .then((r) => r.json())
+      .then(setAnalytics)
+      .catch(console.error)
+      .finally(() => setAnalyticsLoading(false));
   }, []);
 
   return (
@@ -194,6 +210,89 @@ GET https://megachad.xyz/api/stats`}</pre>
             </section>
           </>
         )}
+
+        {/* Agent Analytics */}
+        <section className="agent-card analytics-section">
+          <h2>Agent Analytics</h2>
+          {analyticsLoading && <p className="agent-loading">Loading analytics...</p>}
+          {analytics && (
+            <>
+              <div className="analytics-stats-row">
+                <div className="analytics-stat">
+                  <span className="analytics-stat-value">{analytics.totalApiCalls.toLocaleString()}</span>
+                  <span className="analytics-stat-label">API Calls Today</span>
+                </div>
+                <div className="analytics-stat">
+                  <span className="analytics-stat-value">{analytics.uniqueCallers.toLocaleString()}</span>
+                  <span className="analytics-stat-label">Unique Agents</span>
+                </div>
+                <div className="analytics-stat">
+                  <span className="analytics-stat-value">{Object.keys(analytics.endpoints).length}</span>
+                  <span className="analytics-stat-label">Active Endpoints</span>
+                </div>
+                <div className="analytics-stat">
+                  <span className="analytics-stat-value">{Object.keys(analytics.mcpTools).length}</span>
+                  <span className="analytics-stat-label">MCP Tools Used</span>
+                </div>
+              </div>
+
+              {Object.keys(analytics.endpoints).length > 0 && (
+                <div className="analytics-breakdown">
+                  <h3>Top Endpoints</h3>
+                  <div className="analytics-bar-list">
+                    {Object.entries(analytics.endpoints)
+                      .slice(0, 10)
+                      .map(([endpoint, count]) => {
+                        const maxCount = Math.max(...Object.values(analytics.endpoints));
+                        const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                        return (
+                          <div key={endpoint} className="analytics-bar-item">
+                            <div className="analytics-bar-label">
+                              <span className="analytics-bar-endpoint">{endpoint}</span>
+                              <span className="analytics-bar-count">{count.toLocaleString()}</span>
+                            </div>
+                            <div className="analytics-bar-track">
+                              <div className="analytics-bar-fill" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {Object.keys(analytics.mcpTools).length > 0 && (
+                <div className="analytics-breakdown">
+                  <h3>MCP Tool Usage</h3>
+                  <div className="analytics-bar-list">
+                    {Object.entries(analytics.mcpTools)
+                      .slice(0, 10)
+                      .map(([tool, count]) => {
+                        const maxCount = Math.max(...Object.values(analytics.mcpTools));
+                        const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                        return (
+                          <div key={tool} className="analytics-bar-item">
+                            <div className="analytics-bar-label">
+                              <span className="analytics-bar-endpoint">{tool}</span>
+                              <span className="analytics-bar-count">{count.toLocaleString()}</span>
+                            </div>
+                            <div className="analytics-bar-track">
+                              <div className="analytics-bar-fill analytics-bar-fill-mcp" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              <p className="analytics-date">Data for {analytics.date}</p>
+            </>
+          )}
+          {!analyticsLoading && !analytics && (
+            <p className="agent-loading">Analytics unavailable</p>
+          )}
+        </section>
 
         <style jsx>{`
           .agent-subtitle {
@@ -360,6 +459,101 @@ GET https://megachad.xyz/api/stats`}</pre>
             color: #ccc;
             line-height: 1.6;
             white-space: pre;
+          }
+          .analytics-section {
+            margin-top: 2rem;
+            border-color: rgba(247, 134, 198, 0.2);
+          }
+          .analytics-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+          }
+          .analytics-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(247, 134, 198, 0.06);
+            border: 1px solid rgba(247, 134, 198, 0.15);
+            padding: 1rem 0.75rem;
+          }
+          .analytics-stat-value {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            color: var(--pink);
+            line-height: 1;
+          }
+          .analytics-stat-label {
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 0.4rem;
+          }
+          .analytics-breakdown {
+            margin-bottom: 1.5rem;
+          }
+          .analytics-breakdown h3 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0 0 0.75rem 0;
+            letter-spacing: 0.04em;
+          }
+          .analytics-bar-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          .analytics-bar-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+          }
+          .analytics-bar-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .analytics-bar-endpoint {
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.8);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .analytics-bar-count {
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+            color: var(--pink);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-left: 0.5rem;
+          }
+          .analytics-bar-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 2px;
+            overflow: hidden;
+          }
+          .analytics-bar-fill {
+            height: 100%;
+            background: var(--pink);
+            border-radius: 2px;
+            transition: width 0.6s ease;
+          }
+          .analytics-bar-fill-mcp {
+            background: #00ff88;
+          }
+          .analytics-date {
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-align: right;
+            margin-top: 0.5rem;
           }
         `}</style>
       </div>

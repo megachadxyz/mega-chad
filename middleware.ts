@@ -1,6 +1,57 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// ── Analytics tracking via Upstash REST (Edge-compatible, no SDK needed) ──
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const ANALYTICS_TTL = 90 * 24 * 60 * 60; // 90 days in seconds
+
+function getToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Fire-and-forget analytics tracking via Upstash REST pipeline.
+ * Runs in Edge runtime without @upstash/redis SDK.
+ */
+function trackAnalytics(endpoint: string, ip: string): void {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) return;
+
+  const date = getToday();
+  const endpointKey = `analytics:${endpoint}:${date}`;
+  const totalKey = `analytics:total:${date}`;
+  const callersKey = `analytics:callers:${date}`;
+  const endpointsSetKey = `analytics:endpoints:${date}`;
+
+  // Build pipeline commands for Upstash REST API
+  const commands: [string, ...string[]][] = [
+    ['INCR', endpointKey],
+    ['EXPIRE', endpointKey, String(ANALYTICS_TTL)],
+    ['INCR', totalKey],
+    ['EXPIRE', totalKey, String(ANALYTICS_TTL)],
+    ['SADD', endpointsSetKey, endpoint],
+    ['EXPIRE', endpointsSetKey, String(ANALYTICS_TTL)],
+  ];
+
+  if (ip && ip !== 'unknown') {
+    commands.push(
+      ['SADD', callersKey, ip],
+      ['EXPIRE', callersKey, String(ANALYTICS_TTL)],
+    );
+  }
+
+  fetch(`${UPSTASH_URL}/pipeline`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${UPSTASH_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(commands),
+  }).catch(() => {
+    // Swallow errors — analytics must never break requests
+  });
+}
+
 const ALLOWED_PAGES = new Set([
   '/',
   '/about',
@@ -96,6 +147,9 @@ export function middleware(request: NextRequest) {
         },
       );
     }
+
+    // Fire-and-forget analytics tracking (non-blocking)
+    trackAnalytics(pathname, ip);
 
     const res = NextResponse.next();
     res.headers.set('Access-Control-Allow-Origin', '*');

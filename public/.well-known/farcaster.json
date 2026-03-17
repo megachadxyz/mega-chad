@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjAsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn0",
+    "payload": "eyJkb21haW4iOiJtZWdhY2hhZC54eXoifQ",
+    "signature": "PLACEHOLDER_REPLACE_WITH_REAL_SIGNATURE"
+  },
+  "frame": {
+    "version": "1",
+    "name": "$MEGACHAD",
+    "iconUrl": "https://megachad.xyz/chadfavicon.jpg",
+    "homeUrl": "https://megachad.xyz",
+    "imageUrl": "https://megachad.xyz/api/frame/image",
+    "buttonTitle": "Looksmaxx",
+    "splashImageUrl": "https://megachad.xyz/images/megachad-logo.png",
+    "splashBackgroundColor": "#0a0a0f",
+    "webhookUrl": "https://megachad.xyz/api/frame"
+  }
+}
