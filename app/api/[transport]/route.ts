@@ -244,6 +244,50 @@ const handler = createMcpHandler(
       },
     );
 
+    // ── Agent Register ────────────────────────────────────
+    server.registerTool(
+      'register_referral_agent',
+      {
+        title: 'Register as Referral Agent',
+        description:
+          'Register a wallet as a MegaChad referring agent. Returns registration transaction calldata and a referral code. Referring agents earn 10% of the tren fund portion (11,250 $MEGACHAD) for every burn they refer.',
+        inputSchema: {
+          wallet: z.string().describe('Agent wallet address (0x...)'),
+          mcpEndpoint: z.string().optional().describe('Agent MCP server URL (optional)'),
+          description: z.string().optional().describe('Agent description (optional)'),
+        },
+      },
+      async ({ wallet, mcpEndpoint, description }) => {
+        trackMcpTool('register_referral_agent').catch(() => {});
+        const res = await fetch('https://megachad.xyz/api/agent/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallet, mcpEndpoint, description }),
+        });
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── Agent Referrals ──────────────────────────────────
+    server.registerTool(
+      'get_referral_stats',
+      {
+        title: 'Get Referral Stats',
+        description:
+          'Get referral statistics for a registered agent — total referrals, earnings, reward per burn, and calldata for referred burns.',
+        inputSchema: {
+          address: z.string().describe('Agent wallet address (0x...)'),
+        },
+      },
+      async ({ address }) => {
+        trackMcpTool('get_referral_stats').catch(() => {});
+        const res = await fetch(`https://megachad.xyz/api/agent/referrals?address=${address}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
     // ── Bridge Info ────────────────────────────────────────
     server.registerTool(
       'get_bridge_info',

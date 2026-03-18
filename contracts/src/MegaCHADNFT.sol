@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract MegaCHADNFT is ERC721URIStorage, Ownable {
     uint256 private _nextTokenId;
 
-    constructor() ERC721("MegaCHAD Looksmaxx", "MCHADNFT") Ownable(msg.sender) {}
+    constructor() ERC721("MegaCHAD Looksmaxx", "MCHADNFT") {}
 
     function mint(address to, string memory tokenURI) external onlyOwner returns (uint256) {
         require(to != address(0), "Cannot mint to zero address");
