@@ -831,6 +831,83 @@
         }
       }
     },
+    "/api/agent/chat": {
+      "post": {
+        "operationId": "chatWithMegachad",
+        "summary": "Natural language interface for AI agents",
+        "description": "Send a plain English message and get back structured, actionable responses with data and suggested next actions. Supports 11 intents: price, stats, wallet, looksmaxx, swap, gallery, leaderboard, bridge, gasless, referral, about.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "message": { "type": "string", "description": "Natural language query", "example": "What is the current MEGACHAD price?" },
+                  "wallet": { "type": "string", "description": "Wallet address for context (0x...)", "pattern": "^0x[a-fA-F0-9]{40}$" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Structured response with intent, answer, data, and actions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "intent": { "type": "string", "description": "Detected intent (price, stats, wallet, etc.)" },
+                    "answer": { "type": "string", "description": "Human-readable answer" },
+                    "data": { "type": "object", "description": "Raw data from the underlying API" },
+                    "actions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": { "type": "string" },
+                          "endpoint": { "type": "string" },
+                          "method": { "type": "string" },
+                          "body": { "type": "object" }
+                        }
+                      },
+                      "description": "Suggested follow-up actions"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing or empty message" }
+        }
+      },
+      "get": {
+        "operationId": "getChatInfo",
+        "summary": "Get chat endpoint documentation",
+        "description": "Returns supported intents, example messages, and endpoint documentation.",
+        "responses": {
+          "200": {
+            "description": "Endpoint documentation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "endpoint": { "type": "string" },
+                    "method": { "type": "string" },
+                    "description": { "type": "string" },
+                    "supportedIntents": { "type": "array", "items": { "type": "string" } },
+                    "examples": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/events": {
       "get": {
         "operationId": "getEventStream",

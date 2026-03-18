@@ -288,6 +288,33 @@ const handler = createMcpHandler(
       },
     );
 
+    // ── Natural Language Chat ─────────────────────────────
+    server.registerTool(
+      'chat_with_megachad',
+      {
+        title: 'Chat with MegaChad',
+        description:
+          'Send a plain English message and get back structured, actionable responses. Supports intents: price, stats, wallet, looksmaxx, swap, gallery, leaderboard, bridge, gasless, referral, about.',
+        inputSchema: {
+          message: z.string().describe('Natural language query (e.g. "What is the current MEGACHAD price?")'),
+          wallet: z
+            .string()
+            .optional()
+            .describe('Wallet address for context (0x...). Optional.'),
+        },
+      },
+      async ({ message, wallet }) => {
+        trackMcpTool('chat_with_megachad').catch(() => {});
+        const res = await fetch('https://megachad.xyz/api/agent/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, wallet }),
+        });
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
     // ── Bridge Info ────────────────────────────────────────
     server.registerTool(
       'get_bridge_info',
