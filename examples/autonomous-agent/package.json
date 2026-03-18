@@ -1,0 +1,17 @@
+{
+  "name": "megachad-autonomous-agent-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone example of an autonomous agent interacting with MegaChad",
+  "scripts": {
+    "start": "ts-node agent.ts",
+    "mcp": "ts-node agent-with-mcp.ts"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}
