@@ -831,6 +831,176 @@
         }
       }
     },
+    "/api/agent/register": {
+      "get": {
+        "operationId": "checkAgentRegistration",
+        "summary": "Check if a wallet is registered as a referring agent",
+        "description": "Returns registration status, referral code, and stats for a wallet. Agents register on-chain to earn 11,250 $MEGACHAD (5% of burn) for every burn they refer.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" },
+            "description": "Agent wallet address"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registration status and stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agent": { "type": "string" },
+                    "registered": { "type": "boolean" },
+                    "referralCode": { "type": "string", "nullable": true },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "referralCount": { "type": "integer" },
+                        "totalEarnings": { "type": "string" },
+                        "totalEarningsFormatted": { "type": "string" }
+                      }
+                    },
+                    "referralContract": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid address" }
+        }
+      },
+      "post": {
+        "operationId": "registerReferralAgent",
+        "summary": "Register as a MegaChad referring agent",
+        "description": "Returns transaction calldata to register on-chain as a referring agent. After registration, earn 11,250 $MEGACHAD (5% of total burn) for every burn referred via your referral code.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["wallet"],
+                "properties": {
+                  "wallet": { "type": "string", "description": "Agent wallet address (0x...)", "pattern": "^0x[a-fA-F0-9]{40}$" },
+                  "mcpEndpoint": { "type": "string", "description": "Agent MCP server URL (optional)" },
+                  "description": { "type": "string", "description": "Agent description (optional)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration transaction calldata and referral info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agent": { "type": "string" },
+                    "referralCode": { "type": "string" },
+                    "registration": {
+                      "type": "object",
+                      "properties": {
+                        "description": { "type": "string" },
+                        "transaction": {
+                          "type": "object",
+                          "properties": {
+                            "to": { "type": "string" },
+                            "data": { "type": "string" },
+                            "chainId": { "type": "integer" },
+                            "value": { "type": "string" }
+                          }
+                        }
+                      }
+                    },
+                    "afterRegistration": {
+                      "type": "object",
+                      "properties": {
+                        "referralCode": { "type": "string" },
+                        "howItWorks": { "type": "array", "items": { "type": "string" } },
+                        "earnings": {
+                          "type": "object",
+                          "properties": {
+                            "perBurn": { "type": "string" },
+                            "percentage": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid wallet address" }
+        }
+      }
+    },
+    "/api/agent/referrals": {
+      "get": {
+        "operationId": "getReferralStats",
+        "summary": "Get referral stats and burn-with-referral calldata",
+        "description": "Returns referral count, earnings, reward-per-burn info, and pre-built calldata for executing a referred burn. Pass ?referralCode= to resolve a code to an agent.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" },
+            "description": "Agent wallet address"
+          },
+          {
+            "name": "referralCode",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Referral code to resolve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referral stats and calldata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agent": { "type": "string" },
+                    "registered": { "type": "boolean" },
+                    "referralCode": { "type": "string", "nullable": true },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "referralCount": { "type": "integer" },
+                        "totalEarnings": { "type": "string" },
+                        "totalEarningsFormatted": { "type": "string" }
+                      }
+                    },
+                    "rewardInfo": {
+                      "type": "object",
+                      "properties": {
+                        "currentBps": { "type": "integer" },
+                        "percentageOfTrenFund": { "type": "string" },
+                        "rewardPerBurn": { "type": "string" },
+                        "rewardPerBurnRaw": { "type": "string" }
+                      }
+                    },
+                    "referralContract": { "type": "string" },
+                    "burnWithReferralCalldata": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing address or referralCode" }
+        }
+      }
+    },
     "/api/agent/chat": {
       "post": {
         "operationId": "chatWithMegachad",

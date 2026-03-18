@@ -9,6 +9,7 @@ import {
   IDENTITY_REGISTRY_ABI,
   REPUTATION_REGISTRY_ABI,
 } from '@/lib/erc8004';
+import { REFERRAL_ADDRESS } from '@/lib/referral';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,6 +94,19 @@ export async function GET() {
         reputationRegistry: ERC8004_REPUTATION_REGISTRY,
       },
       status: AGENT_ID !== null ? 'registered' : 'pending_registration',
+      referralProgram: {
+        description: 'Agents can register on-chain to earn rewards for every burn they refer.',
+        rewardPerBurn: '11,250 $MEGACHAD (5% of total 225,000 burn)',
+        howToRegister: 'POST /api/agent/register with { wallet: "0x..." } to get registration calldata',
+        checkStats: 'GET /api/agent/referrals?address=0x...',
+        referralContract: REFERRAL_ADDRESS,
+        flow: [
+          '1. Register as agent via /api/agent/register',
+          '2. Get your referral code',
+          '3. Users burn with your referral via burnWithReferral(yourAddress)',
+          '4. You earn 11,250 $MEGACHAD per referred burn automatically',
+        ],
+      },
     });
   } catch (err) {
     console.error('[Agent Info] Error:', err);
