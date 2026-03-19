@@ -152,6 +152,9 @@ export default function PortalPage() {
           <li><Link href="/gallery">Gallery</Link></li>
           <li className="nav-divider">|</li>
           <li><Link href="/portal" className="nav-link-active">Portal</Link></li>
+          {isConnected && address && (
+            <li><Link href={`/profile/${address}`}>Profile</Link></li>
+          )}
         </ul>
       </nav>
 

@@ -419,6 +419,8 @@ export default function ChadboardPage() {
           <li><Link href="/main#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>
           <li className="nav-divider">|</li>
           <li><Link href="/chadboard" onClick={() => setMobileNav(false)} className="nav-link-active">Chadboard</Link></li>
+          <li><Link href="/gallery" onClick={() => setMobileNav(false)}>Gallery</Link></li>
+          <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
         </ul>
         <div className="nav-right">
           <button className="nav-burger" onClick={() => setMobileNav(!mobileNav)} aria-label="Menu">
@@ -694,6 +696,8 @@ export default function ChadboardPage() {
               <li><Link href="/main#chads">Chads</Link></li>
               <li className="footer-divider">|</li>
               <li><Link href="/chadboard">Chadboard</Link></li>
+              <li><Link href="/gallery">Gallery</Link></li>
+              <li><Link href="/portal">Portal</Link></li>
             </ul>
             <div className="footer-social">
               <a

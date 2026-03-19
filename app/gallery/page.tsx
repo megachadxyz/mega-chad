@@ -30,14 +30,17 @@ export default function GalleryPage() {
 
   return (
     <>
-      {/* Nav (simplified for gallery) */}
+      {/* Nav */}
       <nav className="nav">
         <Link href="/main" className="nav-logo" style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--pink)', textShadow: 'var(--pink-glow)', textDecoration: 'none' }}>
           $MEGACHAD
         </Link>
-        <Link href="/main" className="btn btn-outline" style={{ fontSize: '.65rem' }}>
-          Back to Home
-        </Link>
+        <ul className="nav-links">
+          <li><Link href="/main">Burn</Link></li>
+          <li><Link href="/chadboard">Chadboard</Link></li>
+          <li><Link href="/gallery" className="nav-link-active">Gallery</Link></li>
+          <li><Link href="/portal">Portal</Link></li>
+        </ul>
       </nav>
 
       <section className="section" style={{ paddingTop: '8rem' }}>
@@ -72,7 +75,7 @@ export default function GalleryPage() {
                 <img src={burn.ipfsUrl} alt={burn.prompt} className="gallery-image" />
                 <div className="gallery-meta">
                   <div className="gallery-prompt">{burn.prompt}</div>
-                  <div className="gallery-burner">{truncAddr(burn.burner)}</div>
+                  <Link href={`/profile/${burn.burner}`} className="gallery-burner" style={{ color: 'var(--pink)', textDecoration: 'none' }}>{truncAddr(burn.burner)}</Link>
                   <div className="gallery-time">
                     {new Date(burn.timestamp).toLocaleDateString()}
                   </div>

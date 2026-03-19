@@ -6,26 +6,27 @@ export default function AboutPage() {
   return (
     <div className="legal-page">
       <div className="legal-container">
-        <Link href="/" className="back-link">← Back to Home</Link>
+        <Link href="/main" className="back-link">← Back to App</Link>
 
         <h1>About $MEGACHAD</h1>
 
         <section>
           <h2>What is MegaChad?</h2>
           <p>
-            MegaChad is a burn-to-create platform built on MegaETH where users burn $MEGACHAD tokens
-            to generate AI-enhanced "looksmaxxed" images. Each burn creates a unique piece of art that
-            is permanently stored on IPFS and can be minted as an NFT.
+            MegaChad is a burn-to-create looksmaxxing engine on MegaETH. Users burn $MEGACHAD tokens
+            to generate AI-enhanced portraits and mint them as NFTs. It also serves as MegaETH's
+            universal portal — a command center for portfolio management, cross-chain operations,
+            protocol discovery, and on-chain identity.
           </p>
         </section>
 
         <section>
           <h2>How It Works</h2>
           <ol>
-            <li><strong>Burn Tokens:</strong> Users burn 225,000 $MEGACHAD tokens per creation</li>
-            <li><strong>AI Generation:</strong> Our AI (Flux 2 Max) generates a professional looksmaxxed portrait</li>
-            <li><strong>Storage Options:</strong> Choose between free IPFS storage or permanent on-chain storage via Warren Protocol (~$5)</li>
-            <li><strong>NFT Minting:</strong> Receive an NFT representing your unique creation</li>
+            <li><strong>Burn Tokens:</strong> Users burn 225,000 $MEGACHAD tokens per creation (112,500 burned forever + 112,500 to tren fund)</li>
+            <li><strong>AI Generation:</strong> Replicate (Flux 2 Max) generates a professional looksmaxxed portrait</li>
+            <li><strong>Storage:</strong> Choose between free IPFS storage or permanent on-chain storage via Warren Protocol (~$5)</li>
+            <li><strong>NFT Minting:</strong> Receive an ERC-721 NFT on MegaETH representing your creation</li>
           </ol>
         </section>
 
@@ -35,37 +36,104 @@ export default function AboutPage() {
             When you burn 225,000 $MEGACHAD tokens:
           </p>
           <ul>
-            <li><strong>112,500 tokens (50%)</strong> are sent to the dead address (permanent burn)</li>
+            <li><strong>112,500 tokens (50%)</strong> are sent to the dead address (0x...dEaD) — permanently destroyed</li>
             <li><strong>112,500 tokens (50%)</strong> go to the Tren Fund wallet</li>
           </ul>
           <p>
-            This deflationary mechanism reduces the total supply with every burn, making $MEGACHAD
-            increasingly scarce over time.
+            This deflationary mechanism reduces total supply with every burn. With referral burns,
+            the split is 50% burned, 45% tren fund, 5% referrer agent.
+          </p>
+          <p>
+            <strong>Infra Fee:</strong> 1 USDm per looksmaxx covers AI generation and IPFS pinning costs,
+            paid via Meridian x402 protocol.
+          </p>
+        </section>
+
+        <section>
+          <h2>Platform Features</h2>
+
+          <h3>Burn-to-Create Engine</h3>
+          <p>
+            The core product. Burn $MEGACHAD, upload a portrait, and receive an AI-enhanced looksmaxxed
+            NFT. Supports gasless burns via EIP-712 relayer — no gas fees needed.
+          </p>
+
+          <h3>MegaETH Universal Portal</h3>
+          <p>
+            Your MegaETH command center at <Link href="/portal" className="inline-link">/portal</Link>.
+            View all token balances, browse the protocol directory, check live network stats, and
+            execute natural language commands. One place for everything on MegaETH.
+          </p>
+
+          <h3>Cross-Chain Intents</h3>
+          <p>
+            Looksmaxx from any chain — Ethereum, Base, Arbitrum, Optimism, Polygon, BNB Chain, Avalanche,
+            Scroll, zkSync, or Linea. The system builds a complete bridge → swap → burn → generate → mint
+            plan automatically. Works for both humans and AI agents.
+          </p>
+
+          <h3>Natural Language Transaction Engine</h3>
+          <p>
+            Type what you want in plain English — "swap 0.1 ETH for megachad and burn it" or
+            "looksmaxx from base" — and get back structured responses with ready-to-sign calldata.
+            Powered by Claude AI with regex fallback.
+          </p>
+
+          <h3>Identity Layer</h3>
+          <p>
+            Every wallet gets a rich on-chain profile at <Link href="/profile/0x0000000000000000000000000000000000000000" className="inline-link">/profile</Link>:
+            MegaNames (.mega domains), burn history, reputation score (ERC-8004), referral stats,
+            and tier level (Normie → Mewer → Mogger → Gigachad → Eternal Chad). Queryable by any
+            MegaETH protocol.
+          </p>
+
+          <h3>Agent Referral Economy</h3>
+          <p>
+            AI agents register on-chain and earn 11,250 $MEGACHAD (5%) per referred burn.
+            Full MCP integration with 19 tools for autonomous agent operations.
+          </p>
+
+          <h3>Chadboard & Gallery</h3>
+          <p>
+            <Link href="/chadboard" className="inline-link">Chadboard</Link> ranks top burners with
+            ERC-8004 reputation scores and MegaNames profiles. The <Link href="/gallery" className="inline-link">Gallery</Link> showcases
+            all looksmaxxed creations with IPFS links. Burn-gated ChadChat for holders.
           </p>
         </section>
 
         <section>
           <h2>Technology Stack</h2>
           <ul>
-            <li><strong>Blockchain:</strong> MegaETH (ultra-fast L2)</li>
-            <li><strong>Smart Contracts:</strong> ERC-20 token with custom burn mechanism, ERC-721 NFTs</li>
+            <li><strong>Blockchain:</strong> MegaETH (chain ID 4326, ~250ms blocks, 100k+ TPS)</li>
+            <li><strong>Smart Contracts:</strong> MegaChadToken (ERC-20 burn), MegaCHADNFT (ERC-721), MegaChadRelayer (EIP-712 gasless), MegaChadReferral (agent economy)</li>
             <li><strong>AI:</strong> Replicate (Flux 2 Max model)</li>
-            <li><strong>Storage:</strong> Dual-tier storage system
-              <ul>
-                <li>Free: IPFS via Pinata (decentralized, permanent)</li>
-                <li>Premium: Warren Protocol (on-chain, immutable, censorship-resistant)</li>
-              </ul>
-            </li>
-            <li><strong>Frontend:</strong> Next.js 14 with Web3 integration</li>
+            <li><strong>Storage:</strong> IPFS via Pinata (free) + Warren Protocol (on-chain, ~$5)</li>
+            <li><strong>Payments:</strong> Meridian x402 protocol (HTTP 402 standard, USDm stablecoin)</li>
+            <li><strong>Identity:</strong> ERC-8004 Agent Registry + MegaNames .mega domains</li>
+            <li><strong>Agent Integration:</strong> MCP server (19 tools), natural language chat, cross-chain intents</li>
+            <li><strong>Frontend:</strong> Next.js 14 + wagmi + viem</li>
+            <li><strong>Cross-Chain:</strong> 10 source chains via Rabbithole + canonical MegaETH Bridge</li>
+            <li><strong>Social:</strong> Telegram bot, Farcaster frames, burn-gated chat (Ably)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Smart Contracts</h2>
+          <ul>
+            <li><strong>$MEGACHAD Token:</strong> 0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888</li>
+            <li><strong>MegaCHAD NFT:</strong> ERC-721 with IPFS/Warren metadata</li>
+            <li><strong>Gasless Relayer:</strong> 0x87d67c0A351FeB2bB9F6985D55665544F94ebC9F (EIP-712)</li>
+            <li><strong>Referral Contract:</strong> 0xf85004d10AbA6200669FeB12C81d356027312181</li>
+            <li><strong>ERC-8004 Identity:</strong> 0x8004A169FB4a3325136EB29fA0ceB6D2e539a432</li>
+            <li><strong>ERC-8004 Reputation:</strong> 0x8004BAa17C55a88189AE136b182e5fdA19dE9b63</li>
           </ul>
         </section>
 
         <section>
           <h2>Open Source</h2>
           <p>
-            MegaChad is built in public. Our entire codebase—frontend, smart contracts, and infrastructure—is
-            open source and available on GitHub. Community contributions, feedback, and transparency are core
-            to our mission.
+            MegaChad is built in public. Our entire codebase — frontend, smart contracts, and
+            infrastructure — is open source on GitHub.
           </p>
           <p>
             <a
@@ -83,8 +151,12 @@ export default function AboutPage() {
           <h2>Community</h2>
           <p>
             Join the MegaChad community to share your looksmaxxed creations, compete on the Chadboard
-            leaderboard, and participate in burn-gated chat with other holders.
+            leaderboard, and participate in burn-gated ChadChat.
           </p>
+          <ul>
+            <li><a href="https://x.com/megachadxyz" target="_blank" rel="noopener noreferrer" className="github-link">X / Twitter</a></li>
+            <li><a href="https://t.me/megachads" target="_blank" rel="noopener noreferrer" className="github-link">Telegram</a></li>
+          </ul>
         </section>
 
         <div className="legal-footer">
@@ -138,6 +210,15 @@ export default function AboutPage() {
           letter-spacing: 0.03em;
         }
 
+        h3 {
+          font-family: var(--font-display);
+          font-size: 1.3rem;
+          color: var(--pink-dim);
+          margin-top: 1.5rem;
+          margin-bottom: 0.75rem;
+          letter-spacing: 0.02em;
+        }
+
         section {
           margin-bottom: 2.5rem;
           padding-bottom: 2rem;
@@ -165,6 +246,17 @@ export default function AboutPage() {
 
         strong {
           color: var(--pink);
+        }
+
+        .inline-link {
+          color: var(--pink);
+          text-decoration: none;
+          transition: opacity 0.2s;
+        }
+
+        .inline-link:hover {
+          opacity: 0.8;
+          text-decoration: underline;
         }
 
         .legal-footer {
@@ -214,6 +306,10 @@ export default function AboutPage() {
 
           h2 {
             font-size: 1.5rem;
+          }
+
+          h3 {
+            font-size: 1.2rem;
           }
         }
       `}</style>

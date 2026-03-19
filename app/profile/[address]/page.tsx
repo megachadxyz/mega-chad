@@ -114,6 +114,7 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
           <li><Link href="/main">Burn</Link></li>
           <li><Link href="/chadboard">Chadboard</Link></li>
           <li><Link href="/gallery">Gallery</Link></li>
+          <li className="nav-divider">|</li>
           <li><Link href="/portal">Portal</Link></li>
         </ul>
       </nav>
