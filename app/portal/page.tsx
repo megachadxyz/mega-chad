@@ -149,7 +149,6 @@ export default function PortalPage() {
         <ul className="nav-links">
           <li><Link href="/main">Burn</Link></li>
           <li><Link href="/chadboard">Chadboard</Link></li>
-          <li><Link href="/gallery">Gallery</Link></li>
           <li className="nav-divider">|</li>
           <li><Link href="/portal" className="nav-link-active">Portal</Link></li>
           {isConnected && address && (
@@ -363,8 +362,8 @@ export default function PortalPage() {
                   <Link href={`/profile/${address}`} className="btn btn-outline" style={{ textAlign: 'center', padding: '12px' }}>
                     My Profile
                   </Link>
-                  <Link href="/gallery" className="btn btn-outline" style={{ textAlign: 'center', padding: '12px' }}>
-                    Gallery
+                  <Link href="/chadboard" className="btn btn-outline" style={{ textAlign: 'center', padding: '12px' }}>
+                    Chadboard
                   </Link>
                 </div>
               </>
@@ -537,7 +536,6 @@ export default function PortalPage() {
             <ul className="footer-links">
               <li><Link href="/main">Burn</Link></li>
               <li><Link href="/chadboard">Chadboard</Link></li>
-              <li><Link href="/gallery">Gallery</Link></li>
               <li className="footer-divider">|</li>
               <li><Link href="/portal">Portal</Link></li>
             </ul>

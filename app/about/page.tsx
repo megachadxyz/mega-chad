@@ -93,11 +93,11 @@ export default function AboutPage() {
             Full MCP integration with 19 tools for autonomous agent operations.
           </p>
 
-          <h3>Chadboard & Gallery</h3>
+          <h3>Chadboard</h3>
           <p>
             <Link href="/chadboard" className="inline-link">Chadboard</Link> ranks top burners with
-            ERC-8004 reputation scores and MegaNames profiles. The <Link href="/gallery" className="inline-link">Gallery</Link> showcases
-            all looksmaxxed creations with IPFS links. Burn-gated ChadChat for holders.
+            tier badges, ERC-8004 reputation scores, MegaNames profiles, and identity details.
+            Click any burner to see their creations, rate them on-chain, or visit their full profile. Burn-gated ChadChat for holders.
           </p>
         </section>
 

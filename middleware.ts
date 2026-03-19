@@ -59,7 +59,6 @@ const ALLOWED_PAGES = new Set([
   '/privacy',
   '/docs',
   '/chadboard',
-  '/gallery',
   '/main',
   '/early',
   '/agent',

@@ -54,6 +54,21 @@ function displayName(entry: ChadboardEntry): string {
   return entry.megaName || truncAddr(entry.address);
 }
 
+const TIER_THRESHOLDS = [
+  { min: 100, name: 'Eternal Chad', color: '#FFD700' },
+  { min: 50, name: 'Gigachad', color: '#FF4444' },
+  { min: 20, name: 'Mogger', color: '#F786C6' },
+  { min: 5, name: 'Mewer', color: '#88CCFF' },
+  { min: 1, name: 'Normie', color: '#999' },
+];
+
+function getTier(burns: number): { name: string; color: string } {
+  for (const t of TIER_THRESHOLDS) {
+    if (burns >= t.min) return { name: t.name, color: t.color };
+  }
+  return { name: 'Unburned', color: '#555' };
+}
+
 const TEST_CID = 'bafkreia6nhohfylww3stb3vou6kynvrpdov6vrfhromuwwbmzuwptrzd3u';
 
 function isTestImage(url: string): boolean {
@@ -419,7 +434,6 @@ export default function ChadboardPage() {
           <li><Link href="/main#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>
           <li className="nav-divider">|</li>
           <li><Link href="/chadboard" onClick={() => setMobileNav(false)} className="nav-link-active">Chadboard</Link></li>
-          <li><Link href="/gallery" onClick={() => setMobileNav(false)}>Gallery</Link></li>
           <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
         </ul>
         <div className="nav-right">
@@ -454,41 +468,55 @@ export default function ChadboardPage() {
 
         {!loading && entries.length > 0 && !selectedWallet && (
           <div className="chads-grid" style={{ marginTop: '2.5rem' }}>
-            {entries.map((entry, i) => (
-              <div
-                key={entry.address}
-                className="chad-card cb-clickable"
-                onClick={() => setSelectedWallet(entry)}
-              >
-                <div className="chad-img">
-                  {isTestImage(entry.latestImage) ? (
-                    <div className="cb-test-placeholder">TEST</div>
-                  ) : (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={entry.latestImage} alt={`Latest by ${displayName(entry)}`} />
-                  )}
-                  {i === 0 && <div className="cb-crown">MOGGER</div>}
-                </div>
-                <div className="chad-name">#{i + 1} LooksMaxxer</div>
-                <div className="chad-role">{displayName(entry)}</div>
-                <div className="cb-card-stats">
-                  <div className="cb-card-stat">
-                    <span className="cb-card-stat-value">{entry.totalBurns}</span>
-                    <span className="cb-card-stat-label">{entry.totalBurns === 1 ? 'Burn' : 'Burns'}</span>
+            {entries.map((entry, i) => {
+              const tier = getTier(entry.totalBurns);
+              return (
+                <div
+                  key={entry.address}
+                  className="chad-card cb-clickable"
+                  onClick={() => setSelectedWallet(entry)}
+                >
+                  <div className="chad-img">
+                    {isTestImage(entry.latestImage) ? (
+                      <div className="cb-test-placeholder">TEST</div>
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={entry.latestImage} alt={`Latest by ${displayName(entry)}`} />
+                    )}
+                    {i === 0 && <div className="cb-crown">MOGGER</div>}
                   </div>
-                  <div className="cb-card-stat">
-                    <span className="cb-card-stat-value">{entry.totalBurned.toLocaleString()}</span>
-                    <span className="cb-card-stat-label">Burned</span>
+                  <div className="chad-name">#{i + 1} LooksMaxxer</div>
+                  <div className="chad-role">{displayName(entry)}</div>
+                  <div className="cb-tier-badge" style={{ color: tier.color, borderColor: tier.color }}>
+                    {tier.name}
                   </div>
-                  {entry.reputation && entry.reputation.score !== null && (
+                  <div className="cb-card-stats">
                     <div className="cb-card-stat">
-                      <span className="cb-card-stat-value cb-rep-score">{entry.reputation.score}</span>
-                      <span className="cb-card-stat-label">Rep ({entry.reputation.count})</span>
+                      <span className="cb-card-stat-value">{entry.totalBurns}</span>
+                      <span className="cb-card-stat-label">{entry.totalBurns === 1 ? 'Burn' : 'Burns'}</span>
                     </div>
-                  )}
+                    <div className="cb-card-stat">
+                      <span className="cb-card-stat-value">{entry.totalBurned.toLocaleString()}</span>
+                      <span className="cb-card-stat-label">Burned</span>
+                    </div>
+                    {entry.reputation && entry.reputation.score !== null && (
+                      <div className="cb-card-stat">
+                        <span className="cb-card-stat-value cb-rep-score">{entry.reputation.score}</span>
+                        <span className="cb-card-stat-label">Rep ({entry.reputation.count})</span>
+                      </div>
+                    )}
+                  </div>
+                  <Link
+                    href={`/profile/${entry.address}`}
+                    className="cb-profile-link-btn"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ color: 'var(--pink)', fontSize: '.7rem', letterSpacing: '.08em', textTransform: 'uppercase', textDecoration: 'none', marginTop: '.5rem', display: 'inline-block' }}
+                  >
+                    View Profile &rarr;
+                  </Link>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -502,6 +530,9 @@ export default function ChadboardPage() {
               <div>
                 <div className="cb-detail-rank">
                   #{entries.indexOf(selectedWallet) + 1} LooksMaxxer
+                  <span className="cb-tier-badge" style={{ color: getTier(selectedWallet.totalBurns).color, borderColor: getTier(selectedWallet.totalBurns).color, marginLeft: '.75rem', fontSize: '.65rem' }}>
+                    {getTier(selectedWallet.totalBurns).name}
+                  </span>
                 </div>
                 <div className="cb-detail-address">
                   {selectedWallet.megaName ? (
@@ -515,6 +546,12 @@ export default function ChadboardPage() {
                     selectedWallet.address
                   )}
                 </div>
+                <Link
+                  href={`/profile/${selectedWallet.address}`}
+                  style={{ color: 'var(--pink)', fontSize: '.75rem', letterSpacing: '.08em', textTransform: 'uppercase', textDecoration: 'none', marginTop: '.25rem', display: 'inline-block' }}
+                >
+                  Full Profile &rarr;
+                </Link>
               </div>
               <div className="cb-detail-stats">
                 <div className="cb-card-stat">
@@ -696,7 +733,6 @@ export default function ChadboardPage() {
               <li><Link href="/main#chads">Chads</Link></li>
               <li className="footer-divider">|</li>
               <li><Link href="/chadboard">Chadboard</Link></li>
-              <li><Link href="/gallery">Gallery</Link></li>
               <li><Link href="/portal">Portal</Link></li>
             </ul>
             <div className="footer-social">

@@ -24,8 +24,7 @@ The protocol has two tokens: $MEGACHAD (primary burn token) and $MEGAGOONER (gov
 - [Looksmaxx (x402)](https://megachad.xyz/api/x402/looksmaxx): Payment-gated burn-to-create — GET for requirements, POST with burn proof + payment
 - [Token Stats](https://megachad.xyz/api/stats): Total supply, circulating supply, tokens burned, burn count
 - [Price](https://megachad.xyz/api/price): Current $MEGACHAD price and burn cost in ETH
-- [Gallery](https://megachad.xyz/api/gallery): Paginated list of recent looksmaxxed burns with IPFS image URLs
-- [Chadboard](https://megachad.xyz/api/chadboard): Burner leaderboard with ERC-8004 reputation scores
+- [Chadboard](https://megachad.xyz/api/chadboard): Burner leaderboard with tier badges, identity, and ERC-8004 reputation scores
 - [Agent Info](https://megachad.xyz/api/agent/info): On-chain identity, registration status, contract addresses
 - [Bridge Info](https://megachad.xyz/api/bridge): Bridge infrastructure for moving assets to MegaETH
 

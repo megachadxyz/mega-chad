@@ -1209,6 +1209,17 @@ img { max-width: 100%; height: auto; }
   box-shadow: var(--pink-glow);
 }
 
+.cb-tier-badge {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: .7rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  padding: .2rem .6rem;
+  border: 1px solid;
+  margin-top: .4rem;
+}
+
 .cb-card-stats {
   display: flex;
   gap: 1.5rem;

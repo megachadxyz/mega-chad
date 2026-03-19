@@ -504,7 +504,6 @@ export default function Home() {
           <li><a href="#chads" onClick={() => setMobileNav(false)}>Chads</a></li>
           <li className="nav-divider">|</li>
           <li><a href="/chadboard">Chadboard</a></li>
-          <li><a href="/gallery">Gallery</a></li>
           <li><a href="/portal">Portal</a></li>
         </ul>
         <div className="nav-right">
@@ -908,7 +907,6 @@ export default function Home() {
               <li><a href="#chads">Chads</a></li>
               <li className="footer-divider">|</li>
               <li><a href="/chadboard">Chadboard</a></li>
-              <li><a href="/gallery">Gallery</a></li>
               <li><a href="/portal">Portal</a></li>
             </ul>
             <div className="footer-social">
