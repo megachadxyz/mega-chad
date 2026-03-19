@@ -331,6 +331,87 @@ const handler = createMcpHandler(
         return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
       },
     );
+
+    // ── Cross-Chain Intent ───────────────────────────────────
+    server.registerTool(
+      'cross_chain_looksmaxx',
+      {
+        title: 'Cross-Chain Looksmaxx',
+        description:
+          'Build a cross-chain looksmaxx plan from any supported chain (Ethereum, Base, Arbitrum, Optimism, Polygon, BNB, Avalanche, Scroll, zkSync, Linea) to MegaETH. Returns step-by-step execution plan with bridge URLs, swap calldata, and burn instructions.',
+        inputSchema: {
+          sourceChain: z.string().describe('Source chain name (e.g. "base", "arbitrum", "ethereum")'),
+          wallet: z.string().optional().describe('Wallet address for pre-built calldata (0x...)'),
+          amount: z.string().optional().describe('ETH amount to bridge (e.g. "0.15")'),
+          referrer: z.string().optional().describe('Referrer agent address for 5% commission (0x...)'),
+        },
+      },
+      async ({ sourceChain, wallet, amount, referrer }) => {
+        trackMcpTool('cross_chain_looksmaxx').catch(() => {});
+        const params = new URLSearchParams({ sourceChain });
+        if (wallet) params.set('wallet', wallet);
+        if (amount) params.set('amount', amount);
+        if (referrer) params.set('referrer', referrer);
+        const res = await fetch(`https://megachad.xyz/api/cross-chain/intent?${params}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── Identity / Profile Lookup ────────────────────────────
+    server.registerTool(
+      'get_identity',
+      {
+        title: 'Get MegaChad Identity',
+        description:
+          'Resolve a wallet address or .mega name into a unified MegaETH identity profile. Returns: MegaNames data, token balances, burn history & rank, reputation score, referral stats, tier level, and social links. Works as the social identity layer for MegaETH.',
+        inputSchema: {
+          addressOrName: z.string().describe('Wallet address (0x...) or .mega name (e.g. "chad.mega" or "chad")'),
+        },
+      },
+      async ({ addressOrName }) => {
+        trackMcpTool('get_identity').catch(() => {});
+        const res = await fetch(`https://megachad.xyz/api/identity/${encodeURIComponent(addressOrName)}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── MegaETH Portal: Token Balances ───────────────────────
+    server.registerTool(
+      'get_portfolio',
+      {
+        title: 'Get MegaETH Portfolio',
+        description:
+          'Get all MegaETH token balances for a wallet: ETH, WETH, $MEGACHAD, USDm. Returns formatted balances with raw values.',
+        inputSchema: {
+          address: z.string().describe('Wallet address (0x...)'),
+        },
+      },
+      async ({ address }) => {
+        trackMcpTool('get_portfolio').catch(() => {});
+        const res = await fetch(`https://megachad.xyz/api/portal/tokens?address=${address}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── MegaETH Protocol Directory ───────────────────────────
+    server.registerTool(
+      'get_megaeth_protocols',
+      {
+        title: 'Get MegaETH Protocol Directory',
+        description:
+          'Returns a curated directory of protocols on MegaETH: DEXes, bridges, payment infra, storage, identity systems. Includes contract addresses, features, and links.',
+        inputSchema: {},
+      },
+      async () => {
+        trackMcpTool('get_megaeth_protocols').catch(() => {});
+        const res = await fetch('https://megachad.xyz/api/portal/protocols');
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
   },
   {
     serverInfo: {

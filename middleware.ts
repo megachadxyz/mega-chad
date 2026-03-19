@@ -63,6 +63,7 @@ const ALLOWED_PAGES = new Set([
   '/main',
   '/early',
   '/agent',
+  '/portal',
 ]);
 
 // Rate limit: sliding window per IP (in-memory, resets on cold start)
@@ -158,6 +159,11 @@ export function middleware(request: NextRequest) {
 
   // Known good pages
   if (ALLOWED_PAGES.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Dynamic routes: /profile/:address
+  if (pathname.startsWith('/profile/')) {
     return NextResponse.next();
   }
 
