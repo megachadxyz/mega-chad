@@ -432,7 +432,6 @@ export default function ChadboardPage() {
           <li><Link href="/main#burn" onClick={() => setMobileNav(false)}>Burn</Link></li>
           <li><Link href="/main#roadmap" onClick={() => setMobileNav(false)}>Roadmap</Link></li>
           <li><Link href="/main#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>
-          <li className="nav-divider">|</li>
           <li><Link href="/chadboard" onClick={() => setMobileNav(false)} className="nav-link-active">Chadboard</Link></li>
           <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
         </ul>
@@ -731,7 +730,6 @@ export default function ChadboardPage() {
               <li><Link href="/main#burn">Burn</Link></li>
               <li><Link href="/main#roadmap">Roadmap</Link></li>
               <li><Link href="/main#chads">Chads</Link></li>
-              <li className="footer-divider">|</li>
               <li><Link href="/chadboard">Chadboard</Link></li>
               <li><Link href="/portal">Portal</Link></li>
             </ul>

@@ -502,9 +502,8 @@ export default function Home() {
           <li><a href="#burn" onClick={() => setMobileNav(false)}>Burn</a></li>
           <li><a href="#roadmap" onClick={() => setMobileNav(false)}>Roadmap</a></li>
           <li><a href="#chads" onClick={() => setMobileNav(false)}>Chads</a></li>
-          <li className="nav-divider">|</li>
-          <li><a href="/chadboard">Chadboard</a></li>
-          <li><a href="/portal">Portal</a></li>
+          <li><a href="/chadboard" onClick={() => setMobileNav(false)}>Chadboard</a></li>
+          <li><a href="/portal" onClick={() => setMobileNav(false)}>Portal</a></li>
         </ul>
         <div className="nav-right">
           <button className="audio-toggle" onClick={toggleAudio} title={audioPlaying ? 'Mute' : 'Play Music'}>
@@ -662,12 +661,18 @@ export default function Home() {
       {/* ─── BURN TO LOOKSMAXX ──────────────────────── */}
       <section id="burn" className="section burn">
         <h2 className="section-heading">Burn to Looksmaxx</h2>
+        <p style={{ color: 'var(--text-dim)', fontSize: '.8rem', letterSpacing: '.05em', marginTop: '.25rem', marginBottom: '1.5rem' }}>
+          From any chain. Ethereum, Base, Arbitrum, Optimism, Polygon &amp; more — bridge, swap, burn, mint in one flow.
+        </p>
 
         {!isConnected ? (
           <div className="burn-card">
             <div className="burn-connect-prompt">
               Connect your wallet to burn tokens and generate art. 50% burned forever, 50% to tren fund.
               <br />
+              <span style={{ color: 'var(--text-dim)', fontSize: '.75rem', display: 'block', marginTop: '.5rem', marginBottom: '.5rem' }}>
+                Not on MegaETH? Use <a href="/portal" style={{ color: 'var(--pink)' }}>Portal</a> or our cross-chain engine to burn from any chain.
+              </span>
               <button className="btn btn-primary" onClick={connectWallet}>
                 Connect Wallet
               </button>
@@ -905,7 +910,6 @@ export default function Home() {
               <li><a href="#burn">Burn</a></li>
               <li><a href="#roadmap">Roadmap</a></li>
               <li><a href="#chads">Chads</a></li>
-              <li className="footer-divider">|</li>
               <li><a href="/chadboard">Chadboard</a></li>
               <li><a href="/portal">Portal</a></li>
             </ul>
