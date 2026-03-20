@@ -55,18 +55,18 @@ function displayName(entry: ChadboardEntry): string {
 }
 
 const TIER_THRESHOLDS = [
-  { min: 100, name: 'Eternal Chad', color: '#FFD700' },
-  { min: 50, name: 'Gigachad', color: '#FF4444' },
-  { min: 20, name: 'Mogger', color: '#F786C6' },
-  { min: 5, name: 'Mewer', color: '#88CCFF' },
-  { min: 1, name: 'Normie', color: '#999' },
+  { min: 25, name: 'Gigachad', color: '#FFD700' },
+  { min: 10, name: 'Chad', color: '#FF4444' },
+  { min: 3, name: 'Bonesmasher', color: '#F786C6' },
+  { min: 1, name: 'Mewer', color: '#88CCFF' },
+  { min: 0, name: 'Normie', color: '#999' },
 ];
 
 function getTier(burns: number): { name: string; color: string } {
   for (const t of TIER_THRESHOLDS) {
     if (burns >= t.min) return { name: t.name, color: t.color };
   }
-  return { name: 'Unburned', color: '#555' };
+  return { name: 'Normie', color: '#999' };
 }
 
 const TEST_CID = 'bafkreia6nhohfylww3stb3vou6kynvrpdov6vrfhromuwwbmzuwptrzd3u';

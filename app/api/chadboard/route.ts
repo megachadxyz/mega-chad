@@ -306,61 +306,131 @@ export async function GET() {
       }
     }
 
-    // Sort by total burns descending
+    console.log('[Chadboard] Processed', walletMap.size, 'burner wallets from', nftsWithImages.length, 'total NFTs');
+
+    // Resolve .mega names and text records for burner addresses
+    async function resolveMegaProfile(entry: ChadboardEntry) {
+      try {
+        const megaName = await viemClient.readContract({
+          address: MEGANAMES_CONTRACT,
+          abi: MEGANAMES_ABI,
+          functionName: 'getName',
+          args: [entry.address as `0x${string}`],
+        });
+        if (megaName && megaName.length > 0) {
+          entry.megaName = megaName;
+
+          const tokenId = getTokenId(megaName);
+          const records = await Promise.allSettled(
+            TEXT_RECORD_KEYS.map((key) =>
+              viemClient.readContract({
+                address: MEGANAMES_CONTRACT,
+                abi: MEGANAMES_ABI,
+                functionName: 'getText',
+                args: [tokenId, key],
+              })
+            )
+          );
+
+          const profile: MegaNameProfile = {};
+          TEXT_RECORD_KEYS.forEach((key, i) => {
+            const result = records[i];
+            if (result.status === 'fulfilled' && result.value && result.value.length > 0) {
+              if (key === 'com.twitter') profile.twitter = result.value;
+              else if (key === 'com.github') profile.github = result.value;
+              else if (key === 'org.telegram') profile.telegram = result.value;
+              else if (key === 'avatar') profile.avatar = result.value;
+              else if (key === 'description') profile.description = result.value;
+              else if (key === 'url') profile.url = result.value;
+            }
+          });
+
+          if (Object.keys(profile).length > 0) {
+            entry.megaProfile = profile;
+          }
+        }
+      } catch {
+        // No .mega name registered for this address
+      }
+    }
+
+    await Promise.all(Array.from(walletMap.values()).map(resolveMegaProfile));
+
+    // ── Discover .mega domain holders not yet on the board ──────────
+    // Query MegaNames Transfer events to find all domain holders
+    try {
+      const megaNameTransfers = await viemClient.getLogs({
+        address: MEGANAMES_CONTRACT,
+        event: parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)'),
+        fromBlock: 0n,
+        toBlock: 'latest',
+      });
+
+      // Build current owner map for .mega domains (track by tokenId for correctness)
+      const tokenOwners = new Map<string, string>(); // tokenId -> current owner
+      for (const log of megaNameTransfers) {
+        const { to, tokenId } = log.args as { from: string; to: string; tokenId: bigint };
+        tokenOwners.set(tokenId.toString(), to.toLowerCase());
+      }
+      // Invert to owner -> has domain (skip zero address = burned domains)
+      const megaOwners = new Set<string>();
+      for (const [, owner] of tokenOwners) {
+        if (owner !== '0x0000000000000000000000000000000000000000') {
+          megaOwners.add(owner);
+        }
+      }
+
+      // Add .mega holders who haven't burned yet
+      const newEntries: ChadboardEntry[] = [];
+      for (const owner of megaOwners) {
+        if (!walletMap.has(owner)) {
+          const entry: ChadboardEntry = {
+            address: owner,
+            totalBurns: 0,
+            totalBurned: 0,
+            latestImage: '',
+            latestTimestamp: new Date().toISOString(),
+            images: [],
+          };
+          walletMap.set(owner, entry);
+          newEntries.push(entry);
+        }
+      }
+
+      // Resolve .mega profiles for newly added holders
+      if (newEntries.length > 0) {
+        await Promise.all(newEntries.map(resolveMegaProfile));
+        // Remove any that didn't actually have a .mega name (edge case: transferred away)
+        for (const entry of newEntries) {
+          if (!entry.megaName) {
+            walletMap.delete(entry.address);
+          }
+        }
+      }
+
+      console.log('[Chadboard] Added', newEntries.filter(e => e.megaName).length, '.mega domain holders with 0 burns');
+    } catch (err) {
+      console.error('[Chadboard] Failed to fetch .mega domain holders:', err instanceof Error ? err.message : String(err));
+    }
+
+    // For entries with no looksmaxx image, use Twitter/X profile picture if available
+    for (const entry of walletMap.values()) {
+      if (!entry.latestImage && entry.megaProfile?.twitter) {
+        const handle = entry.megaProfile.twitter.replace('@', '');
+        entry.latestImage = `https://unavatar.io/x/${handle}`;
+      }
+      // Also use avatar from .mega profile if set and no image
+      if (!entry.latestImage && entry.megaProfile?.avatar) {
+        entry.latestImage = entry.megaProfile.avatar;
+      }
+    }
+
+    // Sort by total burns descending (0-burn .mega holders appear at the end)
     const entries = Array.from(walletMap.values()).sort(
       (a, b) => b.totalBurns - a.totalBurns || b.totalBurned - a.totalBurned
     );
 
-    console.log('[Chadboard] Returning', entries.length, 'entries from', nftsWithImages.length, 'total NFTs');
-
-    // Resolve .mega names and text records for all addresses
-    await Promise.all(
-      entries.map(async (entry) => {
-        try {
-          const megaName = await viemClient.readContract({
-            address: MEGANAMES_CONTRACT,
-            abi: MEGANAMES_ABI,
-            functionName: 'getName',
-            args: [entry.address as `0x${string}`],
-          });
-          if (megaName && megaName.length > 0) {
-            entry.megaName = megaName;
-
-            // Fetch text records for this .mega name
-            const tokenId = getTokenId(megaName);
-            const records = await Promise.allSettled(
-              TEXT_RECORD_KEYS.map((key) =>
-                viemClient.readContract({
-                  address: MEGANAMES_CONTRACT,
-                  abi: MEGANAMES_ABI,
-                  functionName: 'getText',
-                  args: [tokenId, key],
-                })
-              )
-            );
-
-            const profile: MegaNameProfile = {};
-            TEXT_RECORD_KEYS.forEach((key, i) => {
-              const result = records[i];
-              if (result.status === 'fulfilled' && result.value && result.value.length > 0) {
-                if (key === 'com.twitter') profile.twitter = result.value;
-                else if (key === 'com.github') profile.github = result.value;
-                else if (key === 'org.telegram') profile.telegram = result.value;
-                else if (key === 'avatar') profile.avatar = result.value;
-                else if (key === 'description') profile.description = result.value;
-                else if (key === 'url') profile.url = result.value;
-              }
-            });
-
-            if (Object.keys(profile).length > 0) {
-              entry.megaProfile = profile;
-            }
-          }
-        } catch {
-          // No .mega name registered for this address
-        }
-      })
-    );
+    console.log('[Chadboard] Returning', entries.length, 'entries');
 
     // Resolve ERC-8004 reputation for burners (if agent is registered)
     if (MEGACHAD_AGENT_ID !== null) {

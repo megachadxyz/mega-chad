@@ -14,7 +14,7 @@ export const maxDuration = 15;
  * - Burn history (count, total burned, rank, images)
  * - Reputation (ERC-8004 score, review count)
  * - Referral data (agent status, earnings, referral code)
- * - Tier (Unburned → Normie → Mewer → Mogger → Gigachad → Eternal Chad)
+ * - Tier (Normie → Mewer → Bonesmasher → Chad → Gigachad)
  *
  * Works with 0x addresses and .mega names:
  *   /api/identity/0x1234...5678

@@ -58,12 +58,11 @@ function isTestImage(url: string): boolean {
 }
 
 const TIER_COLORS: Record<string, string> = {
-  'Eternal Chad': '#FFD700',
-  'Gigachad': '#FF4444',
-  'Mogger': '#F786C6',
+  'Gigachad': '#FFD700',
+  'Chad': '#FF4444',
+  'Bonesmasher': '#F786C6',
   'Mewer': '#88CCFF',
   'Normie': '#999',
-  'Unburned': '#555',
 };
 
 export default function ProfilePage({ params }: { params: { address: string } }) {
@@ -157,6 +156,20 @@ export default function ProfilePage({ params }: { params: { address: string } })
                   <img
                     src={identity.burns.history[0].ipfsUrl}
                     alt="Latest looksmaxx"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : identity.megaName?.twitter ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={`https://unavatar.io/x/${identity.megaName.twitter.replace('@', '')}`}
+                    alt={identity.megaName.twitter}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : identity.megaName?.avatar ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={identity.megaName.avatar}
+                    alt="Avatar"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 ) : (
@@ -468,7 +481,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
                       <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase' }}>Tier Progress</div>
                       <div style={{ color: '#fff', fontSize: '.8rem' }}>
                         {identity.tier.level < 5
-                          ? `${identity.burns.total} burns → next tier at ${[0, 1, 5, 20, 50, 100][identity.tier.level + 1]} burns`
+                          ? `${identity.burns.total} burns → next tier at ${[0, 1, 3, 10, 25][identity.tier.level]} burns`
                           : 'Max tier reached'}
                       </div>
                     </div>

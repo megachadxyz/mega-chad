@@ -219,12 +219,11 @@ async function fetchMegaProfile(address: string): Promise<Omit<MegaNameProfile, 
 // ── Tier Calculation ───────────────────────────────────────────
 
 export function calculateTier(totalBurns: number): { level: number; name: string } {
-  if (totalBurns >= 100) return { level: 5, name: 'Eternal Chad' };
-  if (totalBurns >= 50) return { level: 4, name: 'Gigachad' };
-  if (totalBurns >= 20) return { level: 3, name: 'Mogger' };
-  if (totalBurns >= 5) return { level: 2, name: 'Mewer' };
-  if (totalBurns >= 1) return { level: 1, name: 'Normie' };
-  return { level: 0, name: 'Unburned' };
+  if (totalBurns >= 25) return { level: 5, name: 'Gigachad' };
+  if (totalBurns >= 10) return { level: 4, name: 'Chad' };
+  if (totalBurns >= 3) return { level: 3, name: 'Bonesmasher' };
+  if (totalBurns >= 1) return { level: 2, name: 'Mewer' };
+  return { level: 1, name: 'Normie' };
 }
 
 // ── Full Identity Resolution ───────────────────────────────────

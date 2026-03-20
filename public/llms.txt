@@ -62,7 +62,7 @@ The protocol has two tokens: $MEGACHAD (primary burn token) and $MEGAGOONER (gov
 
 ## Tier System
 
-Burn count determines tier: Unburned → Normie (1+) → Mewer (5+) → Mogger (20+) → Gigachad (50+) → Eternal Chad (100+)
+Burn count determines tier: Normie (0) → Mewer (1+) → Bonesmasher (3+) → Chad (10+) → Gigachad (25+). All .mega domain holders appear on the Chadboard.
 
 ## How to Interact (Agent Flow)
 

@@ -144,7 +144,7 @@ export default function DocsPage() {
           <ul>
             <li><strong>MegaNames:</strong> .mega domain name and social links</li>
             <li><strong>Burn history:</strong> All looksmaxxes with IPFS images</li>
-            <li><strong>Tier:</strong> Unburned → Normie (1+) → Mewer (5+) → Mogger (20+) → Gigachad (50+) → Eternal Chad (100+)</li>
+            <li><strong>Tier:</strong> Normie (0) → Mewer (1+) → Bonesmasher (3+) → Chad (10+) → Gigachad (25+)</li>
             <li><strong>Reputation:</strong> ERC-8004 on-chain rating from other users</li>
             <li><strong>Referral stats:</strong> If registered as an agent</li>
           </ul>
