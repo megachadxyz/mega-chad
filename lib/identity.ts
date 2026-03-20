@@ -292,28 +292,49 @@ async function fetchBurnHistory(address: string): Promise<{
   rank?: number;
 }> {
   try {
-    // Query NFT Transfer events where this address is the recipient (mints)
+    // Query NFT Transfer events to/from this address to determine currently held NFTs
     // Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
     const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
     const addressPadded = '0x000000000000000000000000' + address.slice(2).toLowerCase();
 
-    const logs = await rpcCall('eth_getLogs', [{
-      address: NFT_CONTRACT,
-      topics: [transferTopic, null, addressPadded],
-      fromBlock: '0x0',
-      toBlock: 'latest',
-    }]);
+    // Fetch transfers IN and OUT in parallel
+    const [inLogs, outLogs] = await Promise.all([
+      rpcCall('eth_getLogs', [{
+        address: NFT_CONTRACT,
+        topics: [transferTopic, null, addressPadded],
+        fromBlock: '0x0',
+        toBlock: 'latest',
+      }]),
+      rpcCall('eth_getLogs', [{
+        address: NFT_CONTRACT,
+        topics: [transferTopic, addressPadded, null],
+        fromBlock: '0x0',
+        toBlock: 'latest',
+      }]),
+    ]);
 
-    const transfers = (logs as Array<{ topics: string[]; transactionHash: string; blockNumber: string }>) || [];
+    const transfersIn = (inLogs as Array<{ topics: string[]; transactionHash: string; blockNumber: string }>) || [];
+    const transfersOut = (outLogs as Array<{ topics: string[]; transactionHash: string; blockNumber: string }>) || [];
 
-    if (transfers.length === 0) {
+    // Track which tokenIds were transferred out
+    const sentTokenIds = new Set(
+      transfersOut.map(log => BigInt(log.topics[3]).toString())
+    );
+
+    // Only keep NFTs still held (received but not sent away)
+    const heldTransfers = transfersIn.filter(log => {
+      const tokenId = BigInt(log.topics[3]).toString();
+      return !sentTokenIds.has(tokenId);
+    });
+
+    if (heldTransfers.length === 0) {
       return { total: 0, totalBurned: '0', history: [] };
     }
 
-    // Build burn history from transfer events
-    const history: BurnRecord[] = transfers.map(log => ({
+    // Build burn history from currently held NFTs only
+    const history: BurnRecord[] = heldTransfers.map(log => ({
       txHash: log.transactionHash,
-      timestamp: new Date().toISOString(), // Block timestamp not available from logs alone
+      timestamp: new Date().toISOString(),
       tokenId: BigInt(log.topics[3]).toString(),
     }));
 
@@ -350,7 +371,7 @@ async function fetchBurnHistory(address: string): Promise<{
       }));
     }
 
-    const total = transfers.length;
+    const total = heldTransfers.length;
 
     return {
       total,
