@@ -81,12 +81,13 @@ export async function GET() {
       {
         name: 'ERC-8004 Registry',
         category: 'Identity',
-        description: 'Trustless agent identity and reputation registry on MegaETH.',
+        description: 'Trustless agent identity and reputation registry on MegaETH. Register AI agents, build on-chain reputation, and enable agent-to-agent discovery.',
+        url: 'https://erc8004.org',
         contracts: {
           identityRegistry: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
           reputationRegistry: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
         },
-        features: ['Agent Identity', 'On-Chain Reputation', 'Service Discovery'],
+        features: ['Agent Identity', 'On-Chain Reputation', 'Service Discovery', 'Sybil-Resistant Ratings'],
       },
       {
         name: 'MegaNames',
