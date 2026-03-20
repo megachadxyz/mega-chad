@@ -69,6 +69,13 @@ export async function GET() {
         features: ['x402 Protocol', 'USDm Stablecoin', 'Meta-Transactions'],
       },
       {
+        name: 'x402',
+        category: 'Payments',
+        description: 'Open protocol for machine-native payments over HTTP. Pay-per-call APIs using the 402 status code. Set up payment-gated endpoints in minutes.',
+        url: 'https://x402.org',
+        features: ['HTTP 402', 'Pay-Per-Call', 'Agent Payments', 'API Monetization'],
+      },
+      {
         name: 'Warren Protocol',
         category: 'Storage',
         description: 'Permanent on-chain data storage for images and files on MegaETH.',
@@ -110,7 +117,7 @@ export async function GET() {
     },
     _meta: {
       lastUpdated: '2026-03-19',
-      protocolCount: 8,
+      protocolCount: 9,
       description: 'Community-curated MegaETH protocol directory. Submit additions via GitHub.',
     },
   }, {
