@@ -79,17 +79,6 @@ export async function GET() {
         features: ['On-Chain Storage', 'Permanent URLs', 'Partner API'],
       },
       {
-        name: 'ERC-8004 Registry',
-        category: 'Identity',
-        description: 'Trustless agent identity and reputation registry on MegaETH. Register AI agents, build on-chain reputation, and enable agent-to-agent discovery.',
-        url: 'https://erc8004.org',
-        contracts: {
-          identityRegistry: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
-          reputationRegistry: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
-        },
-        features: ['Agent Identity', 'On-Chain Reputation', 'Service Discovery', 'Sybil-Resistant Ratings'],
-      },
-      {
         name: 'MegaNames',
         category: 'Identity',
         description: '.mega domain name service for human-readable addresses on MegaETH. Register your identity, link social profiles, and appear on the Chadboard.',
@@ -110,7 +99,7 @@ export async function GET() {
     },
     _meta: {
       lastUpdated: '2026-03-19',
-      protocolCount: 8,
+      protocolCount: 7,
       description: 'Community-curated MegaETH protocol directory. Submit additions via GitHub.',
     },
   }, {
