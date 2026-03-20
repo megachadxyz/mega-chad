@@ -91,8 +91,12 @@ export async function GET() {
       {
         name: 'MegaNames',
         category: 'Identity',
-        description: '.mega domain name service for human-readable addresses on MegaETH.',
-        features: ['Domain Names', 'Reverse Resolution', 'Profile Metadata'],
+        description: '.mega domain name service for human-readable addresses on MegaETH. Register your identity, link social profiles, and appear on the Chadboard.',
+        url: 'https://meganames.xyz',
+        contracts: {
+          registry: '0x5B424C6CCba77b32b9625a6fd5A30D997',
+        },
+        features: ['Domain Names', 'Reverse Resolution', 'Profile Metadata', 'Social Links', 'Chadboard Identity'],
       },
     ],
     infrastructure: {
