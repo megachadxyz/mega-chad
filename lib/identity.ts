@@ -13,7 +13,6 @@ import {
 import { encodeFunctionData } from 'viem';
 
 const MEGAETH_RPC = 'https://mainnet.megaeth.com/rpc';
-const BASE = 'https://megachad.xyz';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -281,6 +280,11 @@ async function fetchBalances(address: string): Promise<{ eth: string; megachad: 
   }
 }
 
+const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
+const BURN_AMOUNT_PER = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') / 2;
+
 async function fetchBurnHistory(address: string): Promise<{
   total: number;
   totalBurned: string;
@@ -288,34 +292,70 @@ async function fetchBurnHistory(address: string): Promise<{
   rank?: number;
 }> {
   try {
-    // Fetch from chadboard API (has aggregated burn data)
-    const chadboardRes = await fetch(`${BASE}/api/chadboard`);
-    const chadboard = await chadboardRes.json();
+    // Query NFT Transfer events where this address is the recipient (mints)
+    // Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+    const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+    const addressPadded = '0x000000000000000000000000' + address.slice(2).toLowerCase();
 
-    const entries = chadboard.entries || [];
-    const entry = entries.find(
-      (e: { address: string }) => e.address.toLowerCase() === address.toLowerCase()
-    );
+    const logs = await rpcCall('eth_getLogs', [{
+      address: NFT_CONTRACT,
+      topics: [transferTopic, null, addressPadded],
+      fromBlock: '0x0',
+      toBlock: 'latest',
+    }]);
 
-    if (!entry) {
+    const transfers = (logs as Array<{ topics: string[]; transactionHash: string; blockNumber: string }>) || [];
+
+    if (transfers.length === 0) {
       return { total: 0, totalBurned: '0', history: [] };
     }
 
-    const rank = entries.findIndex(
-      (e: { address: string }) => e.address.toLowerCase() === address.toLowerCase()
-    ) + 1;
-
-    const history: BurnRecord[] = (entry.images || []).map((img: { txHash: string; timestamp: string; ipfsUrl: string }) => ({
-      txHash: img.txHash,
-      timestamp: img.timestamp,
-      ipfsUrl: img.ipfsUrl,
+    // Build burn history from transfer events
+    const history: BurnRecord[] = transfers.map(log => ({
+      txHash: log.transactionHash,
+      timestamp: new Date().toISOString(), // Block timestamp not available from logs alone
+      tokenId: BigInt(log.topics[3]).toString(),
     }));
 
+    // Fetch IPFS URLs for each token from Redis (same as chadboard does)
+    const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (upstashUrl && upstashToken) {
+      await Promise.all(history.map(async (burn) => {
+        try {
+          const key = `nft:metadata:${burn.tokenId}`;
+          const res = await fetch(upstashUrl, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${upstashToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(['GET', key]),
+            cache: 'no-store',
+          });
+          if (res.ok) {
+            const { result } = await res.json();
+            if (result) {
+              const stored = typeof result === 'string' ? JSON.parse(result) : result;
+              burn.ipfsUrl = (stored.ipfsUrl || '')
+                .replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+                .replace('https://ipfs.io/ipfs/', 'https://gateway.pinata.cloud/ipfs/');
+              if (stored.timestamp) burn.timestamp = stored.timestamp;
+            }
+          }
+        } catch {
+          // Skip metadata for this token
+        }
+      }));
+    }
+
+    const total = transfers.length;
+
     return {
-      total: entry.totalBurns || 0,
-      totalBurned: (entry.totalBurned || 0).toString(),
-      history,
-      rank: rank > 0 ? rank : undefined,
+      total,
+      totalBurned: (total * BURN_AMOUNT_PER).toString(),
+      history: history.reverse(), // Most recent first
     };
   } catch {
     return { total: 0, totalBurned: '0', history: [] };
