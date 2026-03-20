@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
@@ -66,8 +66,8 @@ const TIER_COLORS: Record<string, string> = {
   'Unburned': '#555',
 };
 
-export default function ProfilePage({ params }: { params: Promise<{ address: string }> }) {
-  const { address: paramAddress } = use(params);
+export default function ProfilePage({ params }: { params: { address: string } }) {
+  const paramAddress = params.address;
   const { address: connectedAddress } = useAccount();
 
   const [identity, setIdentity] = useState<IdentityData | null>(null);
