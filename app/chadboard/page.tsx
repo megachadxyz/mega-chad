@@ -476,15 +476,17 @@ export default function ChadboardPage() {
                   onClick={() => setSelectedWallet(entry)}
                 >
                   <div className="chad-img">
-                    {isTestImage(entry.latestImage) ? (
+                    {entry.totalBurns === 0 ? (
+                      <div className="cb-normie-placeholder">NORMIE</div>
+                    ) : isTestImage(entry.latestImage) ? (
                       <div className="cb-test-placeholder">TEST</div>
                     ) : (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={entry.latestImage} alt={`Latest by ${displayName(entry)}`} />
                     )}
-                    {i === 0 && <div className="cb-crown">MOGGER</div>}
+                    {i === 0 && entry.totalBurns > 0 && <div className="cb-crown">MOGGER</div>}
                   </div>
-                  <div className="chad-name">#{i + 1} LooksMaxxer</div>
+                  <div className="chad-name">{entry.totalBurns > 0 ? `#${entries.filter(e => e.totalBurns > 0).indexOf(entry) + 1} LooksMaxxer` : 'Normie'}</div>
                   <div className="chad-role">{displayName(entry)}</div>
                   <div className="cb-tier-badge" style={{ color: tier.color, borderColor: tier.color }}>
                     {tier.name}

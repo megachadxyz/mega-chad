@@ -1195,6 +1195,21 @@ img { max-width: 100%; height: auto; }
   color: var(--pink);
 }
 
+.cb-normie-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: #0a0a0f;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  letter-spacing: .2em;
+  color: var(--pink);
+  text-shadow: var(--pink-glow);
+}
+
 .cb-crown {
   position: absolute;
   top: 12px;

@@ -413,18 +413,6 @@ export async function GET() {
       console.error('[Chadboard] Failed to fetch .mega domain holders:', err instanceof Error ? err.message : String(err));
     }
 
-    // For entries with no looksmaxx image, use Twitter/X profile picture if available
-    for (const entry of walletMap.values()) {
-      if (!entry.latestImage && entry.megaProfile?.twitter) {
-        const handle = entry.megaProfile.twitter.replace('@', '');
-        entry.latestImage = `https://unavatar.io/x/${handle}`;
-      }
-      // Also use avatar from .mega profile if set and no image
-      if (!entry.latestImage && entry.megaProfile?.avatar) {
-        entry.latestImage = entry.megaProfile.avatar;
-      }
-    }
-
     // Sort by total burns descending (0-burn .mega holders appear at the end)
     const entries = Array.from(walletMap.values()).sort(
       (a, b) => b.totalBurns - a.totalBurns || b.totalBurned - a.totalBurned

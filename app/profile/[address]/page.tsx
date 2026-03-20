@@ -158,22 +158,8 @@ export default function ProfilePage({ params }: { params: { address: string } })
                     alt="Latest looksmaxx"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                ) : identity.megaName?.twitter ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={`https://unavatar.io/x/${identity.megaName.twitter.replace('@', '')}`}
-                    alt={identity.megaName.twitter}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : identity.megaName?.avatar ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={identity.megaName.avatar}
-                    alt="Avatar"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
                 ) : (
-                  <div style={{ color: 'var(--text-dim)', fontSize: '2rem', fontFamily: "'Bebas Neue'" }}>
+                  <div style={{ color: 'var(--pink)', fontSize: '2rem', fontFamily: "'Bebas Neue'" }}>
                     {identity.displayName.slice(0, 2).toUpperCase()}
                   </div>
                 )}
