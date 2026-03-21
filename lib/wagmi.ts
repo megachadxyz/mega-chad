@@ -1,4 +1,4 @@
-import { http, createConfig } from 'wagmi';
+import { http, createConfig, injected } from 'wagmi';
 import { defineChain } from 'viem';
 
 export const megaethTestnet = defineChain({
@@ -31,9 +31,10 @@ export const megaeth = defineChain({
   },
 });
 
-// wagmi auto-detects injected wallets (MetaMask, Brave, Phantom, etc.)
+// Explicitly register injected wallet connector (MetaMask, Brave, Phantom, etc.)
 export const config = createConfig({
   chains: [megaeth],
+  connectors: [injected()],
   transports: {
     [megaeth.id]: http(),
   },
