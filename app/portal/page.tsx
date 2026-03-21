@@ -215,11 +215,10 @@ export default function PortalPage() {
         </p>
 
         {/* ─── NLP COMMAND BAR ────────────────────────── */}
-        <div style={{
+        <div className="portal-container" style={{
           marginTop: '2rem',
           display: 'flex',
           gap: '.5rem',
-          maxWidth: 700,
         }}>
           <input
             type="text"
@@ -252,13 +251,12 @@ export default function PortalPage() {
 
         {/* ─── NLP RESPONSE ──────────────────────────── */}
         {chatResponse && (
-          <div style={{
+          <div className="portal-container" style={{
             marginTop: '1rem',
             padding: '1.25rem',
             background: 'rgba(247,134,198,0.05)',
             border: '1px solid rgba(247,134,198,0.15)',
             borderRadius: 8,
-            maxWidth: 700,
           }}>
             <div style={{ color: '#e0e0e0', fontSize: '.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
               {chatResponse.answer}
@@ -283,29 +281,12 @@ export default function PortalPage() {
         )}
 
         {/* ─── TAB SWITCHER ──────────────────────────── */}
-        <div style={{
-          display: 'flex',
-          gap: '0',
-          marginTop: '2.5rem',
-          borderBottom: '1px solid rgba(247,134,198,0.15)',
-          maxWidth: 700,
-        }}>
+        <div className="portal-container portal-tabs" style={{ marginTop: '2.5rem' }}>
           {(['portfolio', 'protocols', 'activity'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '10px 24px',
-                background: 'none',
-                border: 'none',
-                borderBottom: activeTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === tab ? 'var(--primary)' : 'var(--text-dim)',
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: '1.1rem',
-                letterSpacing: '0.05em',
-                cursor: 'pointer',
-                textTransform: 'uppercase',
-              }}
+              className={`portal-tab ${activeTab === tab ? 'portal-tab--active' : ''}`}
             >
               {tab}
             </button>
@@ -314,7 +295,7 @@ export default function PortalPage() {
 
         {/* ─── PORTFOLIO TAB ──────────────────────────── */}
         {activeTab === 'portfolio' && (
-          <div style={{ marginTop: '2rem', maxWidth: 700 }}>
+          <div className="portal-container" style={{ marginTop: '2rem' }}>
             {!isConnected ? (
               <div className="burn-card" style={{ textAlign: 'center', padding: '3rem' }}>
                 <div style={{ color: 'var(--text-dim)', fontSize: '.85rem' }}>
@@ -326,12 +307,7 @@ export default function PortalPage() {
             ) : (
               <>
                 {/* Stats Bar */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                  gap: '1rem',
-                  marginBottom: '2rem',
-                }}>
+                <div className="portal-stats-grid" style={{ marginBottom: '2rem' }}>
                   <div className="burn-card" style={{ padding: '1rem', textAlign: 'center' }}>
                     <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>ETH Balance</div>
                     <div style={{ color: 'var(--primary)', fontSize: '1.2rem', fontFamily: "'Bebas Neue'" }}>{Number(ethBalance).toFixed(4)}</div>
@@ -405,7 +381,7 @@ export default function PortalPage() {
 
                 {/* Quick Actions */}
                 <h3 style={{ fontFamily: "'Bebas Neue'", fontSize: '1.3rem', margin: '2rem 0 1rem', color: '#fff' }}>Quick Actions</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '.75rem' }}>
+                <div className="portal-actions-grid">
                   <Link href="/main#burn" className="btn btn-primary" style={{ textAlign: 'center', padding: '12px' }}>
                     Burn & Looksmaxx
                   </Link>
@@ -426,7 +402,7 @@ export default function PortalPage() {
 
         {/* ─── PROTOCOLS TAB ─────────────────────────── */}
         {activeTab === 'protocols' && (
-          <div style={{ marginTop: '2rem', maxWidth: 700 }}>
+          <div className="portal-container" style={{ marginTop: '2rem' }}>
             <p style={{ color: 'var(--text-dim)', fontSize: '.8rem', marginBottom: '1.5rem' }}>
               Protocols building on MegaETH. The real-time blockchain.
             </p>
@@ -489,19 +465,14 @@ export default function PortalPage() {
 
         {/* ─── ACTIVITY TAB ──────────────────────────── */}
         {activeTab === 'activity' && (
-          <div style={{ marginTop: '2rem', maxWidth: 700 }}>
+          <div className="portal-container" style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '1.5rem' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4f4', animation: 'pulse 2s infinite' }} />
               <span style={{ color: '#4f4', fontSize: '.75rem', fontFamily: "'Roboto Mono'", textTransform: 'uppercase' }}>Live on MegaETH</span>
             </div>
 
             {/* Protocol Stats */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '1rem',
-              marginBottom: '2rem',
-            }}>
+            <div className="portal-activity-stats" style={{ marginBottom: '2rem' }}>
               <div className="burn-card" style={{ padding: '1rem', textAlign: 'center' }}>
                 <div style={{ color: 'var(--primary)', fontSize: '1.5rem', fontFamily: "'Bebas Neue'" }}>{stats.totalBurns || 0}</div>
                 <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase' }}>Total Burns</div>
@@ -549,7 +520,7 @@ export default function PortalPage() {
             {/* Chain Info */}
             <h3 style={{ fontFamily: "'Bebas Neue'", fontSize: '1.3rem', margin: '2rem 0 1rem', color: '#fff' }}>MegaETH Network</h3>
             <div className="burn-card" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
+              <div className="portal-chain-grid">
                 <div>
                   <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase' }}>Chain ID</div>
                   <div style={{ color: '#fff', fontSize: '.85rem', fontFamily: "'Roboto Mono'" }}>4326</div>

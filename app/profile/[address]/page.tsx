@@ -183,13 +183,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
         {identity && !loading && (
           <>
             {/* ─── PROFILE HEADER ────────────────────────── */}
-            <div style={{
-              display: 'flex',
-              gap: '2rem',
-              alignItems: 'flex-start',
-              flexWrap: 'wrap',
-              maxWidth: 800,
-            }}>
+            <div className="profile-header">
               {/* Avatar / Latest Looksmaxx */}
               <div style={{
                 width: 140,
@@ -218,7 +212,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
               </div>
 
               {/* Name & Info */}
-              <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <h2 style={{
                   fontFamily: "'Bebas Neue'",
                   fontSize: '2rem',
@@ -336,13 +330,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
             </div>
 
             {/* ─── STATS GRID ────────────────────────────── */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-              gap: '1rem',
-              marginTop: '2.5rem',
-              maxWidth: 800,
-            }}>
+            <div className="profile-stats-grid" style={{ marginTop: '2.5rem' }}>
               <div className="burn-card" style={{ padding: '1rem', textAlign: 'center' }}>
                 <div style={{ color: 'var(--primary)', fontSize: '1.5rem', fontFamily: "'Bebas Neue'" }}>{identity.burns.total}</div>
                 <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase' }}>Burns</div>
@@ -379,7 +367,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
                 <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.75rem' }}>
                   <span style={{ fontSize: '.7rem', padding: '2px 8px', borderRadius: 4, background: 'rgba(100,200,100,0.1)', color: '#8f8', textTransform: 'uppercase', fontWeight: 600 }}>Registered Agent</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div className="profile-stats-grid">
                   <div>
                     <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase' }}>Referrals</div>
                     <div style={{ color: '#fff', fontSize: '1rem' }}>{identity.referral.referralCount}</div>
@@ -399,29 +387,12 @@ export default function ProfilePage({ params }: { params: { address: string } })
             )}
 
             {/* ─── SECTION TABS ──────────────────────────── */}
-            <div style={{
-              display: 'flex',
-              gap: '0',
-              marginTop: '2.5rem',
-              borderBottom: '1px solid rgba(247,134,198,0.15)',
-              maxWidth: 800,
-            }}>
+            <div className="portal-tabs" style={{ marginTop: '2.5rem', maxWidth: 800 }}>
               {(['burns', 'stats'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveSection(tab)}
-                  style={{
-                    padding: '10px 24px',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: activeSection === tab ? '2px solid var(--primary)' : '2px solid transparent',
-                    color: activeSection === tab ? 'var(--primary)' : 'var(--text-dim)',
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '1.1rem',
-                    letterSpacing: '0.05em',
-                    cursor: 'pointer',
-                    textTransform: 'uppercase',
-                  }}
+                  className={`portal-tab ${activeSection === tab ? 'portal-tab--active' : ''}`}
                 >
                   {tab === 'burns' ? `Looksmaxxes (${identity.burns.total})` : 'On-Chain'}
                 </button>
@@ -444,11 +415,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
                     )}
                   </div>
                 ) : (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                    gap: '1rem',
-                  }}>
+                  <div className="profile-burns-grid">
                     {identity.burns.history.map(burn => (
                       <div key={burn.txHash} className="burn-card" style={{ overflow: 'hidden' }}>
                         {burn.ipfsUrl && !isTestImage(burn.ipfsUrl) ? (
@@ -506,7 +473,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
               <div style={{ marginTop: '1.5rem', maxWidth: 800 }}>
                 <div className="burn-card" style={{ padding: '1.25rem' }}>
                   <h4 style={{ fontFamily: "'Bebas Neue'", fontSize: '1.1rem', color: '#fff', margin: '0 0 1rem' }}>Identity Details</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="profile-onchain-grid">
                     <div>
                       <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase' }}>Address</div>
                       <div style={{ color: '#fff', fontSize: '.8rem', fontFamily: "'Roboto Mono'", wordBreak: 'break-all' }}>{identity.address}</div>
