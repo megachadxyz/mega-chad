@@ -314,7 +314,7 @@ export default function PortalPage() {
                   </div>
                   <div className="burn-card" style={{ padding: '1rem', textAlign: 'center' }}>
                     <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>$MEGACHAD Price</div>
-                    <div style={{ color: 'var(--primary)', fontSize: '1.2rem', fontFamily: "'Bebas Neue'" }}>{price.price?.megachadPerEth ? `${Number(price.price.megachadPerEth).toLocaleString()}/ETH` : '...'}</div>
+                    <div style={{ color: 'var(--primary)', fontSize: '1.2rem', fontFamily: "'Bebas Neue'" }}>{price.price?.megachadPerEth ? `${(1 / Number(price.price.megachadPerEth)).toFixed(8)} ETH` : '...'}</div>
                   </div>
                   <div className="burn-card" style={{ padding: '1rem', textAlign: 'center' }}>
                     <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Total Burns</div>
