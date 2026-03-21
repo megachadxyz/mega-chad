@@ -490,8 +490,8 @@ export default function Home() {
           <Image
             src="/images/megachad-logo.png"
             alt="$MEGACHAD"
-            width={180}
-            height={50}
+            width={220}
+            height={60}
             priority
             style={{ objectFit: 'contain', height: 'auto' }}
           />
