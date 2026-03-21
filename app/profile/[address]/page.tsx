@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAccount } from 'wagmi';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
 interface BurnRecord {
   txHash: string;
@@ -65,9 +65,30 @@ const TIER_COLORS: Record<string, string> = {
   'Normie': '#999',
 };
 
+function truncAddr(addr: string): string {
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
 export default function ProfilePage({ params }: { params: { address: string } }) {
   const paramAddress = params.address;
-  const { address: connectedAddress } = useAccount();
+  const { address: connectedAddress, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
+
+  const connectWallet = () => {
+    if (connectors.length <= 1) {
+      const c = connectors[0];
+      if (c) connect({ connector: c });
+      return;
+    }
+    setShowWalletPicker(true);
+  };
+
+  const pickConnector = (connector: typeof connectors[number]) => {
+    connect({ connector });
+    setShowWalletPicker(false);
+  };
 
   const [identity, setIdentity] = useState<IdentityData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,8 +139,34 @@ export default function ProfilePage({ params }: { params: { address: string } })
           <li><Link href="/chadboard">Chadboard</Link></li>
           <li><Link href="/portal">Portal</Link></li>
         </ul>
-        <div className="nav-right" />
+        <div className="nav-right">
+          {isConnected ? (
+            <button className="nav-wallet" onClick={() => disconnect()}>
+              {truncAddr(connectedAddress!)}
+            </button>
+          ) : (
+            <button className="nav-wallet" onClick={connectWallet}>
+              Connect Wallet
+            </button>
+          )}
+        </div>
       </nav>
+
+      {/* ─── WALLET PICKER ───────────────────────────── */}
+      {showWalletPicker && (
+        <div className="wallet-overlay" onClick={() => setShowWalletPicker(false)}>
+          <div className="wallet-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Connect Wallet</h3>
+            <div className="wallet-options">
+              {connectors.map((c) => (
+                <button key={c.uid} className="wallet-option" onClick={() => pickConnector(c)}>
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="section" style={{ paddingTop: '8rem' }}>
         {loading && <div className="cb-loading">Resolving identity...</div>}

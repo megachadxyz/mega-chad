@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import * as Ably from 'ably';
 import {
   ERC8004_REPUTATION_REGISTRY,
@@ -83,6 +83,23 @@ export default function ChadboardPage() {
 
   // ─── Wallet ──────────────────────────────────────────
   const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
+
+  const connectWallet = () => {
+    if (connectors.length <= 1) {
+      const c = connectors[0];
+      if (c) connect({ connector: c });
+      return;
+    }
+    setShowWalletPicker(true);
+  };
+
+  const pickConnector = (connector: typeof connectors[number]) => {
+    connect({ connector });
+    setShowWalletPicker(false);
+  };
 
   // ─── Real-time NFT mints ─────────────────────────────
   const { latestMint, isConnected: wsConnected } = useRealtimeNFTMints();
@@ -437,11 +454,36 @@ export default function ChadboardPage() {
           <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
         </ul>
         <div className="nav-right">
+          {isConnected ? (
+            <button className="nav-wallet" onClick={() => disconnect()}>
+              {truncAddr(address!)}
+            </button>
+          ) : (
+            <button className="nav-wallet" onClick={connectWallet}>
+              Connect Wallet
+            </button>
+          )}
           <button className="nav-burger" onClick={() => setMobileNav(!mobileNav)} aria-label="Menu">
             <span /><span /><span />
           </button>
         </div>
       </nav>
+
+      {/* ─── WALLET PICKER ───────────────────────────── */}
+      {showWalletPicker && (
+        <div className="wallet-overlay" onClick={() => setShowWalletPicker(false)}>
+          <div className="wallet-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Connect Wallet</h3>
+            <div className="wallet-options">
+              {connectors.map((c) => (
+                <button key={c.uid} className="wallet-option" onClick={() => pickConnector(c)}>
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── CHADBOARD CONTENT ────────────────────────── */}
       <section className="section" style={{ paddingTop: '8rem' }}>
