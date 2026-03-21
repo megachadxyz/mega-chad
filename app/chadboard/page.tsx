@@ -429,6 +429,7 @@ export default function ChadboardPage() {
         </Link>
         <ul className={`nav-links ${mobileNav ? 'open' : ''}`}>
           <li><Link href="/main#about" onClick={() => setMobileNav(false)}>About</Link></li>
+          <li><Link href="/main#buy" onClick={() => setMobileNav(false)}>Buy</Link></li>
           <li><Link href="/main#burn" onClick={() => setMobileNav(false)}>Burn</Link></li>
           <li><Link href="/main#roadmap" onClick={() => setMobileNav(false)}>Roadmap</Link></li>
           <li><Link href="/main#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>

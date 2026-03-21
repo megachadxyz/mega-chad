@@ -110,10 +110,15 @@ export default function ProfilePage({ params }: { params: { address: string } })
           />
         </Link>
         <ul className="nav-links">
-          <li><Link href="/main">Burn</Link></li>
+          <li><Link href="/main#about">About</Link></li>
+          <li><Link href="/main#buy">Buy</Link></li>
+          <li><Link href="/main#burn">Burn</Link></li>
+          <li><Link href="/main#roadmap">Roadmap</Link></li>
+          <li><Link href="/main#chads">Chads</Link></li>
           <li><Link href="/chadboard">Chadboard</Link></li>
           <li><Link href="/portal">Portal</Link></li>
         </ul>
+        <div className="nav-right" />
       </nav>
 
       <section className="section" style={{ paddingTop: '8rem' }}>

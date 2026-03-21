@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
+import SwapModal from '@/components/SwapModal';
 
 interface TokenBalance {
   symbol: string;
@@ -147,13 +148,15 @@ export default function PortalPage() {
           />
         </Link>
         <ul className="nav-links">
-          <li><Link href="/main">Burn</Link></li>
+          <li><Link href="/main#about">About</Link></li>
+          <li><Link href="/main#buy">Buy</Link></li>
+          <li><Link href="/main#burn">Burn</Link></li>
+          <li><Link href="/main#roadmap">Roadmap</Link></li>
+          <li><Link href="/main#chads">Chads</Link></li>
           <li><Link href="/chadboard">Chadboard</Link></li>
           <li><Link href="/portal" className="nav-link-active">Portal</Link></li>
-          {isConnected && address && (
-            <li><Link href={`/profile/${address}`}>Profile</Link></li>
-          )}
         </ul>
+        <div className="nav-right" />
       </nav>
 
       {/* ─── HEADER ─────────────────────────────────── */}
@@ -296,7 +299,7 @@ export default function PortalPage() {
                   </div>
                   <div className="burn-card" style={{ padding: '1rem', textAlign: 'center' }}>
                     <div style={{ color: 'var(--text-dim)', fontSize: '.7rem', textTransform: 'uppercase', letterSpacing: '.08em' }}>Burn Cost</div>
-                    <div style={{ color: 'var(--primary)', fontSize: '1.2rem', fontFamily: "'Bebas Neue'" }}>{price.burnCost?.ethEstimate || '...'} ETH</div>
+                    <div style={{ color: 'var(--primary)', fontSize: '1.2rem', fontFamily: "'Bebas Neue'" }}>225,000 $MEGACHAD</div>
                   </div>
                 </div>
 
@@ -348,6 +351,10 @@ export default function PortalPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Buy $MEGACHAD */}
+                <h3 style={{ fontFamily: "'Bebas Neue'", fontSize: '1.3rem', margin: '2rem 0 1rem', color: '#fff' }}>Buy $MEGACHAD</h3>
+                <SwapModal inline onSwapSuccess={() => fetchPortalData()} />
 
                 {/* Quick Actions */}
                 <h3 style={{ fontFamily: "'Bebas Neue'", fontSize: '1.3rem', margin: '2rem 0 1rem', color: '#fff' }}>Quick Actions</h3>
@@ -529,14 +536,33 @@ export default function PortalPage() {
               height={60}
               style={{ objectFit: 'contain', height: 'auto' }}
             />
-            <div className="footer-tagline">MegaETH Universal Portal</div>
+            <div className="footer-tagline">Launch Feb 9 &mdash; MegaETH</div>
           </div>
           <div className="footer-right">
             <ul className="footer-links">
-              <li><Link href="/main">Burn</Link></li>
+              <li><Link href="/main#about">About</Link></li>
+              <li><Link href="/main#burn">Burn</Link></li>
+              <li><Link href="/main#roadmap">Roadmap</Link></li>
+              <li><Link href="/main#chads">Chads</Link></li>
               <li><Link href="/chadboard">Chadboard</Link></li>
               <li><Link href="/portal">Portal</Link></li>
             </ul>
+            <div className="footer-social">
+              <a
+                href="https://x.com/megachadxyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-social-link"
+                aria-label="X / Twitter"
+              >
+                <Image
+                  src="/images/x-logo.svg"
+                  alt="X"
+                  width={18}
+                  height={18}
+                />
+              </a>
+            </div>
           </div>
         </div>
       </footer>
