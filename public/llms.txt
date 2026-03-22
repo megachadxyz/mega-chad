@@ -62,7 +62,23 @@ The protocol has two tokens: $MEGACHAD (primary burn token) and $MEGAGOONER (gov
 
 ## Tier System
 
-Burn count determines tier: Normie (0) → Mewer (1+) → Bonesmasher (3+) → Chad (10+) → Gigachad (25+). All .mega domain holders appear on the Chadboard.
+Burn count determines tier: Normie (0) → Mewer (1+) → Bonesmasher (3+) → Chad (10+) → Gigachad (25+). The wallet with the most burns overall is crowned MOGGER. All .mega domain holders appear on the Chadboard.
+
+## ChadChat
+
+Burn-gated real-time messaging on the Chadboard. Only wallets with at least 1 burn (Mewer tier+) can send messages. Powered by Ably.
+
+## Telegram Alerts
+
+Real-time burn and mint notifications via the MegaChad Telegram bot at https://t.me/megachads.
+
+## MEGA Protocol Governance
+
+- **$MEGAGOONER:** Governance/reward token (50M cap, 225-week quadratic emission)
+- **Framemogger:** Burn $MEGACHAD → earn governance rights → mint $MEGAGOONER
+- **MoggerStaking:** Stake $MEGACHAD → earn $MEGAGOONER over time
+- **JESTERGOONER:** Stake LP tokens → earn $MEGAGOONER
+- **Jestermogger:** Governance voting — top 3 burners propose, $MEGAGOONER holders vote
 
 ## How to Interact (Agent Flow)
 

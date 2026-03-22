@@ -83,7 +83,7 @@ export default function AboutPage() {
           <p>
             Every wallet gets a rich on-chain profile at <Link href="/profile/0x0000000000000000000000000000000000000000" className="inline-link">/profile</Link>:
             MegaNames (.mega domains), burn history, reputation score (ERC-8004), referral stats,
-            and tier level (Normie → Mewer → Mogger → Gigachad → Eternal Chad). Queryable by any
+            and tier level (Normie → Mewer → Bonesmasher → Chad → Gigachad). Queryable by any
             MegaETH protocol.
           </p>
 
@@ -97,7 +97,39 @@ export default function AboutPage() {
           <p>
             <Link href="/chadboard" className="inline-link">Chadboard</Link> ranks top burners with
             tier badges, ERC-8004 reputation scores, MegaNames profiles, and identity details.
-            Click any burner to see their creations, rate them on-chain, or visit their full profile. Burn-gated ChadChat for holders.
+            Click any burner to see their creations, rate them on-chain, or visit their full profile.
+            All .mega domain holders also appear on the Chadboard.
+          </p>
+
+          <h3>ChadChat</h3>
+          <p>
+            Burn-gated real-time messaging for $MEGACHAD holders. ChadChat is accessible from the
+            Chadboard — only wallets that have burned at least once (Mewer tier or above) can send
+            messages. Powered by Ably for instant delivery.
+          </p>
+
+          <h3>Telegram Alerts</h3>
+          <p>
+            Real-time burn and mint notifications via the MegaChad Telegram bot. Get alerted
+            when new burns happen, leaderboard changes, and protocol milestones are reached.
+            Join at <a href="https://t.me/megachads" target="_blank" rel="noopener noreferrer" className="inline-link">t.me/megachads</a>.
+          </p>
+
+          <h3>MEGA Protocol Governance</h3>
+          <p>
+            The MEGA Protocol is MegaChad's governance layer. Burning $MEGACHAD via Framemogger
+            earns governance rights and mints $MEGAGOONER — the governance and reward token
+            (50M supply cap, 225-week quadratic emission schedule).
+          </p>
+          <ul>
+            <li><strong>$MEGAGOONER:</strong> Governance token earned through burning and staking</li>
+            <li><strong>Framemogger:</strong> Burn $MEGACHAD to earn governance rights and $MEGAGOONER rewards</li>
+            <li><strong>MoggerStaking:</strong> Stake $MEGACHAD to earn $MEGAGOONER over time</li>
+            <li><strong>JESTERGOONER:</strong> Stake LP tokens to earn $MEGAGOONER</li>
+            <li><strong>Jestermogger:</strong> Governance voting — top 3 $MEGACHAD burners can propose, $MEGAGOONER holders vote</li>
+          </ul>
+          <p>
+            All MEGA Protocol contracts are UUPS upgradeable proxies deployed on MegaETH.
           </p>
         </section>
 

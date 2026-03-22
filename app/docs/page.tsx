@@ -172,25 +172,26 @@ export default function DocsPage() {
             MegaChad exposes a full MCP (Model Context Protocol) server with 19 tools:
           </p>
           <ul>
-            <li><code>get_megachad_stats</code> — Protocol statistics</li>
-            <li><code>get_swap_quote</code> — Kumbaya DEX quotes</li>
-            <li><code>get_looksmaxx_requirements</code> — x402 + burn requirements</li>
-            <li><code>get_gallery</code> — Recent looksmaxxed burns</li>
-            <li><code>get_chadboard</code> — Top burners leaderboard</li>
-            <li><code>get_wallet</code> — Balance + eligibility check</li>
-            <li><code>get_gasless_burn</code> — EIP-712 gasless burn info</li>
-            <li><code>register_agent</code> — Agent registration calldata</li>
-            <li><code>get_bridge_info</code> — Bridge infrastructure</li>
-            <li><code>get_price</code> — Live $MEGACHAD price</li>
-            <li><code>get_agent_looksmaxx_plan</code> — Full burn plan with calldata</li>
-            <li><code>get_referral_info</code> — Referral program details</li>
-            <li><code>get_referral_stats</code> — Agent earnings</li>
-            <li><code>chat_with_megachad</code> — Natural language transaction engine</li>
-            <li><code>cross_chain_looksmaxx</code> — Cross-chain intent builder</li>
-            <li><code>get_identity</code> — Unified identity/profile lookup</li>
-            <li><code>get_portfolio</code> — MegaETH token balances</li>
-            <li><code>get_megaeth_protocols</code> — Protocol directory</li>
-            <li><code>get_events</code> — On-chain event stream</li>
+            <li><code>get_megachad_stats</code> — Token supply, circulating supply, burn count</li>
+            <li><code>get_price</code> — Current $MEGACHAD price in ETH from Kumbaya DEX</li>
+            <li><code>get_swap_quote</code> — Swap quote for ETH → $MEGACHAD with calldata</li>
+            <li><code>get_wallet_info</code> — Wallet balances, NFT count, burn eligibility</li>
+            <li><code>get_portfolio</code> — Full MegaETH token portfolio (ETH, WETH, MEGACHAD, USDm)</li>
+            <li><code>get_gallery</code> — Browse looksmaxxed burns with IPFS images</li>
+            <li><code>get_chadboard</code> — Burner leaderboard with reputation scores and .mega names</li>
+            <li><code>get_identity</code> — Resolve wallet or .mega name into unified identity profile</li>
+            <li><code>get_nft_metadata</code> — ERC-721 metadata for looksmaxxed NFTs</li>
+            <li><code>get_looksmaxx_requirements</code> — Burn requirements and x402 payment info</li>
+            <li><code>get_looksmaxx_plan</code> — Full transaction plan: swap → burn → tren fund → submit</li>
+            <li><code>cross_chain_looksmaxx</code> — Cross-chain plan from 10+ chains to MegaETH</li>
+            <li><code>gasless_burn_info</code> — EIP-712 typed data for gasless meta-transaction burns</li>
+            <li><code>get_bridge_info</code> — Bridge options for moving assets to MegaETH</li>
+            <li><code>get_agent_info</code> — ERC-8004 agent registration and reputation data</li>
+            <li><code>register_referral_agent</code> — Register as referring agent (earn 11,250 $MEGACHAD per burn)</li>
+            <li><code>get_referral_stats</code> — Referral count, earnings, and reward info</li>
+            <li><code>register_early_access</code> — Register wallet for beta access</li>
+            <li><code>chat_with_megachad</code> — Natural language interface for all operations</li>
+            <li><code>get_megaeth_protocols</code> — Curated MegaETH protocol directory</li>
           </ul>
           <p>
             Connect via <code>npx @anthropic-ai/claude-code mcp add megachad https://megachad.xyz/api/mcp</code> or
@@ -276,7 +277,59 @@ export default function DocsPage() {
         </section>
 
         <section>
-          <h2>12. Developer Resources</h2>
+          <h2>12. ChadChat</h2>
+          <p>
+            ChadChat is burn-gated real-time messaging on the Chadboard. Only wallets with at least
+            1 burn (Mewer tier or above) can send messages.
+          </p>
+          <ul>
+            <li><strong>Access:</strong> Open the chat panel from the Chadboard page</li>
+            <li><strong>Requirement:</strong> Must have burned at least once (connected wallet)</li>
+            <li><strong>Display name:</strong> Shows your .mega name, custom name, or truncated address</li>
+            <li><strong>Real-time:</strong> Powered by Ably for instant message delivery</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>13. Telegram Alerts</h2>
+          <p>
+            The MegaChad Telegram bot sends real-time notifications for burns, mints, and
+            protocol milestones. Join <a href="https://t.me/megachads" target="_blank" rel="noopener noreferrer" className="external-link">t.me/megachads</a> for alerts.
+          </p>
+          <ul>
+            <li><code>POST /api/telegram/alerts</code> — Trigger burn/mint notifications</li>
+            <li><code>GET /api/telegram/setup</code> — Bot configuration info</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>14. MEGA Protocol Governance</h2>
+          <p>
+            The MEGA Protocol is MegaChad's governance layer built on MegaETH. Burning $MEGACHAD
+            earns governance rights and mints $MEGAGOONER — the governance and reward token.
+          </p>
+
+          <h3>$MEGAGOONER Token</h3>
+          <ul>
+            <li><strong>Supply cap:</strong> 50,000,000 $MEGAGOONER</li>
+            <li><strong>Emission:</strong> 225-week quadratic emission schedule</li>
+            <li><strong>Purpose:</strong> Governance voting and staking rewards</li>
+          </ul>
+
+          <h3>Protocol Contracts</h3>
+          <ul>
+            <li><strong>Framemogger:</strong> Burn $MEGACHAD → earn governance rights → mint $MEGAGOONER</li>
+            <li><strong>MoggerStaking:</strong> Stake $MEGACHAD → earn $MEGAGOONER over time</li>
+            <li><strong>JESTERGOONER:</strong> Stake LP tokens → earn $MEGAGOONER</li>
+            <li><strong>Jestermogger:</strong> Governance voting — top 3 burners propose, $MEGAGOONER holders vote</li>
+          </ul>
+          <p>
+            All contracts are UUPS upgradeable proxies deployed on MegaETH (chain ID 4326).
+          </p>
+        </section>
+
+        <section>
+          <h2>15. Developer Resources</h2>
           <ul>
             <li>
               <strong>GitHub:</strong>{' '}
