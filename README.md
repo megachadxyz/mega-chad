@@ -1,51 +1,80 @@
-# Mega Chad NFT
+# MegaChad — MCP Server & Burn-to-Create Engine on MegaETH
 
-Mint site and art pipeline: **Vercel** (host + API) + **Replicate** (image generation). NFT mint and revenue splits on **MegaETH** can be added next (Split + NFT contract, chain ID 4326 mainnet / 6342 testnet).
+MegaChad is a **Model Context Protocol (MCP) server** and burn-to-create looksmaxxing engine on [MegaETH](https://megaeth.com). It exposes **19 MCP tools** that let AI agents interact with DeFi, NFTs, identity, and cross-chain operations on the MegaETH real-time blockchain.
 
-## What’s in this repo
+## MCP Server
 
-- **Next.js 14** (App Router) — runs on Vercel.
-- **Replicate** — `/api/generate` uses [Flux Schnell](https://replicate.com/black-forest-labs/flux-schnell) to generate images from a text prompt. You can switch to Flux 1.1 Pro or another model for higher quality or different style.
-- **Mint UI** — placeholder; hook up your MegaETH contract and wallet (e.g. Wagmi + MegaETH chain ID 4326) when ready.
+**Endpoint:** `https://megachad.xyz/api/mcp` (Streamable HTTP)
+
+Connect any MCP-compatible client (Claude Desktop, Cursor, etc.):
+
+```json
+{
+  "mcpServers": {
+    "megachad": {
+      "url": "https://megachad.xyz/api/mcp"
+    }
+  }
+}
+```
+
+### MCP Tools (19)
+
+| Tool | Description |
+|------|-------------|
+| `get_megachad_stats` | Token supply, circulating supply, burn count |
+| `get_price` | $MEGACHAD price in ETH from Kumbaya DEX |
+| `get_swap_quote` | Swap quote for ETH → $MEGACHAD with calldata |
+| `get_wallet_info` | Wallet balances, NFT count, burn eligibility |
+| `get_portfolio` | Full MegaETH token portfolio (ETH, WETH, MEGACHAD, USDm) |
+| `get_gallery` | Browse looksmaxxed burns with IPFS images |
+| `get_chadboard` | Burner leaderboard with reputation scores and .mega names |
+| `get_identity` | Resolve wallet or .mega name into unified identity profile |
+| `get_nft_metadata` | ERC-721 metadata for looksmaxxed NFTs |
+| `get_looksmaxx_requirements` | Burn requirements and x402 payment info |
+| `get_looksmaxx_plan` | Full transaction plan: swap → burn → tren fund → submit |
+| `cross_chain_looksmaxx` | Cross-chain plan from 10+ chains to MegaETH |
+| `gasless_burn_info` | EIP-712 typed data for gasless meta-transaction burns |
+| `get_bridge_info` | Bridge options for moving assets to MegaETH |
+| `get_agent_info` | ERC-8004 agent registration and reputation data |
+| `register_referral_agent` | Register as referring agent (earn 10% per burn) |
+| `get_referral_stats` | Referral count, earnings, and reward info |
+| `register_early_access` | Register wallet for beta access |
+| `chat_with_megachad` | Natural language interface for all operations |
+| `get_megaeth_protocols` | Curated MegaETH protocol directory |
+
+## What It Does
+
+- **Burn-to-Create:** Burn 225,000 $MEGACHAD tokens to generate AI-enhanced looksmaxxed portraits and mint NFTs on MegaETH
+- **Cross-Chain:** Bridge + swap + burn from Ethereum, Base, Arbitrum, Optimism, Polygon, and 5 more chains
+- **Identity Layer:** Unified profiles from on-chain data, MegaNames (.mega domains), burn history, reputation scores
+- **Agent Referrals:** On-chain referral economy — agents earn 10% of tren fund per referred burn
+- **x402 Payments:** HTTP 402 payment protocol via Meridian for API monetization
+- **ERC-8004:** Registered on-chain agent with reputation tracking
+
+## Tech Stack
+
+- **Next.js 14** (App Router) on Vercel
+- **MegaETH** (Chain ID 4326, ~250ms blocks, 100k+ TPS)
+- **Wagmi + viem** for wallet interactions
+- **mcp-handler** for MCP server implementation
+- **Kumbaya DEX** for swaps
+- **Warren Protocol** for on-chain image storage
+- **Upstash Redis** for metadata caching
 
 ## Setup
 
-1. **Clone and install**
-   ```bash
-   git clone https://github.com/megachadxyz/mega-chad.git
-   cd mega-chad
-   npm install
-   ```
+```bash
+git clone https://github.com/megachadxyz/mega-chad.git
+cd mega-chad
+npm install
+cp env.example .env.local  # fill in API keys
+npm run dev
+```
 
-2. **Replicate API token**
-   - Go to [replicate.com/account/api-tokens](https://replicate.com/account/api-tokens) and create a token.
-   - Copy `env.example` to `.env.local` and set:
-     ```bash
-     REPLICATE_API_TOKEN=r8_...
-     ```
+## Links
 
-3. **Run locally**
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000), enter a prompt, and click Generate.
-
-4. **Deploy on Vercel**
-   - Push this repo to GitHub and import the project in [Vercel](https://vercel.com).
-   - Add `REPLICATE_API_TOKEN` in Project → Settings → Environment Variables.
-   - Deploy; the mint site and `/api/generate` will be live.
-
-## Next steps (MegaETH mint)
-
-- Deploy your **Split** and **NFT contract** on MegaETH (testnet 6342, then mainnet 4326) per the MEGAETH plan.
-- Add wallet connect and mint flow (e.g. Wagmi/viem, chain 4326).
-- Point mint revenue to your Split address so payouts are automatic.
-
-## Repo
-
-[https://github.com/megachadxyz/mega-chad](https://github.com/megachadxyz/mega-chad)
-
-## Recent Updates
-
-- Landing page with legal documentation deployed (Feb 23, 2026)
-
+- **App:** [megachad.xyz](https://megachad.xyz)
+- **MCP Endpoint:** [megachad.xyz/api/mcp](https://megachad.xyz/api/mcp)
+- **Repo:** [github.com/megachadxyz/mega-chad](https://github.com/megachadxyz/mega-chad)
+- **X:** [@megachadxyz](https://x.com/megachadxyz)

@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.megachadxyz/megachad",
   "title": "MegaChad",
-  "description": "Burn-to-create looksmaxxing engine on MegaETH. 14 MCP tools for DeFi, NFTs, and burns.",
+  "description": "MCP server for MegaETH burn-to-create looksmaxxing engine. 19 MCP tools for DeFi swaps, NFT minting, cross-chain intents, identity resolution, agent referrals, and natural language transactions.",
   "repository": {
     "url": "https://github.com/megachadxyz/mega-chad",
     "source": "github"
