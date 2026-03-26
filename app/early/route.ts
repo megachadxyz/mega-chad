@@ -532,6 +532,7 @@ export async function GET() {
     ]);
 
     const has3NFTs = nftCount >= 3;
+    const hasAnyNFT = nftCount >= 1;
     hasInstantAccess = has3NFTs;
 
     const tokenBadge = document.getElementById('tokenBadge');
@@ -551,7 +552,6 @@ export async function GET() {
       ? '\u2713 ' + nftCount + '/3 looksmaxxed NFTs (referral path — need 3 for instant)'
       : '\u2717 No looksmaxxed NFTs found';
 
-    const hasAnyNFT = nftCount >= 1;
     const eligible = hasTokens || hasAnyNFT;
 
     if (!eligible) {
@@ -575,7 +575,7 @@ export async function GET() {
     document.getElementById('eligibilityError').style.display = 'none';
 
     if (!window.ethereum) {
-      err.textContent = 'No wallet detected. Please paste your wallet address below.';
+      err.textContent = 'No wallet detected. Please paste your wallet address above.';
       err.style.display = 'block';
       return;
     }
@@ -590,7 +590,7 @@ export async function GET() {
     } catch (e) {
       btn.textContent = 'Connect Wallet';
       btn.disabled = false;
-      err.textContent = 'Connection rejected. Try again or paste your address below.';
+      err.textContent = 'Connection rejected. Try again or paste your address above.';
       err.style.display = 'block';
     }
   }
