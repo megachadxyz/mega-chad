@@ -110,8 +110,11 @@ export default function PortalPage() {
 
     // Stats
     fetches.push(
-      fetch('/api/stats')
-        .then(r => r.json())
+      fetch('/api/stats', { cache: 'no-store' })
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
         .then(data => setStats(data))
         .catch(() => {})
     );
