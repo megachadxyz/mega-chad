@@ -147,8 +147,11 @@ export default function ChadboardPage() {
 
   // ─── Fetch data ────────────────────────────────────
   const fetchChadboard = useCallback(() => {
-    fetch('/api/chadboard')
-      .then((r) => r.json())
+    fetch('/api/chadboard', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
         setEntries(data.entries || []);
         if (data.agentId) setAgentId(data.agentId);

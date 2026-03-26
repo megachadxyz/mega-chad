@@ -121,8 +121,11 @@ export default function PortalPage() {
 
     // Price
     fetches.push(
-      fetch('/api/price')
-        .then(r => r.json())
+      fetch('/api/price', { cache: 'no-store' })
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
         .then(data => setPrice(data))
         .catch(() => {})
     );
