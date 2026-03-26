@@ -169,7 +169,7 @@ export default function DocsPage() {
         <section>
           <h2>9. MCP Server Integration</h2>
           <p>
-            MegaChad exposes a full MCP (Model Context Protocol) server with 19 tools:
+            MegaChad exposes a full MCP (Model Context Protocol) server with 20 tools:
           </p>
           <ul>
             <li><code>get_megachad_stats</code> — Token supply, circulating supply, burn count</li>
@@ -217,6 +217,9 @@ export default function DocsPage() {
             <li><code>POST /api/generate</code> — Generate + mint (direct burn proof)</li>
             <li><code>GET|POST /api/x402/looksmaxx</code> — x402-aware looksmaxx</li>
             <li><code>GET /api/x402/quote?ethAmount=0.1</code> — Swap quote</li>
+            <li><code>GET|POST /api/gasless/burn</code> — EIP-712 gasless burn via relayer</li>
+            <li><code>POST /api/warren/deploy</code> — Warren on-chain permanent storage</li>
+            <li><code>GET /api/metadata/&#123;tokenId&#125;</code> — ERC-721 NFT metadata</li>
           </ul>
 
           <h3>Agent & Chat</h3>
@@ -226,6 +229,16 @@ export default function DocsPage() {
             <li><code>GET|POST /api/agent/register</code> — Agent registration</li>
             <li><code>GET /api/agent/referrals?address=0x...</code> — Referral stats</li>
             <li><code>GET /api/agent/looksmaxx?wallet=0x...</code> — Full burn plan</li>
+          </ul>
+
+          <h3>Social & Messaging</h3>
+          <ul>
+            <li><code>POST /api/chat/auth</code> — ChadChat Ably auth token</li>
+            <li><code>GET|POST /api/chat/messages</code> — Chat message storage</li>
+            <li><code>GET|POST /api/chat/name</code> — Display name management</li>
+            <li><code>POST /api/telegram</code> — Telegram bot webhook</li>
+            <li><code>POST /api/telegram/alerts</code> — Burn/mint notifications</li>
+            <li><code>GET /api/frame</code> — Farcaster frame navigation</li>
           </ul>
 
           <h3>Cross-Chain</h3>
@@ -245,8 +258,9 @@ export default function DocsPage() {
           <h3>Infrastructure</h3>
           <ul>
             <li><code>GET /api/bridge</code> — Bridge info</li>
-            <li><code>GET /api/gasless/burn?address=0x...</code> — EIP-712 gasless info</li>
             <li><code>GET /api/events</code> — On-chain event stream (SSE)</li>
+            <li><code>GET /api/analytics</code> — Usage tracking</li>
+            <li><code>POST /api/early/register</code> — Beta access registration</li>
           </ul>
         </section>
 

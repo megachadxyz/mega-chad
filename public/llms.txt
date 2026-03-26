@@ -1,6 +1,6 @@
 # MegaChad
 
-> Burn-to-create looksmaxxing engine and MegaETH universal portal. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation. Features cross-chain intents, natural language transactions, identity layer, and 19 MCP tools. ERC-8004 registered agent with x402 payment support.
+> Burn-to-create looksmaxxing engine and MegaETH universal portal. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation. Features cross-chain intents, natural language transactions, identity layer, and 20 MCP tools. ERC-8004 registered agent with x402 payment support.
 
 MegaChad is a burn-to-create protocol and MegaETH portal (chain ID 4326). Users burn 225,000 $MEGACHAD tokens (split: 112,500 to dead address + 112,500 to tren fund) along with a 1 USDm infra fee via x402 to generate AI looksmaxxed portraits and mint them as NFTs.
 
@@ -49,6 +49,22 @@ The protocol has two tokens: $MEGACHAD (primary burn token) and $MEGAGOONER (gov
 ## Gasless Burns
 
 - [Gasless Burn](https://megachad.xyz/api/gasless/burn): EIP-712 gasless burn via relayer — no gas fees needed
+
+## Social & Messaging
+
+- [ChadChat Auth](https://megachad.xyz/api/chat/auth): Ably auth token for burn-gated real-time messaging
+- [Chat Messages](https://megachad.xyz/api/chat/messages): Message storage for ChadChat
+- [Chat Names](https://megachad.xyz/api/chat/name): Display name management
+- [Telegram Alerts](https://megachad.xyz/api/telegram/alerts): Burn/mint notification alerts
+- [Farcaster Frame](https://megachad.xyz/api/frame): Frame-based gallery and leaderboard navigation
+
+## Infrastructure
+
+- [SSE Events](https://megachad.xyz/api/events): Server-Sent Events stream for real-time burn notifications
+- [Analytics](https://megachad.xyz/api/analytics): Per-endpoint and per-MCP-tool usage tracking
+- [Early Access](https://megachad.xyz/api/early/register): Beta access registration
+- [Warren Deploy](https://megachad.xyz/api/warren/deploy): On-chain permanent image storage
+- [NFT Metadata](https://megachad.xyz/api/metadata/TOKEN_ID): ERC-721 metadata for looksmaxxed NFTs
 
 ## Contract Addresses (MegaETH)
 

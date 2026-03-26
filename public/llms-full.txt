@@ -183,6 +183,59 @@ Server-Sent Events stream. Emits `stats`, `burn`, and `heartbeat` events. Reconn
 ### GET /api/metadata/{tokenId}
 Returns ERC-721 metadata for a looksmaxxed NFT.
 
+### POST /api/agent/chat
+Natural language transaction engine. POST plain English and receive structured responses with calldata. Supports 17 intents including swap, burn, looksmaxx, cross-chain, compare, schedule, and multi-burn.
+
+Request: `{ "message": "looksmaxx 0xYOUR_WALLET" }`
+
+### GET|POST /api/agent/register
+Register as a referral agent. Earn 5% (11,250 $MEGACHAD) per referred burn.
+
+### GET /api/agent/referrals?address=0x...
+Returns referral count, earnings, and reward info for a registered agent.
+
+### GET /api/cross-chain/intent?sourceChain=base&wallet=0x...
+Build a cross-chain looksmaxx plan from any of 10 chains. Returns bridge → swap → burn → generate → mint steps.
+
+### GET /api/cross-chain/status?id=cc_...
+Track cross-chain intent progress.
+
+### GET /api/identity/{address}
+Unified MegaETH identity profile — MegaNames, balances, burn history, reputation, tier, referral stats. Accepts 0x addresses or .mega names.
+
+### GET /api/portal/tokens?address=0x...
+All MegaETH token balances for a wallet (ETH, WETH, MEGACHAD, USDm).
+
+### GET /api/portal/protocols
+Curated MegaETH protocol directory.
+
+### GET|POST /api/gasless/burn
+EIP-712 gasless burn via relayer — no gas fees needed. GET returns typed data for signing, POST submits the signed meta-transaction.
+
+### POST /api/warren/deploy
+Warren on-chain permanent image storage (~$5 ETH).
+
+### POST /api/chat/auth
+ChadChat Ably auth token. Requires connected wallet with at least 1 burn.
+
+### GET|POST /api/chat/messages
+Chat message storage for ChadChat.
+
+### GET|POST /api/chat/name
+Display name management for ChadChat.
+
+### POST /api/telegram
+Telegram bot webhook handler.
+
+### POST /api/telegram/alerts
+Trigger burn/mint notification alerts.
+
+### GET /api/frame
+Farcaster frame navigation for gallery and leaderboard.
+
+### GET /api/analytics
+Per-endpoint and per-MCP-tool usage tracking.
+
 ## Full Agent Flow
 
 1. **Check price:** `GET /api/price` — see current $MEGACHAD/ETH rate and burn cost
@@ -199,7 +252,7 @@ Returns ERC-721 metadata for a looksmaxxed NFT.
 
 Connect any MCP-compatible agent to `https://megachad.xyz/api/mcp`
 
-Available tools (19):
+Available tools (20):
 - `get_megachad_stats` — Token supply, circulating supply, burn count
 - `get_price` — Current $MEGACHAD price in ETH from Kumbaya DEX
 - `get_swap_quote` — Swap quote for ETH → $MEGACHAD with calldata

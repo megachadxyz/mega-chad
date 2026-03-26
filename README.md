@@ -1,6 +1,6 @@
 # MegaChad — MCP Server & Burn-to-Create Engine on MegaETH
 
-MegaChad is a **Model Context Protocol (MCP) server** and burn-to-create looksmaxxing engine on [MegaETH](https://megaeth.com). It exposes **19 MCP tools** that let AI agents interact with DeFi, NFTs, identity, and cross-chain operations on the MegaETH real-time blockchain.
+MegaChad is a **Model Context Protocol (MCP) server** and burn-to-create looksmaxxing engine on [MegaETH](https://megaeth.com). It exposes **20 MCP tools** that let AI agents interact with DeFi, NFTs, identity, and cross-chain operations on the MegaETH real-time blockchain.
 
 ## MCP Server
 
@@ -18,7 +18,7 @@ Connect any MCP-compatible client (Claude Desktop, Cursor, etc.):
 }
 ```
 
-### MCP Tools (19)
+### MCP Tools (20)
 
 | Tool | Description |
 |------|-------------|
@@ -57,6 +57,56 @@ Connect any MCP-compatible client (Claude Desktop, Cursor, etc.):
 - **Telegram Alerts:** Real-time burn/mint notifications via [@megachads](https://t.me/megachads)
 - **Natural Language:** NLP transaction engine — type plain English, get structured calldata
 - **Gasless Burns:** EIP-712 meta-transactions via relayer — no gas fees needed
+- **MegaETH Portal:** Portfolio viewer, protocol directory, live network stats, NLP command bar
+- **Farcaster Frames:** Frame-based burn gallery, leaderboard, and price discovery
+- **Analytics:** Per-endpoint and per-MCP-tool usage tracking
+
+## API Endpoints (36)
+
+### Core
+- `GET /api/stats` — Token supply, burn count
+- `GET /api/price` — Current price + burn cost
+- `GET /api/wallet?address=0x` — Balance + eligibility
+- `GET /api/gallery?limit=20` — Recent burns
+- `GET /api/chadboard` — Leaderboard
+
+### Burn & Generation
+- `GET|POST /api/x402/looksmaxx` — x402-gated looksmaxx
+- `GET /api/x402/quote?ethAmount=0.1` — Swap quote
+- `POST /api/generate` — Direct burn + generate
+- `GET|POST /api/gasless/burn` — EIP-712 gasless burn
+- `POST /api/warren/deploy` — Warren on-chain storage
+- `GET /api/metadata/{tokenId}` — NFT metadata
+
+### Agent & NLP
+- `POST /api/agent/chat` — Natural language transactions
+- `GET /api/agent/looksmaxx?wallet=0x` — Full burn plan
+- `GET /api/agent/info` — ERC-8004 identity
+- `GET|POST /api/agent/register` — Agent registration
+- `GET /api/agent/referrals?address=0x` — Referral stats
+
+### Cross-Chain & Bridge
+- `GET /api/cross-chain/intent?sourceChain=base` — Cross-chain plan
+- `GET /api/cross-chain/status?id=cc_` — Intent tracking
+- `GET /api/bridge` — Bridge infrastructure
+
+### Identity & Portal
+- `GET /api/identity/{address}` — Unified identity profile
+- `GET /api/portal/tokens?address=0x` — MegaETH portfolio
+- `GET /api/portal/protocols` — Protocol directory
+
+### Social & Messaging
+- `POST /api/chat/auth` — ChadChat Ably auth token
+- `GET|POST /api/chat/messages` — Chat message storage
+- `GET|POST /api/chat/name` — Display name management
+- `POST /api/telegram` — Telegram bot webhook
+- `POST /api/telegram/alerts` — Burn/mint notifications
+- `GET /api/frame` — Farcaster frame navigation
+
+### Infrastructure
+- `GET /api/events` — SSE event stream
+- `GET /api/analytics` — Usage tracking
+- `POST /api/early/register` — Beta access registration
 
 ## Tech Stack
 

@@ -90,7 +90,7 @@ export default function AboutPage() {
           <h3>Agent Referral Economy</h3>
           <p>
             AI agents register on-chain and earn 11,250 $MEGACHAD (5%) per referred burn.
-            Full MCP integration with 19 tools for autonomous agent operations.
+            Full MCP integration with 20 tools for autonomous agent operations.
           </p>
 
           <h3>Chadboard</h3>
@@ -113,6 +113,26 @@ export default function AboutPage() {
             Real-time burn and mint notifications via the MegaChad Telegram bot. Get alerted
             when new burns happen, leaderboard changes, and protocol milestones are reached.
             Join at <a href="https://t.me/megachads" target="_blank" rel="noopener noreferrer" className="inline-link">t.me/megachads</a>.
+          </p>
+
+          <h3>Farcaster Frames</h3>
+          <p>
+            Frame-based burn gallery, leaderboard, and price discovery for Farcaster. Browse
+            looksmaxxed creations and check stats without leaving your feed.
+          </p>
+
+          <h3>x402 Payments</h3>
+          <p>
+            MegaChad uses the HTTP 402 payment protocol via Meridian for API monetization.
+            The 1 USDm infra fee per looksmaxx covers AI generation and IPFS pinning costs,
+            paid seamlessly through x402 payment headers.
+          </p>
+
+          <h3>ERC-8004 Agent Identity</h3>
+          <p>
+            MegaChad is registered as on-chain Agent #12408 on the ERC-8004 Identity Registry.
+            The Reputation Registry allows anyone to leave on-chain feedback — scores are
+            aggregated and displayed on the Chadboard.
           </p>
 
           <h3>MEGA Protocol Governance</h3>
@@ -142,7 +162,7 @@ export default function AboutPage() {
             <li><strong>Storage:</strong> IPFS via Pinata (free) + Warren Protocol (on-chain, ~$5)</li>
             <li><strong>Payments:</strong> Meridian x402 protocol (HTTP 402 standard, USDm stablecoin)</li>
             <li><strong>Identity:</strong> ERC-8004 Agent Registry + MegaNames .mega domains</li>
-            <li><strong>Agent Integration:</strong> MCP server (19 tools), natural language chat, cross-chain intents</li>
+            <li><strong>Agent Integration:</strong> MCP server (20 tools), natural language chat, cross-chain intents</li>
             <li><strong>Frontend:</strong> Next.js 14 + wagmi + viem</li>
             <li><strong>Cross-Chain:</strong> 10 source chains via Rabbithole + canonical MegaETH Bridge</li>
             <li><strong>Social:</strong> Telegram bot, Farcaster frames, burn-gated chat (Ably)</li>
