@@ -66,7 +66,7 @@ export default function DocsPage() {
           <ol>
             <li>Navigate to <Link href="/main" className="inline-link">/main</Link></li>
             <li>Click "CONNECT WALLET" and approve the connection</li>
-            <li>Upload your portrait image (JPEG/PNG/WebP, max 4MB)</li>
+            <li>Upload your portrait image (JPEG/PNG, max 4MB)</li>
             <li><strong>Optional:</strong> Enable "Store on-chain permanently with Warren" (~$5)</li>
             <li>Click "BURN & LOOKSMAXX"</li>
             <li>Approve two transactions: burn to dead address + transfer to tren fund</li>

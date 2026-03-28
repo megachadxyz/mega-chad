@@ -1,6 +1,8 @@
 # Mega Chad: Burn-to-Create on MegaETH
 
-## Status (as of 2026-02-09)
+> **Note:** This is the original implementation plan from Feb 2026. The project has evolved significantly since then — burn amount is now 225,000 $MEGACHAD (was 1,000), the architecture includes cross-chain intents, MCP server, ChadChat, Portal, ERC-8004 identity, x402 payments, and more. See [README.md](../README.md) for current documentation.
+
+## Status (as of 2026-03-28)
 
 | Step | Description | Status |
 |------|-------------|--------|
@@ -15,15 +17,15 @@
 | 9 | Create app/gallery/page.tsx | DONE |
 | 10 | Delete Webflow code + update config | DONE |
 | 11 | Asset migration (images, audio from Webflow) | DONE |
-| — | Vercel deploy (preview) | DONE — https://mega-chad.vercel.app |
+| — | Vercel deploy | DONE — https://megachad.xyz |
 
-### Remaining TODO
-- **Deploy token** to MegaETH testnet → update `NEXT_PUBLIC_MEGACHAD_CONTRACT`
-- **Replace placeholder CA** (`0xaaaaaa`) in hero with real contract address
-- **Update Buy links** to actual DEX URL
-- **Add env vars on Vercel** (Replicate, Pinata, Upstash) so burn feature works end-to-end
-- **Add favicon** (`public/favicon.ico`)
-- **Transfer Vercel project** to megachadxyz org (see HANDOFF.md)
+### Original TODOs (All Complete)
+- ~~Deploy token to MegaETH~~ — DONE (0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888)
+- ~~Replace placeholder CA~~ — DONE
+- ~~Update Buy links to DEX~~ — DONE (Kumbaya DEX swap widget built in)
+- ~~Add env vars on Vercel~~ — DONE
+- ~~Add favicon~~ — DONE
+- ~~Transfer Vercel project~~ — DONE (megachad.xyz domain connected)
 
 ---
 

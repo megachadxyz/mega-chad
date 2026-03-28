@@ -4,7 +4,7 @@
 
 You don't need to understand any of this. You have AI that does everything. You just type what you want in English. Like ordering food, except the waiter is a genius and you're... you.
 
-**Live preview:** https://mega-chad.vercel.app
+**Live site:** https://megachad.xyz
 **Repo:** https://github.com/megachadxyz/mega-chad
 
 ---
@@ -225,25 +225,26 @@ You're basically a tech company now. CEO: Flatbread the Tadpole.
 - Full website (hero, about, burn-to-create, roadmap, notable chads, footer)
 - Image carousel with music
 - Wallet connect (MetaMask, Brave Wallet, Phantom, etc.)
-- Burn-to-create: type a prompt, burn 1000 tokens, get AI art
-- 50/50 split: 500 burned forever, 500 to dev wallet
-- AI image generation (Replicate)
+- Burn-to-create: burn 225,000 $MEGACHAD tokens, get AI looksmaxxed portrait
+- 50/50 split: 112,500 burned forever, 112,500 to tren fund
+- AI image generation (Replicate Flux 2 Max)
 - IPFS permanent storage (Pinata)
-- Gallery page
+- Warren Protocol on-chain storage option (~$5)
+- NFT minting to burner wallet
+- Chadboard leaderboard with tiers and ChadChat
+- MegaETH Portal with portfolio, protocols, and NLP command bar
+- Cross-chain looksmaxxing from 10+ chains
+- EIP-712 gasless burns via relayer
+- x402 payment protocol integration
+- ERC-8004 on-chain agent identity (#12408)
+- Telegram burn/mint alerts
+- Agent referral program (5% per referred burn)
+- MCP server with 20 tools
+- Token deployed on MegaETH mainnet
+- Vercel hosting on megachad.xyz
 - Smart contract (14 tests passing)
 - Pink is `#F786C6` (you're welcome)
-- Buy links go to kumbaya.xyz
-
-## WHAT'S NOT DONE
-
-Just copy-paste the relevant prompt from above into Claude Code when you're ready. It does the work. You watch. Your specialty, Panini the Frog.
-
-- Deploy the token contract
-- Put the real contract address on the site
-- Set up API keys on Vercel
-- Move hosting to your own Vercel
-- Connect megachad.xyz domain
-- Add a favicon
+- Swap widget via Kumbaya DEX built into the site
 
 ---
 
@@ -251,13 +252,13 @@ Just copy-paste the relevant prompt from above into Claude Code when you're read
 
 ```
 User connects wallet
-  -> Types a prompt ("jacked chad on the moon")
-  -> Clicks BURN (costs 1,000 $MEGACHAD)
-  -> 500 tokens burned forever (deflationary)
-  -> 500 tokens sent to dev wallet (funds the team)
-  -> AI generates an image
-  -> Image saved to IPFS permanently
-  -> User gets their art
+  -> Uploads a portrait photo
+  -> Clicks BURN (costs 225,000 $MEGACHAD)
+  -> 112,500 tokens burned forever (deflationary)
+  -> 112,500 tokens sent to tren fund
+  -> AI generates a looksmaxxed portrait
+  -> Image saved to IPFS permanently (or Warren on-chain)
+  -> NFT minted to user's wallet
 ```
 
 ---
@@ -271,4 +272,4 @@ User connects wallet
 
 ---
 
-*Updated 2026-02-09. Believe in yourself Burger. We almost do.*
+*Updated 2026-03-28. Believe in yourself Burger. We almost do.*
