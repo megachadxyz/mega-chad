@@ -265,7 +265,7 @@ export async function GET() {
 
     // Group by current owner
     const walletMap = new Map<string, ChadboardEntry>();
-    const burnAmountPerBurn = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') / 2;
+    const burnAmountPerBurn = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '225000') / 2;
 
     let skippedDeadAddress = 0;
 

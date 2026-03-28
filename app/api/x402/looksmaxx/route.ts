@@ -137,9 +137,9 @@ export async function POST(req: NextRequest) {
   }
 
   const mimeType = imageType || 'image/png';
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const validTypes = ['image/jpeg', 'image/png'];
   if (!validTypes.includes(mimeType)) {
-    return NextResponse.json({ error: 'Image must be JPEG, PNG, or WebP' }, { status: 400 });
+    return NextResponse.json({ error: 'Image must be JPEG or PNG' }, { status: 400 });
   }
 
   // ── Check replay ──────────────────────────────────────

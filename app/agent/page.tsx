@@ -142,7 +142,7 @@ export default function AgentPage() {
                 <div className="agent-contract">
                   <span className="agent-label">Identity Registry</span>
                   <a
-                    href={`https://megaeth.blockscout.com/address/${info.contracts.identityRegistry}`}
+                    href={`https://megaexplorer.xyz/address/${info.contracts.identityRegistry}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="agent-contract-link"
@@ -153,7 +153,7 @@ export default function AgentPage() {
                 <div className="agent-contract">
                   <span className="agent-label">Reputation Registry</span>
                   <a
-                    href={`https://megaeth.blockscout.com/address/${info.contracts.reputationRegistry}`}
+                    href={`https://megaexplorer.xyz/address/${info.contracts.reputationRegistry}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="agent-contract-link"
@@ -205,7 +205,7 @@ GET https://megachad.xyz/.well-known/agent-registration.json
 GET https://megachad.xyz/api/agent/info
 
 // Burn-to-create (x402 payment-gated)
-POST https://megachad.xyz/api/x402/generate
+POST https://megachad.xyz/api/x402/looksmaxx
 
 // Chadboard leaderboard
 GET https://megachad.xyz/api/chadboard
