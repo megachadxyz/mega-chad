@@ -63,6 +63,8 @@ const ALLOWED_PAGES = new Set([
   '/early',
   '/agent',
   '/portal',
+  '/beta',
+  '/beta/governance',
 ]);
 
 // Rate limit: sliding window per IP (in-memory, resets on cold start)

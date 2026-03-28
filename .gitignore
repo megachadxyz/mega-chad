@@ -26,9 +26,22 @@ npm-debug.log*
 next-env.d.ts
 
 # Foundry (contracts)
+cache/
 contracts/lib/
 contracts/cache/
 contracts/out/
+lib/forge-std/
+lib/openzeppelin-contracts/
+lib/openzeppelin-contracts-upgradeable/
 
 # Playwright MCP
 .playwright-mcp/
+
+# Registry tokens
+.mcpregistry_*
+
+# Build info
+tsconfig.tsbuildinfo
+
+# Broadcast artifacts
+contracts/broadcast/
