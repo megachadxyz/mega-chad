@@ -1005,7 +1005,7 @@
       "post": {
         "operationId": "chatWithMegachad",
         "summary": "Natural language interface for AI agents",
-        "description": "Send a plain English message and get back structured, actionable responses with data and suggested next actions. Supports 11 intents: price, stats, wallet, looksmaxx, swap, gallery, leaderboard, bridge, gasless, referral, about.",
+        "description": "Send a plain English message and get back structured, actionable responses with data and suggested next actions. Supports 17 intents: price, stats, wallet, looksmaxx, swap, gallery, leaderboard, bridge, gasless, referral, about, burn, compare, multi_burn, schedule, cross_chain_looksmaxx, register_agent.",
         "requestBody": {
           "required": true,
           "content": {

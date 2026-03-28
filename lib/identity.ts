@@ -283,7 +283,7 @@ async function fetchBalances(address: string): Promise<{ eth: string; megachad: 
 const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
-const BURN_AMOUNT_PER = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') / 2;
+const BURN_AMOUNT_PER = Number(process.env.NEXT_PUBLIC_BURN_AMOUNT || '225000') / 2;
 
 async function fetchBurnHistory(address: string): Promise<{
   total: number;

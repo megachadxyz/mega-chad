@@ -22,6 +22,16 @@ const GATEWAYS = [
 ];
 
 export async function GET(req: NextRequest) {
+  // Auth check — require admin key
+  const authHeader = req.headers.get('authorization');
+  const adminKey = process.env.ADMIN_API_KEY;
+  if (!adminKey || authHeader !== `Bearer ${adminKey}`) {
+    return NextResponse.json(
+      { error: 'Unauthorized', hint: 'Set ADMIN_API_KEY env var and pass as Bearer token' },
+      { status: 401 },
+    );
+  }
+
   const jwt = process.env.PINATA_JWT;
   const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
   const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;

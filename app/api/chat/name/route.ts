@@ -38,10 +38,31 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, name, isAnon } = await req.json();
+    const { address, name, isAnon, signature, timestamp } = await req.json();
 
     if (!address || typeof address !== 'string') {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
+    }
+
+    // Verify wallet ownership via signed message
+    if (!signature || !timestamp) {
+      return NextResponse.json({ error: 'Signature required' }, { status: 401 });
+    }
+
+    const msgTimestamp = Number(timestamp);
+    if (Math.abs(Date.now() - msgTimestamp) > 5 * 60 * 1000) {
+      return NextResponse.json({ error: 'Signature expired' }, { status: 401 });
+    }
+
+    try {
+      const { verifyMessage } = await import('viem');
+      const message = `ChadChat set name for ${address} at ${timestamp}`;
+      const valid = await verifyMessage({ address: address as `0x${string}`, message, signature });
+      if (!valid) {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      }
+    } catch {
+      return NextResponse.json({ error: 'Signature verification failed' }, { status: 401 });
     }
 
     const r = getRedis();

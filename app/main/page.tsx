@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   useAccount,
   useConnect,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/contracts';
 import WarrenPaymentModal from '@/components/WarrenPaymentModal';
 import SwapModal from '@/components/SwapModal';
+import { useAudio } from '@/hooks/useAudio';
 
 type BurnStatus =
   | 'idle'
@@ -198,17 +200,18 @@ export default function Home() {
   // When burn confirmed, fire transfer 2
   useEffect(() => {
     if (burnConfirmed && status === 'confirming') {
-    // Add delay to ensure nonce updates before second transaction
-    setTimeout(() => {
-      setStatus('burning2');
-      writeDev({
-        address: MEGACHAD_ADDRESS,
-        abi: MEGACHAD_ABI,
-        functionName: 'transfer',
-        args: [TREN_FUND_WALLET, HALF_AMOUNT],
-      });
-    }, 2000); // 2 second delay to allow nonce to update
-  }
+      // Small delay to let wallet update nonce (MegaETH is ~250ms blocks)
+      const timer = setTimeout(() => {
+        setStatus('burning2');
+        writeDev({
+          address: MEGACHAD_ADDRESS,
+          abi: MEGACHAD_ABI,
+          functionName: 'transfer',
+          args: [TREN_FUND_WALLET, HALF_AMOUNT],
+        });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
     if (burnFailed && status === 'confirming') {
       setStatus('error');
       setError('Burn transaction failed on-chain.');
@@ -239,9 +242,9 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const validTypes = ['image/jpeg', 'image/png'];
     if (!validTypes.includes(file.type)) {
-      setError('Please upload a JPEG, PNG, or WebP image.');
+      setError('Please upload a JPEG or PNG image.');
       return;
     }
     if (file.size > 4 * 1024 * 1024) {
@@ -402,56 +405,27 @@ export default function Home() {
   const [slide, setSlide] = useState(0);
   const slideTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
+  const startCarouselTimer = useCallback(() => {
+    if (slideTimer.current) clearInterval(slideTimer.current);
     slideTimer.current = setInterval(() => {
       setSlide((s) => (s + 1) % CAROUSEL_SLIDES.length);
     }, 5000);
-    return () => {
-      if (slideTimer.current) clearInterval(slideTimer.current);
-    };
   }, []);
+
+  const stopCarouselTimer = useCallback(() => {
+    if (slideTimer.current) { clearInterval(slideTimer.current); slideTimer.current = null; }
+  }, []);
+
+  useEffect(() => {
+    startCarouselTimer();
+    return () => stopCarouselTimer();
+  }, [startCarouselTimer, stopCarouselTimer]);
 
   const prevSlide = () => setSlide((s) => (s - 1 + CAROUSEL_SLIDES.length) % CAROUSEL_SLIDES.length);
   const nextSlide = () => setSlide((s) => (s + 1) % CAROUSEL_SLIDES.length);
 
   // ─── Audio ─────────────────────────────────────────
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-
-  // ─── Audio ─────────────────────────────────────────
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (localStorage.getItem('megachad-audio-stopped') === 'true') return;
-
-    audio.volume = 0.3;
-    audio.muted = true;
-    audio.play()
-      .then(() => {
-        setAudioPlaying(true);
-        setTimeout(() => { audio.muted = false; }, 100);
-      })
-      .catch(() => {});
-  }, []);
-
-  const toggleAudio = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audioPlaying) {
-      audio.pause();
-      setAudioPlaying(false);
-      localStorage.setItem('megachad-audio-stopped', 'true');
-    } else {
-      audio.muted = false;
-      audio.play()
-        .then(() => {
-          setAudioPlaying(true);
-          localStorage.removeItem('megachad-audio-stopped');
-        })
-        .catch(() => {});
-    }
-  }, [audioPlaying]);
+  const { audioRef, audioPlaying, toggleAudio } = useAudio();
 
   // ─── Burn stats ─────────────────────────────────────
   const [stats, setStats] = useState<{
@@ -489,7 +463,7 @@ export default function Home() {
 
       {/* ─── NAV ─────────────────────────────────────── */}
       <nav className="nav">
-        <a href="/" className="nav-logo">
+        <Link href="/" className="nav-logo">
           <Image
             src="/images/megachad-logo.png"
             alt="$MEGACHAD"
@@ -498,22 +472,23 @@ export default function Home() {
             priority
             style={{ objectFit: 'contain', height: 'auto' }}
           />
-        </a>
+        </Link>
         <ul className={`nav-links ${mobileNav ? 'open' : ''}`}>
           <li><a href="#about" onClick={() => setMobileNav(false)}>About</a></li>
           <li><a href="#buy" onClick={() => setMobileNav(false)}>Buy</a></li>
           <li><a href="#burn" onClick={() => setMobileNav(false)}>Burn</a></li>
           <li><a href="#roadmap" onClick={() => setMobileNav(false)}>Roadmap</a></li>
           <li><a href="#chads" onClick={() => setMobileNav(false)}>Chads</a></li>
-          <li><a href="/chadboard" onClick={() => setMobileNav(false)}>Chadboard</a></li>
-          <li><a href="/portal" onClick={() => setMobileNav(false)}>Portal</a></li>
+          <li><Link href="/chadboard" onClick={() => setMobileNav(false)}>Chadboard</Link></li>
+          <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
+          <li><Link href="/docs" onClick={() => setMobileNav(false)}>Docs</Link></li>
         </ul>
         <div className="nav-right">
           <button className="audio-toggle" onClick={toggleAudio} title={audioPlaying ? 'Mute' : 'Play Music'}>
             {audioPlaying ? '♫' : '♪'}
           </button>
           {isConnected ? (
-            <button className="nav-wallet" onClick={() => disconnect()}>
+            <button className="nav-wallet" onClick={() => { if (isBusy) { if (!confirm('A burn is in progress. Disconnect anyway?')) return; } disconnect(); }}>
               {truncAddr(address!)}
             </button>
           ) : (
@@ -570,7 +545,11 @@ export default function Home() {
             <h1 className="hero-headline">
               a chad does what a chad wants
             </h1>
-            <div className="hero-ca">CA: 0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888</div>
+            <div className="hero-ca" onClick={() => {
+              navigator.clipboard.writeText('0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888');
+              const el = document.querySelector('.hero-ca');
+              if (el) { el.textContent = 'Copied!'; setTimeout(() => { el.textContent = 'CA: 0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888'; }, 1500); }
+            }} style={{ cursor: 'pointer' }} title="Click to copy">CA: 0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888</div>
             <a className="btn btn-primary hero-buy" href="#buy">BUY NOW</a>
           </div>
         </div>
@@ -578,7 +557,7 @@ export default function Home() {
 
       {/* ─── CAROUSEL ────────────────────────────────── */}
       <section className="carousel-section">
-        <div className="carousel">
+        <div className="carousel" onMouseEnter={stopCarouselTimer} onMouseLeave={startCarouselTimer}>
           <div className="carousel-track" style={{ transform: `translateX(-${slide * 100}%)` }}>
             {CAROUSEL_SLIDES.map((s, i) => (
               <div key={i} className="carousel-slide">
@@ -693,7 +672,7 @@ export default function Home() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png"
               onChange={handleFileSelect}
               style={{ display: 'none' }}
             />
@@ -860,10 +839,10 @@ export default function Home() {
         <h2 className="section-heading">Roadmap</h2>
         <div className="roadmap-grid">
           {[
-            { date: 'Feb 9th', title: 'Bulk', desc: 'Respect the pump.' },
-            { date: 'Feb 12th', title: 'Cut', desc: 'Burn-to-looksmaxx. Every image permanently reduces supply.' },
-            { date: 'Feb 13th', title: 'Recomp', desc: 'Physiquemaxxers get recognition.' },
-            { date: 'TBA', title: 'Looksmaxx', desc: 'Mog everyone.' },
+            { date: 'Completed', title: 'Bulk', desc: 'Respect the pump.' },
+            { date: 'Completed', title: 'Cut', desc: 'Burn-to-looksmaxx. Every image permanently reduces supply.' },
+            { date: 'Completed', title: 'Recomp', desc: 'Physiquemaxxers get recognition.' },
+            { date: 'Coming Soon', title: 'Looksmaxx', desc: 'Mog everyone.' },
           ].map((item) => (
             <div key={item.title} className="roadmap-item">
               <div className="roadmap-date">{item.date}</div>
@@ -905,7 +884,7 @@ export default function Home() {
               height={60}
               style={{ objectFit: 'contain', height: 'auto' }}
             />
-            <div className="footer-tagline">Launch Feb 9 &mdash; MegaETH</div>
+            <div className="footer-tagline">Live on MegaETH</div>
           </div>
           <div className="footer-right">
             <ul className="footer-links">
@@ -913,8 +892,8 @@ export default function Home() {
               <li><a href="#burn">Burn</a></li>
               <li><a href="#roadmap">Roadmap</a></li>
               <li><a href="#chads">Chads</a></li>
-              <li><a href="/chadboard">Chadboard</a></li>
-              <li><a href="/portal">Portal</a></li>
+              <li><Link href="/chadboard">Chadboard</Link></li>
+              <li><Link href="/portal">Portal</Link></li>
             </ul>
             <div className="footer-social">
               <a

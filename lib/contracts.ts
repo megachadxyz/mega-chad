@@ -1,12 +1,12 @@
 export const MEGACHAD_ADDRESS = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  '0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888') as `0x${string}`;
 
 export const BURN_AMOUNT = BigInt(
-  (process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000')
+  (process.env.NEXT_PUBLIC_BURN_AMOUNT || '225000')
 ) * 10n ** 18n;
 
 export const BURN_AMOUNT_DISPLAY = Number(
-  process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000'
+  process.env.NEXT_PUBLIC_BURN_AMOUNT || '225000'
 );
 
 export const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;

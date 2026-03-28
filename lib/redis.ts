@@ -45,6 +45,18 @@ export async function isTxUsed(txHash: string): Promise<boolean> {
   return exists === 1;
 }
 
+/**
+ * Atomically claim a tx hash for processing.
+ * Returns true if successfully claimed, false if already claimed by another request.
+ * Uses SETNX with a 10-minute TTL to prevent race conditions.
+ */
+export async function claimTx(txHash: string): Promise<boolean> {
+  const r = getRedis();
+  const lockKey = `burn:lock:${txHash}`;
+  const result = await r.set(lockKey, '1', { nx: true, ex: 600 });
+  return result === 'OK';
+}
+
 export async function markTxUsed(record: BurnRecord): Promise<void> {
   const r = getRedis();
   const key = `${TX_PREFIX}${record.txHash}`;
@@ -58,6 +70,10 @@ export async function markTxUsed(record: BurnRecord): Promise<void> {
   if (record.burnAmount && record.burnAmount > 0) {
     await r.incrbyfloat(TOTAL_BURNED_KEY, record.burnAmount);
   }
+  // Track burner address for efficient chat auth lookups
+  if (record.burner) {
+    await r.sadd('burn:burners', record.burner.toLowerCase());
+  }
 }
 
 export async function getTotalTokensBurned(): Promise<number> {
@@ -68,7 +84,7 @@ export async function getTotalTokensBurned(): Promise<number> {
   // Migration: seed from existing burn count if counter not yet initialized
   const burnCount = await r.zcard(GALLERY_KEY);
   if (burnCount > 0) {
-    const burnAmount = Number(BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000'));
+    const burnAmount = Number(BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '225000'));
     const total = burnCount * burnAmount;
     await r.set(TOTAL_BURNED_KEY, total);
     return total;

@@ -79,33 +79,45 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
     // Try fee tiers in order (10000 first since that's where MEGACHAD pool is)
     // Use readContract (eth_call) instead of simulateContract because
     // UniV3 QuoterV2 is nonpayable and internally reverts after quoting
-    for (const fee of FEE_TIERS) {
-      try {
-        const result = await publicClient.readContract({
-          address: KUMBAYA_QUOTER_V2,
-          abi: QUOTER_V2_ABI,
-          functionName: 'quoteExactInputSingle',
-          args: [{
-            tokenIn: WETH,
-            tokenOut: MEGACHAD_ADDRESS,
-            fee,
-            amountIn,
-            sqrtPriceLimitX96: 0n,
-          }],
-        });
+    const quoteTimeout = setTimeout(() => {
+      setQuoteAmount(null);
+      setStatus('idle');
+      setError('Quote timed out. Try again.');
+    }, 15000);
 
-        setQuoteAmount(result[0]);
-        setActiveFee(fee);
-        setStatus('idle');
-        return;
-      } catch {
-        // try next fee tier
+    try {
+      for (const fee of FEE_TIERS) {
+        try {
+          const result = await publicClient.readContract({
+            address: KUMBAYA_QUOTER_V2,
+            abi: QUOTER_V2_ABI,
+            functionName: 'quoteExactInputSingle',
+            args: [{
+              tokenIn: WETH,
+              tokenOut: MEGACHAD_ADDRESS,
+              fee,
+              amountIn,
+              sqrtPriceLimitX96: 0n,
+            }],
+          });
+
+          clearTimeout(quoteTimeout);
+          setQuoteAmount(result[0]);
+          setActiveFee(fee);
+          setStatus('idle');
+          return;
+        } catch {
+          // try next fee tier
+        }
       }
-    }
 
-    setQuoteAmount(null);
-    setStatus('idle');
-    setError('No liquidity pool found for this pair');
+      clearTimeout(quoteTimeout);
+      setQuoteAmount(null);
+      setStatus('idle');
+      setError('No liquidity pool found for this pair');
+    } catch {
+      clearTimeout(quoteTimeout);
+    }
   }, [publicClient]);
 
   useEffect(() => {
@@ -288,11 +300,11 @@ export default function SwapModal({ isOpen, onClose, onSwapSuccess, inline }: Sw
                 value={slippage}
                 onChange={(e) => {
                   const v = parseFloat(e.target.value);
-                  if (!isNaN(v) && v >= 0 && v <= 50) setSlippage(v);
+                  if (!isNaN(v) && v >= 0 && v <= 20) setSlippage(v);
                 }}
                 step="0.1"
                 min="0"
-                max="50"
+                max="20"
               />
               <span>%</span>
             </div>

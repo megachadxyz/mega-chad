@@ -48,14 +48,20 @@ export default function AgentPage() {
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/agent/info')
-      .then((r) => r.json())
+    fetch('/api/agent/info', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(setInfo)
       .catch(console.error)
       .finally(() => setLoading(false));
 
-    fetch('/api/analytics')
-      .then((r) => r.json())
+    fetch('/api/analytics', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(setAnalytics)
       .catch(console.error)
       .finally(() => setAnalyticsLoading(false));

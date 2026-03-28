@@ -75,6 +75,13 @@ function isRateLimited(ip: string): boolean {
   const entry = rateLimitMap.get(ip);
 
   if (!entry || now > entry.resetAt) {
+    // Cap map size to prevent memory growth from unique IPs
+    if (rateLimitMap.size > 10_000) {
+      const cutoff = now - RATE_LIMIT_WINDOW;
+      for (const [k, v] of rateLimitMap) {
+        if (v.resetAt < cutoff) rateLimitMap.delete(k);
+      }
+    }
     rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
     return false;
   }
@@ -82,14 +89,6 @@ function isRateLimited(ip: string): boolean {
   entry.count++;
   return entry.count > RATE_LIMIT_MAX;
 }
-
-// Cleanup stale entries periodically (prevent memory leak)
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of rateLimitMap) {
-    if (now > entry.resetAt) rateLimitMap.delete(ip);
-  }
-}, 60_000);
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -105,7 +104,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Discovery files — pass through with CORS
+  // Discovery files — pass through with CORS + cache
   if (
     pathname.startsWith('/.well-known/') ||
     pathname === '/robots.txt' ||
@@ -115,6 +114,7 @@ export function middleware(request: NextRequest) {
   ) {
     const res = NextResponse.next();
     res.headers.set('Access-Control-Allow-Origin', '*');
+    res.headers.set('Cache-Control', 'public, max-age=3600, s-maxage=3600');
     return res;
   }
 

@@ -3,7 +3,7 @@
  * For on-chain permanent image storage on MegaETH
  */
 
-const WARREN_API_KEY = process.env.WARREN_API_KEY || 'mc_b52f876cfeb4ba6ab6d9314858fae9b93093fd705bd83e7c';
+const WARREN_API_KEY = process.env.WARREN_API_KEY || '';
 const WARREN_BASE_URL = 'https://thewarren.app';
 const WARREN_REGISTRY = '0xb7f14622ea97b26524BE743Ab6D9FA519Afbe756';
 

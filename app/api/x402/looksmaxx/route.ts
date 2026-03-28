@@ -11,19 +11,20 @@ import {
   LOOKSMAXX_INFRA_FEE,
   type PaymentPayload,
 } from '@/lib/x402';
+import {
+  MEGACHAD_ADDRESS,
+  NFT_ADDRESS,
+  BURN_AMOUNT,
+  BURN_ADDRESS,
+} from '@/lib/contracts';
 
 export const maxDuration = 120;
 
-const MEGACHAD_CONTRACT = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const MEGACHAD_CONTRACT = MEGACHAD_ADDRESS;
+const NFT_CONTRACT = NFT_ADDRESS;
 
-const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
-
-const BURN_AMOUNT = BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') * 10n ** 18n;
 const BURN_HALF = BURN_AMOUNT / 2n;
 
-const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
 const TREN_FUND_WALLET = (process.env.TREN_FUND_WALLET ||
   '0x85bf9272DEA7dff1781F71473187b96c6f2f370C') as `0x${string}`;
 

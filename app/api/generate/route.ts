@@ -3,23 +3,24 @@ import Replicate from 'replicate';
 import { createPublicClient, createWalletClient, encodeFunctionData, http, type TransactionReceipt } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { pinImage, pinMetadata } from '@/lib/pinata';
-import { isTxUsed, markTxUsed } from '@/lib/redis';
+import { isTxUsed, markTxUsed, claimTx } from '@/lib/redis';
 import { megaeth } from '@/lib/wagmi';
 import { estimateWarrenFee } from '@/lib/warren';
+import {
+  MEGACHAD_ADDRESS,
+  NFT_ADDRESS,
+  BURN_AMOUNT,
+  BURN_ADDRESS,
+} from '@/lib/contracts';
 
 export const maxDuration = 120;
 
-const MEGACHAD_CONTRACT = (process.env.NEXT_PUBLIC_MEGACHAD_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const MEGACHAD_CONTRACT = MEGACHAD_ADDRESS;
+const NFT_CONTRACT = NFT_ADDRESS;
 
-const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
-
-const BURN_AMOUNT = BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '1000') * 10n ** 18n;
 const BURN_HALF = BURN_AMOUNT / 2n;
 
-const BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
-const TREN_FUND_WALLET = (process.env.TREN_FUND_WALLET ||
+const TREN_FUND_WALLET = (process.env.NEXT_PUBLIC_TREN_FUND_WALLET ||
   '0x85bf9272DEA7dff1781F71473187b96c6f2f370C') as `0x${string}`;
 
 const viemClient = createPublicClient({
@@ -72,9 +73,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing image file' }, { status: 400 });
   }
 
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const validTypes = ['image/jpeg', 'image/png'];
   if (!validTypes.includes(imageFile.type)) {
-    return NextResponse.json({ error: 'Image must be JPEG, PNG, or WebP' }, { status: 400 });
+    return NextResponse.json({ error: 'Image must be JPEG or PNG' }, { status: 400 });
   }
   if (imageFile.size > 4 * 1024 * 1024) {
     return NextResponse.json({ error: 'Image must be under 4MB' }, { status: 400 });
@@ -84,10 +85,18 @@ export async function POST(req: NextRequest) {
   const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
   const dataUri = `data:${imageFile.type};base64,${imageBuffer.toString('base64')}`;
 
-  // ── Check replay ──────────────────────────────────────
+  // ── Check replay (both burn and dev tx) with atomic locking ──
   try {
     if (await isTxUsed(burnTxHash)) {
       return NextResponse.json({ error: 'This burn transaction has already been used' }, { status: 409 });
+    }
+    if (await isTxUsed(devTxHash)) {
+      return NextResponse.json({ error: 'This dev transfer transaction has already been used' }, { status: 409 });
+    }
+    // Atomically claim this tx to prevent race conditions
+    const claimed = await claimTx(burnTxHash);
+    if (!claimed) {
+      return NextResponse.json({ error: 'This burn is already being processed' }, { status: 409 });
     }
   } catch {
     // Redis not configured — skip replay check in dev
@@ -212,16 +221,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Image generation failed' }, { status: 502 });
   }
 
+  // ── Download generated image ─────────────────────────────
+  let generatedImageBuffer: Buffer;
+  try {
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) throw new Error('Failed to download generated image');
+    generatedImageBuffer = Buffer.from(await imgRes.arrayBuffer());
+  } catch (err) {
+    console.error('Image download failed:', err);
+    return NextResponse.json({ error: 'Failed to download generated image' }, { status: 502 });
+  }
+
   // ── Pin image to IPFS ──────────────────────────────────
   let ipfsCid = '';
   let ipfsUrl = '';
 
   try {
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error('Failed to download generated image');
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-
-    const pinResult = await pinImage(imgBuffer, {
+    const pinResult = await pinImage(generatedImageBuffer, {
       burner: burnerAddress,
       prompt: 'looksmaxx',
       txHash: burnTxHash,
@@ -242,13 +258,13 @@ export async function POST(req: NextRequest) {
   // ── Get sequential number for NFT name ──────────────────
   let mintNumber = 1;
   try {
+    // Use a lightweight call to get gallery size for numbering
     const { Redis } = await import('@upstash/redis');
     const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
     const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
     if (redisUrl && redisToken) {
       const r = new Redis({ url: redisUrl, token: redisToken });
-      const count = await r.zcard('burn:gallery');
-      mintNumber = count;
+      mintNumber = await r.zcard('burn:gallery');
     }
   } catch {
     // fallback to 1
@@ -281,10 +297,7 @@ export async function POST(req: NextRequest) {
     console.log('[Generate] Warren storage requested, estimating cost...');
 
     try {
-      // Get image buffer for Warren
-      const imgRes = await fetch(imageUrl);
-      const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-      const imageSize = imgBuffer.length;
+      const imageSize = generatedImageBuffer.length;
 
       // Estimate Warren cost
       const warrenEstimate = await estimateWarrenFee(imageSize);
@@ -292,7 +305,7 @@ export async function POST(req: NextRequest) {
       console.log('[Generate] Warren estimate:', warrenEstimate);
 
       // Convert image to base64 for Warren
-      const imageBase64 = imgBuffer.toString('base64');
+      const imageBase64 = generatedImageBuffer.toString('base64');
 
       // Return estimate and data needed for Warren deployment
       // Frontend will prompt user to pay, then call /api/warren/deploy
@@ -386,7 +399,7 @@ export async function POST(req: NextRequest) {
       cid: ipfsCid,
       ipfsUrl,
       timestamp: new Date().toISOString(),
-      burnAmount: Number(BURN_HALF / 10n ** 18n),
+      burnAmount: Number(BURN_AMOUNT / 10n ** 18n),
       tokenId: tokenId || undefined,
     });
   } catch {

@@ -67,13 +67,35 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { address, text } = await req.json();
+    const { address, text, signature, timestamp } = await req.json();
 
     if (!address || typeof address !== 'string') {
       return NextResponse.json({ error: 'Address required' }, { status: 400 });
     }
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return NextResponse.json({ error: 'Text required' }, { status: 400 });
+    }
+
+    // Verify wallet ownership via signed message
+    if (!signature || !timestamp) {
+      return NextResponse.json({ error: 'Signature required for chat messages' }, { status: 401 });
+    }
+
+    // Check timestamp is within 5 minutes to prevent replay
+    const msgTimestamp = Number(timestamp);
+    if (Math.abs(Date.now() - msgTimestamp) > 5 * 60 * 1000) {
+      return NextResponse.json({ error: 'Signature expired' }, { status: 401 });
+    }
+
+    try {
+      const { verifyMessage } = await import('viem');
+      const message = `ChadChat message from ${address} at ${timestamp}`;
+      const valid = await verifyMessage({ address: address as `0x${string}`, message, signature });
+      if (!valid) {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      }
+    } catch {
+      return NextResponse.json({ error: 'Signature verification failed' }, { status: 401 });
     }
 
     const apiKey = process.env.ABLY_API_KEY;
@@ -84,12 +106,22 @@ export async function POST(req: NextRequest) {
     const r = getRedis();
     const addr = address.toLowerCase();
 
-    // Check burn status
-    const members = await r.zrange(GALLERY_KEY, 0, -1);
-    const hasBurned = members.some((m) => {
-      const parsed = typeof m === 'string' ? JSON.parse(m) : m;
-      return parsed.burner?.toLowerCase() === addr;
-    });
+    // Check burn status — use a dedicated burner set for efficiency
+    const burnerKey = `burn:burners`;
+    let hasBurned: boolean = !!(await r.sismember(burnerKey, addr));
+
+    // Fallback: if burner set doesn't exist yet, check gallery (migration path)
+    if (!hasBurned) {
+      const members = await r.zrange(GALLERY_KEY, '+inf', '-inf', { byScore: true, rev: true, offset: 0, count: 200 });
+      hasBurned = members.some((m) => {
+        const parsed = typeof m === 'string' ? JSON.parse(m) : m;
+        return parsed.burner?.toLowerCase() === addr;
+      });
+      // Cache the result for future lookups
+      if (hasBurned) {
+        await r.sadd(burnerKey, addr);
+      }
+    }
 
     if (!hasBurned) {
       return NextResponse.json({ error: 'Must burn to chat' }, { status: 403 });
@@ -120,8 +152,9 @@ export async function POST(req: NextRequest) {
       timestamp: Date.now(),
     };
 
-    // Store in Redis
+    // Store in Redis (trim to last 1000 messages to prevent unbounded growth)
     await r.rpush(MESSAGES_KEY, JSON.stringify(message));
+    await r.ltrim(MESSAGES_KEY, -1000, -1);
 
     // Publish to Ably
     const ably = new Ably.Rest({ key: apiKey });

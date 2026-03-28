@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useSignMessage } from 'wagmi';
 import * as Ably from 'ably';
 import {
   ERC8004_REPUTATION_REGISTRY,
   REPUTATION_REGISTRY_ABI,
 } from '@/lib/erc8004';
 import { useRealtimeNFTMints } from '@/hooks/useRealtimeNFTMints';
+import { useAudio } from '@/hooks/useAudio';
 
 interface ChadboardImage {
   ipfsUrl: string;
@@ -105,42 +106,7 @@ export default function ChadboardPage() {
   const { latestMint, isConnected: wsConnected } = useRealtimeNFTMints();
 
   // ─── Audio ─────────────────────────────────────────
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (localStorage.getItem('megachad-audio-stopped') === 'true') return;
-
-    audio.volume = 0.3;
-    audio.muted = true;
-    audio.play()
-      .then(() => {
-        setAudioPlaying(true);
-        setTimeout(() => { audio.muted = false; }, 100);
-      })
-      .catch(() => {});
-  }, []);
-
-  const toggleAudio = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audioPlaying) {
-      audio.pause();
-      setAudioPlaying(false);
-      localStorage.setItem('megachad-audio-stopped', 'true');
-    } else {
-      audio.muted = false;
-      audio.play()
-        .then(() => {
-          setAudioPlaying(true);
-          localStorage.removeItem('megachad-audio-stopped');
-        })
-        .catch(() => {});
-    }
-  }, [audioPlaying]);
+  const { audioRef, audioPlaying, toggleAudio } = useAudio();
 
   // ─── Mobile nav ────────────────────────────────────
   const [mobileNav, setMobileNav] = useState(false);
@@ -375,21 +341,29 @@ export default function ChadboardPage() {
     setChatOpen(!chatOpen);
   };
 
+  const { signMessageAsync } = useSignMessage();
+
   const handleSendMessage = async () => {
     if (!chatInput.trim() || chatSending || !address) return;
 
     setChatSending(true);
     try {
+      const timestamp = Date.now().toString();
+      const message = `ChadChat message from ${address} at ${timestamp}`;
+      const signature = await signMessageAsync({ message });
+
       const res = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, text: chatInput.trim() }),
+        body: JSON.stringify({ address, text: chatInput.trim(), signature, timestamp }),
       });
       if (res.ok) {
         setChatInput('');
+      } else {
+        console.error('Chat send failed:', res.status);
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('Chat send error:', err);
     }
     setChatSending(false);
   };
@@ -400,6 +374,10 @@ export default function ChadboardPage() {
     setNameSaving(true);
 
     try {
+      const timestamp = Date.now().toString();
+      const message = `ChadChat set name for ${address} at ${timestamp}`;
+      const signature = await signMessageAsync({ message });
+
       const res = await fetch('/api/chat/name', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -407,6 +385,8 @@ export default function ChadboardPage() {
           address,
           name: isAnon ? undefined : (nameInput.trim() || undefined),
           isAnon,
+          signature,
+          timestamp,
         }),
       });
       const data = await res.json();
@@ -455,6 +435,7 @@ export default function ChadboardPage() {
           <li><Link href="/main#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>
           <li><Link href="/chadboard" onClick={() => setMobileNav(false)} className="nav-link-active">Chadboard</Link></li>
           <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
+          <li><Link href="/docs" onClick={() => setMobileNav(false)}>Docs</Link></li>
         </ul>
         <div className="nav-right">
           {isConnected ? (
@@ -513,7 +494,7 @@ export default function ChadboardPage() {
 
         {!loading && entries.length > 0 && !selectedWallet && (
           <div className="chads-grid" style={{ marginTop: '2.5rem' }}>
-            {entries.map((entry, i) => {
+            {entries.filter(e => e.totalBurns > 0).map((entry, i) => {
               const tier = getTier(entry.totalBurns);
               return (
                 <div
@@ -770,7 +751,7 @@ export default function ChadboardPage() {
               height={60}
               style={{ objectFit: 'contain', height: 'auto' }}
             />
-            <div className="footer-tagline">Launch Feb 9 &mdash; MegaETH</div>
+            <div className="footer-tagline">Live on MegaETH</div>
           </div>
           <div className="footer-right">
             <ul className="footer-links">

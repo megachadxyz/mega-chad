@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useSendTransaction,
   useWaitForTransactionReceipt,
@@ -50,6 +50,7 @@ export default function WarrenPaymentModal({
 }: WarrenPaymentModalProps) {
   const [deployStatus, setDeployStatus] = useState<'idle' | 'approving' | 'paying' | 'deploying' | 'done'>('idle');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('eth');
+  const deployingRef = React.useRef(false);
 
   // USDm price estimate (~$5 equivalent, using ETH estimate as reference)
   // Warren costs ETH; for USDm we convert at approximate rate
@@ -223,6 +224,8 @@ export default function WarrenPaymentModal({
   };
 
   async function handleWarrenDeploy(paymentHash: `0x${string}`) {
+    if (deployingRef.current) return;
+    deployingRef.current = true;
     setDeployStatus('deploying');
     try {
       const res = await fetch('/api/warren/deploy', {
@@ -244,6 +247,7 @@ export default function WarrenPaymentModal({
       setDeployStatus('done');
       onSuccess(data);
     } catch (err) {
+      deployingRef.current = false;
       setDeployStatus('idle');
       onError(err instanceof Error ? err.message : 'Warren deployment failed');
     }

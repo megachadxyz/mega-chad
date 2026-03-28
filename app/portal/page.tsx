@@ -81,7 +81,8 @@ export default function PortalPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatResponse, setChatResponse] = useState<{ answer?: string; actions?: { label: string; endpoint: string }[] } | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
-  const [liveEvents] = useState<LiveEvent[]>([]);
+  const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [mobileNav, setMobileNav] = useState(false);
 
   // Fetch data
   const fetchPortalData = useCallback(async () => {
@@ -90,8 +91,11 @@ export default function PortalPage() {
     // Tokens (if connected)
     if (isConnected && address) {
       fetches.push(
-        fetch(`/api/portal/tokens?address=${address}`)
-          .then(r => r.json())
+        fetch(`/api/portal/tokens?address=${address}`, { cache: 'no-store' })
+          .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
           .then(data => {
             setEthBalance(data.nativeBalance?.balance || '0');
             setTokens(data.tokens || []);
@@ -102,8 +106,11 @@ export default function PortalPage() {
 
     // Protocols
     fetches.push(
-      fetch('/api/portal/protocols')
-        .then(r => r.json())
+      fetch('/api/portal/protocols', { cache: 'no-store' })
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
         .then(data => setProtocols(data.protocols || []))
         .catch(() => {})
     );
@@ -136,9 +143,57 @@ export default function PortalPage() {
 
   useEffect(() => {
     fetchPortalData();
-    const interval = setInterval(fetchPortalData, 30000);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval>;
+    const handleVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        fetchPortalData();
+        interval = setInterval(fetchPortalData, 30000);
+      }
+    };
+    interval = setInterval(fetchPortalData, 30000);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchPortalData]);
+
+  // Live events from gallery
+  useEffect(() => {
+    let lastCheck = Date.now();
+    const pollEvents = async () => {
+      if (document.hidden) return;
+      try {
+        const res = await fetch('/api/gallery?limit=5', { cache: 'no-store' });
+        if (!res.ok) return;
+        const burns = await res.json();
+        if (Array.isArray(burns) && burns.length > 0) {
+          const newEvents: LiveEvent[] = burns
+            .filter((b: { timestamp?: string }) => b.timestamp && new Date(b.timestamp).getTime() > lastCheck - 60000)
+            .map((b: { txHash: string; burner?: string; timestamp?: string }, i: number) => ({
+              id: b.txHash || `evt-${i}`,
+              type: 'burn' as const,
+              icon: '\uD83D\uDD25',
+              text: `${b.burner ? `${b.burner.slice(0, 6)}...${b.burner.slice(-4)}` : 'Someone'} burned tokens`,
+              time: b.timestamp ? new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            }));
+          if (newEvents.length > 0) {
+            setLiveEvents(prev => {
+              const ids = new Set(prev.map(e => e.id));
+              const merged = [...newEvents.filter(e => !ids.has(e.id)), ...prev];
+              return merged.slice(0, 20);
+            });
+          }
+        }
+      } catch { /* ignore */ }
+      lastCheck = Date.now();
+    };
+    pollEvents();
+    const interval = setInterval(pollEvents, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   // NLP chat handler
   const handleChat = async () => {
@@ -151,7 +206,9 @@ export default function PortalPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: chatInput, wallet: address }),
+        cache: 'no-store',
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setChatResponse(data);
     } catch {
@@ -174,14 +231,15 @@ export default function PortalPage() {
             style={{ objectFit: 'contain', height: 'auto' }}
           />
         </Link>
-        <ul className="nav-links">
-          <li><Link href="/main#about">About</Link></li>
-          <li><Link href="/main#buy">Buy</Link></li>
-          <li><Link href="/main#burn">Burn</Link></li>
-          <li><Link href="/main#roadmap">Roadmap</Link></li>
-          <li><Link href="/main#chads">Chads</Link></li>
-          <li><Link href="/chadboard">Chadboard</Link></li>
-          <li><Link href="/portal" className="nav-link-active">Portal</Link></li>
+        <ul className={`nav-links ${mobileNav ? 'open' : ''}`}>
+          <li><Link href="/main#about" onClick={() => setMobileNav(false)}>About</Link></li>
+          <li><Link href="/main#buy" onClick={() => setMobileNav(false)}>Buy</Link></li>
+          <li><Link href="/main#burn" onClick={() => setMobileNav(false)}>Burn</Link></li>
+          <li><Link href="/main#roadmap" onClick={() => setMobileNav(false)}>Roadmap</Link></li>
+          <li><Link href="/main#chads" onClick={() => setMobileNav(false)}>Chads</Link></li>
+          <li><Link href="/chadboard" onClick={() => setMobileNav(false)}>Chadboard</Link></li>
+          <li><Link href="/portal" onClick={() => setMobileNav(false)} className="nav-link-active">Portal</Link></li>
+          <li><Link href="/docs" onClick={() => setMobileNav(false)}>Docs</Link></li>
         </ul>
         <div className="nav-right">
           {isConnected ? (
@@ -193,6 +251,9 @@ export default function PortalPage() {
               Connect Wallet
             </button>
           )}
+          <button className="nav-burger" onClick={() => setMobileNav(!mobileNav)} aria-label="Menu">
+            <span /><span /><span />
+          </button>
         </div>
       </nav>
 
@@ -264,7 +325,7 @@ export default function PortalPage() {
             border: '1px solid rgba(247,134,198,0.15)',
             borderRadius: 8,
           }}>
-            <div style={{ color: '#e0e0e0', fontSize: '.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+            <div style={{ color: '#e0e0e0', fontSize: '.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: '300px', overflowY: 'auto' }}>
               {chatResponse.answer}
             </div>
             {chatResponse.actions && chatResponse.actions.length > 0 && (
@@ -350,7 +411,7 @@ export default function PortalPage() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: '#fff', fontSize: '.9rem', fontFamily: "'Roboto Mono'" }}>{Number(ethBalance).toFixed(6)}</div>
+                      <div style={{ color: '#fff', fontSize: '.9rem', fontFamily: "'Roboto Mono'" }}>{Number(ethBalance).toFixed(4)}</div>
                     </div>
                   </div>
 
@@ -560,7 +621,7 @@ export default function PortalPage() {
               height={60}
               style={{ objectFit: 'contain', height: 'auto' }}
             />
-            <div className="footer-tagline">Launch Feb 9 &mdash; MegaETH</div>
+            <div className="footer-tagline">Live on MegaETH</div>
           </div>
           <div className="footer-right">
             <ul className="footer-links">
@@ -585,6 +646,17 @@ export default function PortalPage() {
                   width={18}
                   height={18}
                 />
+              </a>
+              <a
+                href="https://t.me/megachads"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-social-link footer-social-link--telegram"
+                aria-label="Telegram"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                </svg>
               </a>
             </div>
           </div>

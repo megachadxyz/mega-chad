@@ -3,13 +3,11 @@ import { createPublicClient, createWalletClient, encodeFunctionData, http, type 
 import { privateKeyToAccount } from 'viem/accounts';
 import { isTxUsed, markTxUsed } from '@/lib/redis';
 import { megaeth } from '@/lib/wagmi';
+import { NFT_ADDRESS, BURN_AMOUNT } from '@/lib/contracts';
 
 export const maxDuration = 60;
 
-const NFT_CONTRACT = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
-
-const BURN_AMOUNT = BigInt(process.env.NEXT_PUBLIC_BURN_AMOUNT || '225000');
+const NFT_CONTRACT = NFT_ADDRESS;
 
 const viemClient = createPublicClient({ chain: megaeth, transport: http() });
 
@@ -99,7 +97,7 @@ export async function POST(req: NextRequest) {
         cid: ipfsCid || '',
         ipfsUrl: ipfsUrl || '',
         timestamp: new Date().toISOString(),
-        burnAmount: Number(BURN_AMOUNT) / 2,
+        burnAmount: Number(BURN_AMOUNT / 2n / 10n ** 18n),
         tokenId: tokenId || undefined,
       });
     } catch (err) {
