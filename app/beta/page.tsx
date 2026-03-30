@@ -298,7 +298,7 @@ function BurnSection({ address }: { address: `0x${string}` }) {
 }
 
 // ═════════════════════════════════════════════════════════
-// FRAMEMOGGER (Send MEGACHAD to Tren Fund + Burn MEGAGOONER)
+// FRAMEMOGGER (Send MEGACHAD to Tren Fund, Burn MEGAGOONER for deflation)
 // ═════════════════════════════════════════════════════════
 function FramemoggerSection({ address }: { address: `0x${string}` }) {
   const [burnAmount, setBurnAmount] = useState('');
@@ -408,7 +408,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
       setErrorMsg('Insufficient $MEGACHAD balance'); return;
     }
     if (megagoonerBalance !== undefined && megagoonerRequired > megagoonerBalance) {
-      setErrorMsg(`Insufficient $MEGAGOONER — need ${fmtBig(megagoonerRequired)} for deflation burn`); return;
+      setErrorMsg(`Insufficient $MEGAGOONER — need ${fmtBig(megagoonerRequired)} for deflation`); return;
     }
     setErrorMsg('');
 
@@ -445,7 +445,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
       functionName: 'burnMEGACHAD',
       args: [parsedAmount],
     }, {
-      onError: () => { setStatus('error'); setErrorMsg('Burn transaction failed'); },
+      onError: () => { setStatus('error'); setErrorMsg('Framemogger transaction failed'); },
     });
   };
 
@@ -496,22 +496,22 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
     <div className="beta-card">
       <div className="beta-card-header">
         <h2>FRAMEMOGGER</h2>
-        <span className="beta-card-badge">BURN &rarr; DEFLATE</span>
+        <span className="beta-card-badge">SEND &rarr; DEFLATE</span>
       </div>
       <p className="beta-card-desc">
-        Send $MEGACHAD to the Tren Fund and burn $MEGAGOONER for deflation. For every 1 $MEGACHAD burned,
-        0.25 $MEGAGOONER is permanently destroyed (1:4 ratio). Requires 1+ Looksmaxxed NFT.
-        Top 3 weekly burners earn the right to create governance proposals.
+        Send $MEGACHAD to the Tren Fund for future ecosystem use, while permanently burning $MEGAGOONER
+        for deflation. For every 1 $MEGACHAD sent, 0.25 $MEGAGOONER is destroyed (1:4 ratio).
+        Requires 1+ Looksmaxxed NFT. Top 3 weekly senders earn the right to create governance proposals.
       </p>
 
       {/* How it works */}
       <div className="beta-info-box">
         <h4>HOW IT WORKS</h4>
         <ul>
-          <li>$MEGACHAD is sent to the Tren Fund (economic commitment)</li>
-          <li>$MEGAGOONER is burned at a 1:4 ratio (0.25 $MEGAGOONER per 1 $MEGACHAD)</li>
+          <li>$MEGACHAD is sent to the Tren Fund — not burned, reserved for future ecosystem use</li>
+          <li>$MEGAGOONER is permanently burned at a 1:4 ratio (0.25 $MEGAGOONER per 1 $MEGACHAD sent)</li>
           <li>Requires holding at least 1 Looksmaxxed NFT to participate</li>
-          <li>Top 3 weekly burners can submit governance proposals via Jestermogger</li>
+          <li>Top 3 weekly participants can submit governance proposals via Jestermogger</li>
         </ul>
       </div>
 
@@ -575,7 +575,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
 
       {/* Burn input */}
       <div className="beta-input-group">
-        <label className="beta-input-label">BURN AMOUNT ($MEGACHAD)</label>
+        <label className="beta-input-label">AMOUNT ($MEGACHAD TO SEND)</label>
         <div className="beta-input-row">
           <input
             type="number"
@@ -597,7 +597,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
       {/* Requirements preview */}
       {parsedAmount > 0n && burnReqs && (
         <div className="beta-requirements">
-          <span>Requires: {fmtBig(burnReqs[0])} $MEGACHAD + {fmtBig(burnReqs[1])} $MEGAGOONER (deflation burn)</span>
+          <span>Requires: {fmtBig(burnReqs[0])} $MEGACHAD (to Tren Fund) + {fmtBig(burnReqs[1])} $MEGAGOONER (burned for deflation)</span>
         </div>
       )}
 
@@ -605,11 +605,11 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         <div className="beta-status">
           {status === 'approving-megachad' && 'Approving $MEGACHAD...'}
           {status === 'approving-megagooner' && 'Approving $MEGAGOONER for deflation burn...'}
-          {status === 'burning' && 'Burning via Framemogger...'}
+          {status === 'burning' && 'Sending via Framemogger...'}
         </div>
       )}
       {status === 'done' && (
-        <div className="beta-status success">Burn complete! $MEGACHAD sent to Tren Fund, $MEGAGOONER deflated.</div>
+        <div className="beta-status success">Complete! $MEGACHAD sent to Tren Fund, $MEGAGOONER deflated.</div>
       )}
       {status === 'error' && (
         <div className="beta-status error">{errorMsg || 'Transaction failed'}</div>
@@ -623,7 +623,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         onClick={handleBurn}
         disabled={status === 'approving-megachad' || status === 'approving-megagooner' || status === 'burning'}
       >
-        {needsMegachadApproval || needsMegagoonerApproval ? 'APPROVE & BURN' : 'BURN $MEGACHAD'}
+        {needsMegachadApproval || needsMegagoonerApproval ? 'APPROVE & SEND' : 'SEND $MEGACHAD'}
       </button>
     </div>
   );
