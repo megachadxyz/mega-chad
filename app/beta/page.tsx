@@ -880,13 +880,17 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         Stake $MEGACHAD to earn $MEGAGOONER rewards. No lock period — unstake anytime.
       </p>
 
-      {/* NFT Boost explanation */}
+      {/* NFT Requirement + Boost explanation */}
+      <div className="beta-info-box beta-info-warning">
+        <h4>LOOKSMAXXED NFT REQUIRED</h4>
+        <p>You must hold at least 1 Looksmaxxed NFT to be eligible for any emissions. No NFT = no rewards.</p>
+      </div>
       <div className="beta-info-box">
         <h4>NFT EMISSIONS BOOST</h4>
-        <p>Holding Looksmaxxed NFTs increases your effective stake and rewards:</p>
+        <p>More NFTs increase your effective stake and rewards:</p>
         <ul>
-          <li><strong>Tier 1 (0 NFTs):</strong> 1.0x base multiplier</li>
-          <li><strong>Tier 2 (10+ NFTs):</strong> 1.075x multiplier</li>
+          <li><strong>Tier 1 (1-9 NFTs):</strong> 1.0x base multiplier</li>
+          <li><strong>Tier 2 (10-24 NFTs):</strong> 1.075x multiplier</li>
           <li><strong>Tier 3 (25+ NFTs):</strong> 1.15x multiplier</li>
         </ul>
         <p>Your effective stake = staked amount &times; NFT multiplier. Higher effective stake = more $MEGAGOONER rewards per second.</p>
@@ -1164,13 +1168,19 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         Receives 40% of weekly $MEGAGOONER emissions.
       </p>
 
+      {/* NFT Requirement */}
+      <div className="beta-info-box beta-info-warning">
+        <h4>LOOKSMAXXED NFT REQUIRED</h4>
+        <p>You must hold at least 1 Looksmaxxed NFT to be eligible for any emissions. No NFT = no rewards.</p>
+      </div>
+
       {/* NFT + Time Boost explanation */}
       <div className="beta-info-box">
         <h4>BOOST MULTIPLIERS</h4>
         <p><strong>NFT Boost</strong> — Looksmaxxed NFT holdings increase your effective stake:</p>
         <ul>
-          <li><strong>Tier 1 (0 NFTs):</strong> 1.0x base</li>
-          <li><strong>Tier 2 (10+ NFTs):</strong> 1.075x</li>
+          <li><strong>Tier 1 (1-9 NFTs):</strong> 1.0x base</li>
+          <li><strong>Tier 2 (10-24 NFTs):</strong> 1.075x</li>
           <li><strong>Tier 3 (25+ NFTs):</strong> 1.15x</li>
         </ul>
         <p><strong>Time Boost</strong> — The longer you stake, the higher your time multiplier grows, further increasing your effective stake and share of rewards.</p>

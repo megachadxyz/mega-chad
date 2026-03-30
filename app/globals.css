@@ -3257,6 +3257,15 @@ textarea:focus-visible {
   font-family: var(--font-body);
 }
 
+.beta-info-box.beta-info-warning {
+  border-left-color: #ff8c00;
+  background: rgba(255, 140, 0, 0.04);
+}
+
+.beta-info-box.beta-info-warning h4 {
+  color: #ff8c00;
+}
+
 .beta-info-box h4 {
   font-size: 0.65rem;
   letter-spacing: 0.12em;
