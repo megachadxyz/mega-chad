@@ -3247,6 +3247,58 @@ textarea:focus-visible {
   border-color: var(--pink);
 }
 
+/* ── Info boxes ──────────────────────────────────────────── */
+.beta-info-box {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--pink);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-body);
+}
+
+.beta-info-box h4 {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: var(--pink);
+  margin: 0 0 0.5rem;
+}
+
+.beta-info-box p {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+}
+
+.beta-info-box p:last-child {
+  margin-bottom: 0;
+}
+
+.beta-info-box ul {
+  margin: 0.4rem 0;
+  padding-left: 1.2rem;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+
+.beta-info-box li strong {
+  color: var(--text);
+}
+
+/* ── Requirements preview ────────────────────────────────── */
+.beta-requirements {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
 /* ── Faucet ──────────────────────────────────────────────── */
 .beta-faucet {
   border-color: rgba(0, 255, 136, 0.2);
