@@ -64,6 +64,7 @@ const ALLOWED_PAGES = new Set([
   '/agent',
   '/portal',
   '/beta',
+  '/beta/faucet',
   '/beta/governance',
 ]);
 

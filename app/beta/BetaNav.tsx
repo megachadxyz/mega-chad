@@ -55,6 +55,7 @@ export function BetaNav() {
         <div className={`nav-links${mobileNav ? ' open' : ''}`}>
           <Link href="/beta" onClick={() => setMobileNav(false)}>Protocol</Link>
           <Link href="/beta/governance" onClick={() => setMobileNav(false)}>Governance</Link>
+          <Link href="/beta/faucet" onClick={() => setMobileNav(false)}>Faucet</Link>
           <Link href="/main" onClick={() => setMobileNav(false)}>Mainnet</Link>
         </div>
 
