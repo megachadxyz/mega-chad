@@ -192,7 +192,7 @@ function FaucetSection({ address }: { address: `0x${string}` }) {
         <span className="beta-card-badge">FREE TOKENS</span>
       </div>
       <p className="beta-card-desc">
-        Claim testnet tokens to interact with the protocol. 1M $MEGACHAD and 10K $MEGAGOONER per drip. 24h cooldown per token.
+        Claim testnet tokens from the Tren Fund to interact with the protocol. 50 $MEGACHAD and 50 $MEGAGOONER per drip. 24h cooldown per token.
       </p>
 
       <div className="beta-stat-row">

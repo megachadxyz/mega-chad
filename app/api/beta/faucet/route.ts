@@ -9,13 +9,15 @@ import {
   ERC20_ABI,
 } from '@/lib/testnet-contracts';
 
-const FAUCET_PRIVATE_KEY = process.env.FAUCET_PRIVATE_KEY as `0x${string}` | undefined;
+// Faucet drips from the Tren Fund wallet
+// Set TREN_FUND_PRIVATE_KEY in Vercel env vars
+const TREN_FUND_PRIVATE_KEY = process.env.TREN_FUND_PRIVATE_KEY as `0x${string}` | undefined;
 
-// Drip amounts
-const MEGACHAD_DRIP = parseUnits('1000000', 18);  // 1M testnet $MEGACHAD
-const MEGAGOONER_DRIP = parseUnits('10000', 18);   // 10K testnet $MEGAGOONER
+// Drip amounts: 50 of each token per 24h per wallet
+const MEGACHAD_DRIP = parseUnits('50', 18);
+const MEGAGOONER_DRIP = parseUnits('50', 18);
 
-// Cooldown: 1 drip per address per 24 hours (in-memory, resets on cold start)
+// Cooldown: 1 drip per token per address per 24 hours (in-memory, resets on cold start)
 const cooldowns = new Map<string, number>();
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -36,9 +38,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Wallet not whitelisted' }, { status: 403 });
     }
 
-    // Faucet wallet check
-    if (!FAUCET_PRIVATE_KEY) {
-      return NextResponse.json({ error: 'Faucet not configured' }, { status: 503 });
+    // Tren fund wallet check
+    if (!TREN_FUND_PRIVATE_KEY) {
+      return NextResponse.json({ error: 'Faucet not configured. Set TREN_FUND_PRIVATE_KEY.' }, { status: 503 });
     }
 
     // Cooldown check (per token per address)
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Cooldown active. Try again in ~${remaining}h` }, { status: 429 });
     }
 
-    const account = privateKeyToAccount(FAUCET_PRIVATE_KEY);
+    const account = privateKeyToAccount(TREN_FUND_PRIVATE_KEY);
     const walletClient = createWalletClient({
       account,
       chain: megaethTestnet,
@@ -63,7 +65,7 @@ export async function POST(request: Request) {
     const tokenAddress = token === 'megachad' ? TESTNET_MEGACHAD_ADDRESS : TESTNET_MEGAGOONER_ADDRESS;
     const amount = token === 'megachad' ? MEGACHAD_DRIP : MEGAGOONER_DRIP;
 
-    // Check faucet balance
+    // Check tren fund balance
     const faucetBalance = await publicClient.readContract({
       address: tokenAddress,
       abi: ERC20_ABI,
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faucet depleted. Contact team.' }, { status: 503 });
     }
 
-    // Send tokens
+    // Send tokens from tren fund
     const hash = await walletClient.writeContract({
       address: tokenAddress,
       abi: ERC20_ABI,
@@ -97,14 +99,11 @@ export async function POST(request: Request) {
       }
     }
 
-    const displayAmount = token === 'megachad' ? '1,000,000' : '10,000';
-    const symbol = token === 'megachad' ? '$MEGACHAD' : '$MEGAGOONER';
-
     return NextResponse.json({
       success: true,
       hash,
-      amount: displayAmount,
-      token: symbol,
+      amount: '50',
+      token: token === 'megachad' ? '$MEGACHAD' : '$MEGAGOONER',
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Faucet error';
