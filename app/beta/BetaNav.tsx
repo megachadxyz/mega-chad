@@ -67,11 +67,11 @@ export function BetaNav() {
             <span className="beta-whitelisted">WHITELISTED</span>
           )}
           {isConnected ? (
-            <button className="wallet-btn" onClick={() => disconnect()}>
+            <button className="nav-wallet" onClick={() => disconnect()}>
               {truncAddr(address!)}
             </button>
           ) : (
-            <button className="wallet-btn" onClick={connectWallet}>
+            <button className="nav-wallet" onClick={connectWallet}>
               CONNECT WALLET
             </button>
           )}
