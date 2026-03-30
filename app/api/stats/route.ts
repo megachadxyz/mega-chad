@@ -7,15 +7,23 @@ const DEAD_ADDRESS_PADDED = '0x0000000000000000000000000000000000000000000000000
 const RPC_URL = 'https://mainnet.megaeth.com/rpc';
 
 async function rpcCall(method: string, params: unknown[]): Promise<string> {
-  const res = await fetch(RPC_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
-    cache: 'no-store',
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.result;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const res = await fetch(RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.result;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function getOnChainStats(): Promise<{ totalSupply: number; tokensBurned: number }> {
@@ -61,11 +69,15 @@ export async function GET() {
     );
   } catch (err) {
     console.error('Stats fetch failed:', err);
-    return NextResponse.json({
-      totalSupply: null,
-      tokensBurned: null,
-      totalBurns: null,
-    });
+    return NextResponse.json(
+      {
+        totalSupply: null,
+        circulatingSupply: null,
+        tokensBurned: null,
+        totalBurns: null,
+      },
+      { status: 500 },
+    );
   }
 }
 
