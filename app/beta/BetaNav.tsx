@@ -50,7 +50,7 @@ export function BetaNav() {
           <Image src="/images/megachad-logo.png" alt="MegaChad" width={220} height={60} priority />
         </Link>
 
-        <div className="beta-testnet-badge">TESTNET</div>
+        <span className="beta-testnet-tag">TESTNET</span>
 
         <div className={`nav-links${mobileNav ? ' open' : ''}`}>
           <Link href="/beta" onClick={() => setMobileNav(false)}>Protocol</Link>

@@ -56,7 +56,7 @@ function PasswordGate({ children }: { children: React.ReactNode }) {
       <div className="beta-gate">
         <div className="beta-gate-inner">
           <div className="beta-gate-badge">CLASSIFIED</div>
-          <h1 className="beta-gate-title">MEGA PROTOCOL</h1>
+          <h1 className="beta-gate-title">MEGACHAD PROTOCOL</h1>
           <p className="beta-gate-subtitle">TESTNET ACCESS REQUIRED</p>
 
           <form onSubmit={handleSubmit} className="beta-gate-form">

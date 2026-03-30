@@ -2511,19 +2511,17 @@ textarea:focus-visible {
   position: relative;
 }
 
-.beta-testnet-badge {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.beta-testnet-tag {
   font-family: var(--font-body);
-  font-size: 0.6rem;
-  letter-spacing: 0.25em;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
   color: #00ff88;
   background: rgba(0, 255, 136, 0.08);
   border: 1px solid rgba(0, 255, 136, 0.3);
-  padding: 0.2rem 0.8rem;
-  pointer-events: none;
+  padding: 0.15rem 0.6rem;
+  margin-left: 0.75rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .beta-not-whitelisted {
@@ -2558,7 +2556,7 @@ textarea:focus-visible {
 /* ── Hero ────────────────────────────────────────────────── */
 .beta-hero {
   text-align: center;
-  padding: 3rem 0 2rem;
+  padding: 1.5rem 0 1.5rem;
 }
 
 .beta-hero-title {
@@ -3382,7 +3380,7 @@ textarea:focus-visible {
     font-size: 2.5rem;
   }
 
-  .beta-testnet-badge {
+  .beta-testnet-tag {
     display: none;
   }
 

@@ -66,7 +66,7 @@ export default function BetaProtocol() {
     <div className="beta-page">
       {/* Hero */}
       <section className="beta-hero">
-        <h1 className="beta-hero-title">MEGA PROTOCOL</h1>
+        <h1 className="beta-hero-title">MEGACHAD PROTOCOL</h1>
         <p className="beta-hero-subtitle">
           Testnet DeFi Suite — Burn, Stake, Govern
         </p>
