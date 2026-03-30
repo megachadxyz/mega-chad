@@ -119,12 +119,122 @@ export default function BetaProtocol() {
           </div>
         ) : (
           <>
+            <FaucetSection address={address!} />
             {activeTab === 'burn' && <BurnSection address={address!} />}
             {activeTab === 'framemogger' && <FramemoggerSection address={address!} />}
             {activeTab === 'staking' && <StakingSection address={address!} />}
             {activeTab === 'lp-staking' && <LPStakingSection address={address!} />}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════
+// TESTNET FAUCET
+// ═════════════════════════════════════════════════════════
+function FaucetSection({ address }: { address: `0x${string}` }) {
+  const [megachadStatus, setMegachadStatus] = useState<'idle' | 'dripping' | 'done' | 'error'>('idle');
+  const [megagoonerStatus, setMegagoonerStatus] = useState<'idle' | 'dripping' | 'done' | 'error'>('idle');
+  const [megachadMsg, setMegachadMsg] = useState('');
+  const [megagoonerMsg, setMegagoonerMsg] = useState('');
+
+  const { data: megachadBalance, refetch: refetchMegachad } = useReadContract({
+    address: TESTNET_MEGACHAD_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+  });
+
+  const { data: megagoonerBalance, refetch: refetchMegagooner } = useReadContract({
+    address: TESTNET_MEGAGOONER_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+  });
+
+  const drip = async (token: 'megachad' | 'megagooner') => {
+    const setStatus = token === 'megachad' ? setMegachadStatus : setMegagoonerStatus;
+    const setMsg = token === 'megachad' ? setMegachadMsg : setMegagoonerMsg;
+
+    setStatus('dripping');
+    setMsg('');
+
+    try {
+      const res = await fetch('/api/beta/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, token }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setStatus('done');
+        setMsg(`Received ${data.amount} ${data.token}`);
+        refetchMegachad();
+        refetchMegagooner();
+      } else {
+        setStatus('error');
+        setMsg(data.error || 'Faucet error');
+      }
+    } catch {
+      setStatus('error');
+      setMsg('Network error');
+    }
+  };
+
+  return (
+    <div className="beta-card beta-faucet">
+      <div className="beta-card-header">
+        <h2>TESTNET FAUCET</h2>
+        <span className="beta-card-badge">FREE TOKENS</span>
+      </div>
+      <p className="beta-card-desc">
+        Claim testnet tokens to interact with the protocol. 1M $MEGACHAD and 10K $MEGAGOONER per drip. 24h cooldown per token.
+      </p>
+
+      <div className="beta-stat-row">
+        <div className="beta-stat">
+          <span className="beta-stat-label">YOUR $MEGACHAD</span>
+          <span className="beta-stat-value">{fmtBig(megachadBalance)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">YOUR $MEGAGOONER</span>
+          <span className="beta-stat-value">{fmtBig(megagoonerBalance)}</span>
+        </div>
+      </div>
+
+      <div className="beta-faucet-buttons">
+        <div className="beta-faucet-col">
+          <button
+            className="beta-btn-faucet megachad"
+            onClick={() => drip('megachad')}
+            disabled={megachadStatus === 'dripping'}
+          >
+            {megachadStatus === 'dripping' ? 'DRIPPING...' : 'DRIP $MEGACHAD'}
+          </button>
+          {megachadMsg && (
+            <span className={`beta-faucet-msg ${megachadStatus === 'error' ? 'error' : 'success'}`}>
+              {megachadMsg}
+            </span>
+          )}
+        </div>
+        <div className="beta-faucet-col">
+          <button
+            className="beta-btn-faucet megagooner"
+            onClick={() => drip('megagooner')}
+            disabled={megagoonerStatus === 'dripping'}
+          >
+            {megagoonerStatus === 'dripping' ? 'DRIPPING...' : 'DRIP $MEGAGOONER'}
+          </button>
+          {megagoonerMsg && (
+            <span className={`beta-faucet-msg ${megagoonerStatus === 'error' ? 'error' : 'success'}`}>
+              {megagoonerMsg}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
