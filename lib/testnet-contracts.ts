@@ -1,11 +1,10 @@
-// ── Testnet contract addresses (placeholders until deployment) ──
-// These will be updated once contracts are deployed to MegaETH testnet (chain 6342)
+// ── Testnet contract addresses (deployed on MegaETH testnet, chain 6343) ──
 
 export const TESTNET_MEGACHAD_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_MEGACHAD_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  '0x4Fb3d34e1fd1a7a905689CD841487623cdbc8a90') as `0x${string}`;
 
 export const TESTNET_MEGAGOONER_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_MEGAGOONER_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  '0xDa2A1Bb2AE894A381ff1946f115E29335eDCA577') as `0x${string}`;
 
 export const TESTNET_FRAMEMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_FRAMEMOGGER_CONTRACT ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
@@ -24,12 +23,12 @@ export const TESTNET_LP_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_LP_TOKE
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
 export const TESTNET_NFT_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_NFT_CONTRACT ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  '0x8Ba2A1f997FCae0486085E8Df521e28586f42255') as `0x${string}`;
 
 export const TESTNET_BURN_ADDRESS = '0x000000000000000000000000000000000000dEaD' as `0x${string}`;
 
 export const TESTNET_TREN_FUND_WALLET = (process.env.NEXT_PUBLIC_TESTNET_TREN_FUND_WALLET ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+  '0x170db68DD5ef207FB060eEAbCE177a1DC9303ED8') as `0x${string}`;
 
 export const TESTNET_BURN_AMOUNT = BigInt(
   process.env.NEXT_PUBLIC_TESTNET_BURN_AMOUNT || '225000'

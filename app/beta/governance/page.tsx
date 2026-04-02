@@ -72,7 +72,7 @@ export default function GovernancePage() {
         </p>
         <div className="beta-chain-info">
           <span className="beta-chain-dot" />
-          MegaETH Testnet (Chain 6342)
+          MegaETH Testnet (Chain 6343)
         </div>
       </section>
 

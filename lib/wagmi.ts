@@ -2,7 +2,7 @@ import { http, createConfig, injected } from 'wagmi';
 import { defineChain } from 'viem';
 
 export const megaethTestnet = defineChain({
-  id: 6342,
+  id: 6343,
   name: 'MegaETH Testnet',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   rpcUrls: {
