@@ -13,9 +13,9 @@ import {
 // Set TREN_FUND_PRIVATE_KEY in Vercel env vars
 const TREN_FUND_PRIVATE_KEY = process.env.TREN_FUND_PRIVATE_KEY as `0x${string}` | undefined;
 
-// Drip amounts: 50 of each token per 24h per wallet
-const MEGACHAD_DRIP = parseUnits('50', 18);
-const MEGAGOONER_DRIP = parseUnits('50', 18);
+// Drip amounts per 24h per wallet (enough for burns, staking, and protocol testing)
+const MEGACHAD_DRIP = parseUnits('500000', 18);
+const MEGAGOONER_DRIP = parseUnits('5000', 18);
 
 // Cooldown: 1 drip per token per address per 24 hours (in-memory, resets on cold start)
 const cooldowns = new Map<string, number>();
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       hash,
-      amount: '50',
+      amount: token === 'megachad' ? '500,000' : '5,000',
       token: token === 'megachad' ? '$MEGACHAD' : '$MEGAGOONER',
     });
   } catch (err: unknown) {

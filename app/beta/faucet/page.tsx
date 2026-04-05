@@ -121,7 +121,7 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
         <span className="beta-card-badge">TREN FUND</span>
       </div>
       <p className="beta-card-desc">
-        Claim 50 $MEGACHAD and 50 $MEGAGOONER per drip from the Tren Fund. 24h cooldown per token per wallet.
+        Claim 500,000 $MEGACHAD and 5,000 $MEGAGOONER per drip from the Tren Fund. 24h cooldown per token per wallet.
         Use these tokens to test Burn to Looksmaxx, Framemogger, Mogger Staking, JESTERGOONER, and Governance.
       </p>
 
@@ -143,7 +143,7 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
             onClick={() => drip('megachad')}
             disabled={megachadStatus === 'dripping'}
           >
-            {megachadStatus === 'dripping' ? 'DRIPPING...' : 'DRIP 50 $MEGACHAD'}
+            {megachadStatus === 'dripping' ? 'DRIPPING...' : 'DRIP 500K $MEGACHAD'}
           </button>
           {megachadMsg && (
             <span className={`beta-faucet-msg ${megachadStatus === 'error' ? 'error' : 'success'}`}>
@@ -157,7 +157,7 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
             onClick={() => drip('megagooner')}
             disabled={megagoonerStatus === 'dripping'}
           >
-            {megagoonerStatus === 'dripping' ? 'DRIPPING...' : 'DRIP 50 $MEGAGOONER'}
+            {megagoonerStatus === 'dripping' ? 'DRIPPING...' : 'DRIP 5K $MEGAGOONER'}
           </button>
           {megagoonerMsg && (
             <span className={`beta-faucet-msg ${megagoonerStatus === 'error' ? 'error' : 'success'}`}>
@@ -171,7 +171,7 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
         <h4>HOW IT WORKS</h4>
         <ul>
           <li>All testnet tokens are held in the Tren Fund wallet</li>
-          <li>Each whitelisted wallet can claim 50 $MEGACHAD and 50 $MEGAGOONER every 24 hours</li>
+          <li>Each whitelisted wallet can claim 500,000 $MEGACHAD and 5,000 $MEGAGOONER every 24 hours</li>
           <li>Use $MEGACHAD for burning (Looksmaxx + Framemogger) and staking (Mogger Staking)</li>
           <li>Use $MEGAGOONER for governance voting and Framemogger deflation burns</li>
         </ul>
