@@ -199,10 +199,12 @@ function BurnSection({ address }: { address: `0x${string}` }) {
       // Step 1: Burn to dead address
       setStatus('burning');
       const burnHash = await writeContractAsync({
+        chainId: 6343,
         address: TESTNET_MEGACHAD_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'transfer',
         args: [TESTNET_BURN_ADDRESS, halfBurn],
+        gas: 200000n,
       });
 
       setStatus('confirming');
@@ -214,10 +216,12 @@ function BurnSection({ address }: { address: `0x${string}` }) {
       // Step 2: Transfer to tren fund
       setStatus('burning2');
       const trenHash = await writeContractAsync({
+        chainId: 6343,
         address: TESTNET_MEGACHAD_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'transfer',
         args: [TESTNET_TREN_FUND_WALLET, halfBurn],
+        gas: 200000n,
       });
 
       setStatus('confirming2');
