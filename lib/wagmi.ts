@@ -33,11 +33,10 @@ export const megaeth = defineChain({
 
 // Explicitly register injected wallet connector (MetaMask, Brave, Phantom, etc.)
 export const config = createConfig({
-  chains: [megaeth, megaethTestnet],
+  chains: [megaeth],
   connectors: [injected()],
   transports: {
     [megaeth.id]: http(),
-    [megaethTestnet.id]: http(),
   },
   ssr: true,
 });
