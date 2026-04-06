@@ -6,6 +6,7 @@ import {
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
+  usePublicClient,
 } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import {
@@ -139,18 +140,15 @@ function BurnSection({ address }: { address: `0x${string}` }) {
   const [status, setStatus] = useState<'idle' | 'burning' | 'confirming' | 'burning2' | 'confirming2' | 'generating' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const { data: balance } = useReadContract({
+  const { data: balance, refetch: refetchBalance } = useReadContract({
     address: TESTNET_MEGACHAD_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
     args: [address],
   });
 
-  const { writeContract: writeBurn, data: burnHash } = useWriteContract();
-  const { isSuccess: burnConfirmed } = useWaitForTransactionReceipt({ hash: burnHash });
-
-  const { writeContract: writeTren, data: trenHash } = useWriteContract();
-  const { isSuccess: trenConfirmed } = useWaitForTransactionReceipt({ hash: trenHash });
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
 
   const halfBurn = TESTNET_BURN_AMOUNT / 2n;
 
@@ -169,48 +167,59 @@ function BurnSection({ address }: { address: `0x${string}` }) {
     setErrorMsg('');
   };
 
-  // Step 1: Burn to dead address
-  const startBurn = () => {
+  const startBurn = async () => {
     if (!imageFile) { setErrorMsg('Upload an image first'); return; }
     if (balance !== undefined && balance < TESTNET_BURN_AMOUNT) {
       setErrorMsg(`Need ${TESTNET_BURN_AMOUNT_DISPLAY.toLocaleString()} $MEGACHAD`);
       return;
     }
-    setStatus('burning');
     setErrorMsg('');
-    writeBurn({
-      address: TESTNET_MEGACHAD_ADDRESS,
-      abi: ERC20_ABI,
-      functionName: 'transfer',
-      args: [TESTNET_BURN_ADDRESS, halfBurn],
-    }, {
-      onError: () => { setStatus('error'); setErrorMsg('Burn transaction rejected'); },
-    });
-  };
 
-  // Step 2: Transfer to tren fund
-  useEffect(() => {
-    if (burnConfirmed && status === 'burning') {
+    try {
+      // Step 1: Burn to dead address
+      setStatus('burning');
+      const burnHash = await writeContractAsync({
+        address: TESTNET_MEGACHAD_ADDRESS,
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [TESTNET_BURN_ADDRESS, halfBurn],
+      });
+
+      // Wait for burn tx to confirm on-chain
+      setStatus('confirming');
+      await publicClient!.waitForTransactionReceipt({ hash: burnHash });
+
+      // Step 2: Transfer to tren fund
       setStatus('burning2');
-      writeTren({
+      const trenHash = await writeContractAsync({
         address: TESTNET_MEGACHAD_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'transfer',
         args: [TESTNET_TREN_FUND_WALLET, halfBurn],
-      }, {
-        onError: () => { setStatus('error'); setErrorMsg('Tren fund transfer rejected'); },
       });
-    }
-  }, [burnConfirmed]);
 
-  // Step 3: Mock generation (testnet — no actual AI generation)
-  useEffect(() => {
-    if (trenConfirmed && status === 'burning2') {
+      // Wait for tren fund tx to confirm on-chain
+      setStatus('confirming2');
+      await publicClient!.waitForTransactionReceipt({ hash: trenHash });
+
+      // Step 3: Mock generation (testnet — no actual AI generation)
       setStatus('generating');
-      // Simulate generation delay for testnet
-      setTimeout(() => setStatus('done'), 2000);
+      await new Promise((r) => setTimeout(r, 2000));
+      setStatus('done');
+      refetchBalance();
+    } catch (err: unknown) {
+      setStatus('error');
+      const msg = err instanceof Error ? err.message : 'Burn failed';
+      // Clean up common wallet error messages
+      if (msg.includes('User rejected') || msg.includes('user rejected')) {
+        setErrorMsg('Transaction rejected');
+      } else if (msg.includes('insufficient')) {
+        setErrorMsg('Insufficient $MEGACHAD balance');
+      } else {
+        setErrorMsg(msg.length > 120 ? msg.slice(0, 120) + '...' : msg);
+      }
     }
-  }, [trenConfirmed]);
+  };
 
   const statusLabels: Record<string, string> = {
     idle: '',
