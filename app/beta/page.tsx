@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import {
   useAccount,
-  useChainId,
   useSwitchChain,
   useReadContract,
   useWriteContract,
@@ -51,28 +50,20 @@ type ActiveTab = 'burn' | 'framemogger' | 'staking' | 'lp-staking';
 
 // ═════════════════════════════════════════════════════════
 export default function BetaProtocol() {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
+  const { address, isConnected, chainId: walletChainId } = useAccount();
   const { switchChain } = useSwitchChain();
   const [activeTab, setActiveTab] = useState<ActiveTab>('burn');
   const [whitelisted, setWhitelisted] = useState(false);
-  const onWrongChain = isConnected && chainId !== 6343;
+  const onWrongChain = isConnected && walletChainId !== 6343;
 
-  // Auto-switch to testnet when connected on wrong chain
+  // Check whitelist on connect (only when on correct chain and address is stable)
   useEffect(() => {
-    if (onWrongChain) {
-      switchChain({ chainId: 6343 });
-    }
-  }, [onWrongChain]);
-
-  // Check whitelist on connect
-  useEffect(() => {
-    if (!address) { setWhitelisted(false); return; }
+    if (!address || onWrongChain) { setWhitelisted(false); return; }
     fetch(`/api/beta/whitelist?address=${address}`)
       .then((r) => r.json())
       .then((d) => setWhitelisted(d.whitelisted))
       .catch(() => setWhitelisted(false));
-  }, [address]);
+  }, [address, onWrongChain]);
 
   return (
     <div className="beta-page">
@@ -126,7 +117,7 @@ export default function BetaProtocol() {
           <div className="beta-not-allowed">
             <div className="beta-lock-icon">&#9888;</div>
             <h3>WRONG NETWORK</h3>
-            <p>Please switch to MegaETH Testnet (Chain 6343) in your wallet.</p>
+            <p>Your wallet is on chain {walletChainId}. Please switch to MegaETH Testnet (Chain 6343).</p>
             <button
               className="beta-btn-primary"
               onClick={() => switchChain({ chainId: 6343 })}
@@ -171,9 +162,35 @@ function BurnSection({ address }: { address: `0x${string}` }) {
     args: [address],
   });
 
-  const { writeContractAsync } = useWriteContract();
+  const HALF_AMOUNT = TESTNET_BURN_AMOUNT / 2n;
 
-  const halfBurn = TESTNET_BURN_AMOUNT / 2n;
+  // --- Transfer 1: burn to dead address ---
+  const {
+    writeContract: writeBurn,
+    data: burnTxHash,
+    error: burnWriteError,
+    reset: resetBurn,
+  } = useWriteContract();
+
+  const { isSuccess: burnConfirmed, isError: burnFailed } =
+    useWaitForTransactionReceipt({
+      hash: burnTxHash,
+      query: { enabled: !!burnTxHash },
+    });
+
+  // --- Transfer 2: send to tren fund ---
+  const {
+    writeContract: writeTren,
+    data: trenTxHash,
+    error: trenWriteError,
+    reset: resetTren,
+  } = useWriteContract();
+
+  const { isSuccess: trenConfirmed, isError: trenFailed } =
+    useWaitForTransactionReceipt({
+      hash: trenTxHash,
+      query: { enabled: !!trenTxHash },
+    });
 
   // Image handler
   const handleImage = (file: File) => {
@@ -190,82 +207,94 @@ function BurnSection({ address }: { address: `0x${string}` }) {
     setErrorMsg('');
   };
 
-  // Poll RPC directly for tx receipt (bypasses wagmi provider chain issues)
-  const waitForReceipt = async (hash: string): Promise<void> => {
-    const rpc = 'https://carrot.megaeth.com/rpc';
-    for (let i = 0; i < 60; i++) {
-      const res = await fetch(rpc, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0', method: 'eth_getTransactionReceipt',
-          params: [hash], id: 1,
-        }),
-      });
-      const data = await res.json();
-      if (data.result) {
-        if (data.result.status === '0x0') throw new Error('Transaction reverted on-chain');
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 1000));
+  // Handle write errors for transfer 1
+  useEffect(() => {
+    if (burnWriteError && status === 'burning') {
+      setStatus('error');
+      setErrorMsg(burnWriteError.message.includes('User rejected')
+        ? 'Transaction rejected.'
+        : burnWriteError.message.slice(0, 120));
     }
-    throw new Error('Transaction confirmation timed out');
-  };
+  }, [burnWriteError, status]);
 
-  const startBurn = async () => {
+  // Handle write errors for transfer 2
+  useEffect(() => {
+    if (trenWriteError && status === 'burning2') {
+      setStatus('error');
+      setErrorMsg(trenWriteError.message.includes('User rejected')
+        ? 'Transaction rejected.'
+        : trenWriteError.message.slice(0, 120));
+    }
+  }, [trenWriteError, status]);
+
+  // When burn tx hash arrives, move to confirming
+  useEffect(() => {
+    if (burnTxHash && status === 'burning') {
+      setStatus('confirming');
+    }
+  }, [burnTxHash, status]);
+
+  // When burn confirmed, fire transfer 2
+  useEffect(() => {
+    if (burnConfirmed && status === 'confirming') {
+      const timer = setTimeout(() => {
+        setStatus('burning2');
+        writeTren({
+          address: TESTNET_MEGACHAD_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'transfer',
+          args: [TESTNET_TREN_FUND_WALLET, HALF_AMOUNT],
+          gas: 200000n,
+        });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    if (burnFailed && status === 'confirming') {
+      setStatus('error');
+      setErrorMsg('Burn transaction failed on-chain.');
+    }
+  }, [burnConfirmed, burnFailed, status]);
+
+  // When tren tx hash arrives, move to confirming2
+  useEffect(() => {
+    if (trenTxHash && status === 'burning2') {
+      setStatus('confirming2');
+    }
+  }, [trenTxHash, status]);
+
+  // When tren transfer confirmed, simulate generation
+  useEffect(() => {
+    if (trenConfirmed && status === 'confirming2') {
+      setStatus('generating');
+      setTimeout(() => {
+        setStatus('done');
+        refetchBalance();
+      }, 2000);
+    }
+    if (trenFailed && status === 'confirming2') {
+      setStatus('error');
+      setErrorMsg('Tren fund transfer failed on-chain.');
+    }
+  }, [trenConfirmed, trenFailed, status]);
+
+  const startBurn = () => {
     if (!imageFile) { setErrorMsg('Upload an image first'); return; }
     if (balance !== undefined && balance < TESTNET_BURN_AMOUNT) {
       setErrorMsg(`Need ${TESTNET_BURN_AMOUNT_DISPLAY.toLocaleString()} $MEGACHAD`);
       return;
     }
+    setStatus('burning');
     setErrorMsg('');
+    resetBurn();
+    resetTren();
 
-    try {
-      // Step 1: Burn to dead address
-      setStatus('burning');
-      const burnHash = await writeContractAsync({
-        address: TESTNET_MEGACHAD_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: 'transfer',
-        args: [TESTNET_BURN_ADDRESS, halfBurn],
-        gas: 200000n,
-      });
-
-      setStatus('confirming');
-      await waitForReceipt(burnHash);
-
-      // Small delay for nonce update (MegaETH ~250ms blocks)
-      await new Promise((r) => setTimeout(r, 500));
-
-      // Step 2: Transfer to tren fund
-      setStatus('burning2');
-      const trenHash = await writeContractAsync({
-        address: TESTNET_MEGACHAD_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: 'transfer',
-        args: [TESTNET_TREN_FUND_WALLET, halfBurn],
-        gas: 200000n,
-      });
-
-      setStatus('confirming2');
-      await waitForReceipt(trenHash);
-
-      // Step 3: Mock generation (testnet — no actual AI generation)
-      setStatus('generating');
-      await new Promise((r) => setTimeout(r, 2000));
-      setStatus('done');
-      refetchBalance();
-    } catch (err: unknown) {
-      setStatus('error');
-      const msg = err instanceof Error ? err.message : 'Burn failed';
-      if (msg.includes('User rejected') || msg.includes('user rejected')) {
-        setErrorMsg('Transaction rejected');
-      } else if (msg.includes('insufficient')) {
-        setErrorMsg('Insufficient $MEGACHAD balance');
-      } else {
-        setErrorMsg(msg.length > 120 ? msg.slice(0, 120) + '...' : msg);
-      }
-    }
+    writeBurn({
+      address: TESTNET_MEGACHAD_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: 'transfer',
+      args: [TESTNET_BURN_ADDRESS, HALF_AMOUNT],
+      gas: 200000n,
+    });
   };
 
   const statusLabels: Record<string, string> = {
