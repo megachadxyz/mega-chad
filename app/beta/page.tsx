@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import {
   useAccount,
+  useChainId,
+  useSwitchChain,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
@@ -50,8 +52,18 @@ type ActiveTab = 'burn' | 'framemogger' | 'staking' | 'lp-staking';
 // ═════════════════════════════════════════════════════════
 export default function BetaProtocol() {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const [activeTab, setActiveTab] = useState<ActiveTab>('burn');
   const [whitelisted, setWhitelisted] = useState(false);
+  const onWrongChain = isConnected && chainId !== 6343;
+
+  // Auto-switch to testnet when connected on wrong chain
+  useEffect(() => {
+    if (onWrongChain) {
+      switchChain({ chainId: 6343 });
+    }
+  }, [onWrongChain]);
 
   // Check whitelist on connect
   useEffect(() => {
@@ -109,6 +121,19 @@ export default function BetaProtocol() {
         {!isConnected ? (
           <div className="beta-connect-prompt">
             <p>Connect your wallet to interact with the testnet protocol.</p>
+          </div>
+        ) : onWrongChain ? (
+          <div className="beta-not-allowed">
+            <div className="beta-lock-icon">&#9888;</div>
+            <h3>WRONG NETWORK</h3>
+            <p>Please switch to MegaETH Testnet (Chain 6343) in your wallet.</p>
+            <button
+              className="beta-btn-primary"
+              onClick={() => switchChain({ chainId: 6343 })}
+              style={{ marginTop: '1rem' }}
+            >
+              SWITCH TO TESTNET
+            </button>
           </div>
         ) : !whitelisted ? (
           <div className="beta-not-allowed">
@@ -199,7 +224,6 @@ function BurnSection({ address }: { address: `0x${string}` }) {
       // Step 1: Burn to dead address
       setStatus('burning');
       const burnHash = await writeContractAsync({
-        chainId: 6343,
         address: TESTNET_MEGACHAD_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'transfer',
@@ -216,7 +240,6 @@ function BurnSection({ address }: { address: `0x${string}` }) {
       // Step 2: Transfer to tren fund
       setStatus('burning2');
       const trenHash = await writeContractAsync({
-        chainId: 6343,
         address: TESTNET_MEGACHAD_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'transfer',
