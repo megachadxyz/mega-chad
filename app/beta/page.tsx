@@ -37,6 +37,19 @@ function fmtBig(raw: bigint | undefined, decimals = 18): string {
   return Number(formatUnits(raw, decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
+const SECONDS_PER_YEAR = 31536000;
+
+// Compute APR from on-chain rewardRate (scaled 1e18).
+// rewardRate = MEGAGOONER per MEGACHAD (or LP) per second, so
+// APR = rewardRate * secondsPerYear / 1e18 * 100 (assumes 1:1 token value)
+function fmtAPR(rewardRate: bigint | undefined): string {
+  if (rewardRate === undefined || rewardRate === 0n) return '—';
+  const apr = Number(rewardRate) * SECONDS_PER_YEAR / 1e18 * 100;
+  if (apr >= 1000) return `${(apr / 1000).toFixed(1)}k%`;
+  if (apr >= 100) return `${apr.toFixed(0)}%`;
+  return `${apr.toFixed(2)}%`;
+}
+
 function fmtCountdown(seconds: number): string {
   if (seconds <= 0) return 'Ended';
   const d = Math.floor(seconds / 86400);
@@ -892,12 +905,8 @@ function StakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} $MEGACHAD</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">REWARD RATE</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'}/sec</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">REWARDS REMAINING</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'} $MEGAGOONER</span>
+          <span className="beta-stat-label">APR</span>
+          <span className="beta-stat-value">{globalStats ? fmtAPR(globalStats[1]) : '—'}</span>
         </div>
       </div>
 
@@ -1191,12 +1200,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} LP</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">REWARD RATE</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'}/sec</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">REWARDS REMAINING</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'} $MEGAGOONER</span>
+          <span className="beta-stat-label">APR</span>
+          <span className="beta-stat-value">{globalStats ? fmtAPR(globalStats[1]) : '—'}</span>
         </div>
       </div>
 
