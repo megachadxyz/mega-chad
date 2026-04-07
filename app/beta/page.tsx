@@ -25,6 +25,7 @@ import {
   FRAMEMOGGER_ABI,
   MOGGER_STAKING_ABI,
   JESTERGOONER_ABI,
+  LP_ABI,
 } from '@/lib/testnet-contracts';
 
 // ── Helpers ──────────────────────────────────────────────
@@ -37,17 +38,12 @@ function fmtBig(raw: bigint | undefined, decimals = 18): string {
   return Number(formatUnits(raw, decimals)).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-const SECONDS_PER_YEAR = 31536000;
-
-// Compute APR from on-chain rewardRate (scaled 1e18).
-// rewardRate = MEGAGOONER per MEGACHAD (or LP) per second, so
-// APR = rewardRate * secondsPerYear / 1e18 * 100 (assumes 1:1 token value)
-function fmtAPR(rewardRate: bigint | undefined): string {
-  if (rewardRate === undefined || rewardRate === 0n) return '—';
-  const apr = Number(rewardRate) * SECONDS_PER_YEAR / 1e18 * 100;
-  if (apr >= 1000) return `${(apr / 1000).toFixed(1)}k%`;
-  if (apr >= 100) return `${apr.toFixed(0)}%`;
-  return `${apr.toFixed(2)}%`;
+// Format APY percentage for display
+function fmtAPY(apy: number | undefined): string {
+  if (apy === undefined || apy <= 0) return '—';
+  if (apy >= 1000) return `${(apy / 1000).toFixed(1)}k%`;
+  if (apy >= 100) return `${apy.toFixed(0)}%`;
+  return `${apy.toFixed(2)}%`;
 }
 
 function fmtCountdown(seconds: number): string {
@@ -756,7 +752,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     args: [address, TESTNET_MOGGER_STAKING_ADDRESS],
   });
 
-  // Staker info
+  // Staker info: (staked, effectiveStake, pendingReward, multiplier, nftCount)
   const { data: stakerInfo, refetch: refetchStaker } = useReadContract({
     address: TESTNET_MOGGER_STAKING_ADDRESS,
     abi: MOGGER_STAKING_ABI,
@@ -764,7 +760,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     args: [address],
   });
 
-  // Global stats
+  // Global stats: (totalStaked, totalEffectiveStake, currentWeek, weeklyEmission, rewardsRemaining)
   const { data: globalStats } = useReadContract({
     address: TESTNET_MOGGER_STAKING_ADDRESS,
     abi: MOGGER_STAKING_ABI,
@@ -778,6 +774,29 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     functionName: 'earned',
     args: [address],
   });
+
+  // LP reserves for APY calculation
+  const { data: lpReserves } = useReadContract({
+    address: TESTNET_LP_TOKEN_ADDRESS,
+    abi: LP_ABI,
+    functionName: 'getReserves',
+  });
+
+  // Compute APY from weekly emission and LP price
+  // MEGAGOONER price in MEGACHAD = reserveMEGACHAD / reserveMEGAGOONER
+  // APY = (weeklyEmission * 52 * goonerPrice / totalEffectiveStake) * 100
+  const stakingAPY = (() => {
+    if (!globalStats || !lpReserves) return undefined;
+    const totalEffective = Number(formatUnits(globalStats[1], 18));
+    const weeklyEmission = Number(formatUnits(globalStats[3], 18));
+    if (totalEffective <= 0 || weeklyEmission <= 0) return undefined;
+    const reserveA = Number(formatUnits(lpReserves[0], 18));
+    const reserveB = Number(formatUnits(lpReserves[1], 18));
+    if (reserveA <= 0 || reserveB <= 0) return undefined;
+    // LP is MEGACHAD(tokenA) / MEGAGOONER(tokenB) → price = reserveA / reserveB
+    const goonerPrice = reserveA / reserveB;
+    return (weeklyEmission * 52 * goonerPrice / totalEffective) * 100;
+  })();
 
   // Write contracts
   const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
@@ -905,8 +924,16 @@ function StakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} $MEGACHAD</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">APR</span>
-          <span className="beta-stat-value">{globalStats ? fmtAPR(globalStats[1]) : '—'}</span>
+          <span className="beta-stat-label">APY</span>
+          <span className="beta-stat-value">{fmtAPY(stakingAPY)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">WEEKLY EMISSION</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[3]) : '—'} $MEGAGOONER</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">WEEK</span>
+          <span className="beta-stat-value">{globalStats ? `${Number(globalStats[2])} / 225` : '—'}</span>
         </div>
       </div>
 
@@ -922,11 +949,11 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[2]) / 10000).toFixed(2)}x` : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[3]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">NFT COUNT</span>
-          <span className="beta-stat-value">{stakerInfo ? Number(stakerInfo[3]).toString() : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? Number(stakerInfo[4]).toString() : '—'}</span>
         </div>
       </div>
 
@@ -1025,7 +1052,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     args: [address, TESTNET_JESTERGOONER_ADDRESS],
   });
 
-  // Staker info
+  // Staker info: (staked, effectiveStake, lockEnd, pendingReward, timeMultiplier, nftMultiplier, canUnstake)
   const { data: stakerInfo, refetch: refetchStaker } = useReadContract({
     address: TESTNET_JESTERGOONER_ADDRESS,
     abi: JESTERGOONER_ABI,
@@ -1033,15 +1060,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     args: [address],
   });
 
-  // Can unstake
-  const { data: canUnstake } = useReadContract({
-    address: TESTNET_JESTERGOONER_ADDRESS,
-    abi: JESTERGOONER_ABI,
-    functionName: 'canUnstake',
-    args: [address],
-  });
+  // canUnstake is now at stakerInfo[6]
+  const canUnstake = stakerInfo ? stakerInfo[6] : false;
 
-  // Global stats
+  // Global stats: (totalStaked, totalEffectiveStake, currentWeek, weeklyEmission, rewardsRemaining)
   const { data: globalStats } = useReadContract({
     address: TESTNET_JESTERGOONER_ADDRESS,
     abi: JESTERGOONER_ABI,
@@ -1055,6 +1077,36 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     functionName: 'earned',
     args: [address],
   });
+
+  // LP reserves for APY calculation
+  const { data: lpReserves } = useReadContract({
+    address: TESTNET_LP_TOKEN_ADDRESS,
+    abi: LP_ABI,
+    functionName: 'getReserves',
+  });
+
+  const { data: lpTotalSupply } = useReadContract({
+    address: TESTNET_LP_TOKEN_ADDRESS,
+    abi: LP_ABI,
+    functionName: 'totalSupply',
+  });
+
+  // APY: weeklyEmission(MEGAGOONER) * goonerPriceInMEGACHAD * 52 / totalEffectiveStakeValue * 100
+  // LP value per token ≈ 2 * reserveMEGACHAD / lpTotalSupply (standard LP valuation)
+  const lpStakingAPY = (() => {
+    if (!globalStats || !lpReserves || !lpTotalSupply) return undefined;
+    const totalEffective = Number(formatUnits(globalStats[1], 18));
+    const weeklyEmission = Number(formatUnits(globalStats[3], 18));
+    if (totalEffective <= 0 || weeklyEmission <= 0) return undefined;
+    const reserveA = Number(formatUnits(lpReserves[0], 18));
+    const reserveB = Number(formatUnits(lpReserves[1], 18));
+    const totalLP = Number(formatUnits(lpTotalSupply, 18));
+    if (reserveA <= 0 || reserveB <= 0 || totalLP <= 0) return undefined;
+    const goonerPrice = reserveA / reserveB;
+    const lpValuePerToken = (2 * reserveA) / totalLP;
+    const effectiveValue = totalEffective * lpValuePerToken;
+    return (weeklyEmission * 52 * goonerPrice / effectiveValue) * 100;
+  })();
 
   // Write contracts
   const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
@@ -1152,11 +1204,11 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     }
   }, [claimConfirmed, status]);
 
-  // Lock countdown
+  // Lock countdown (lockEnd is at index 2 in V2)
   const [lockTimeLeft, setLockTimeLeft] = useState(0);
   useEffect(() => {
     if (!stakerInfo) return;
-    const lockEnd = Number(stakerInfo[1]);
+    const lockEnd = Number(stakerInfo[2]);
     if (lockEnd === 0) return;
     const update = () => setLockTimeLeft(Math.max(0, lockEnd - Math.floor(Date.now() / 1000)));
     update();
@@ -1200,8 +1252,16 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} LP</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">APR</span>
-          <span className="beta-stat-value">{globalStats ? fmtAPR(globalStats[1]) : '—'}</span>
+          <span className="beta-stat-label">APY</span>
+          <span className="beta-stat-value">{fmtAPY(lpStakingAPY)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">WEEKLY EMISSION</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[3]) : '—'} $MEGAGOONER</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">WEEK</span>
+          <span className="beta-stat-value">{globalStats ? `${Number(globalStats[2])} / 225` : '—'}</span>
         </div>
       </div>
 
@@ -1229,11 +1289,11 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       <div className="beta-stat-row">
         <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[4]) / 10000).toFixed(2)}x` : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[5]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">TIME MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[3]) / 10000).toFixed(2)}x` : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[4]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
       </div>
 
