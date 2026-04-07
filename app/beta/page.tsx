@@ -16,6 +16,7 @@ import {
   TESTNET_MOGGER_STAKING_ADDRESS,
   TESTNET_JESTERGOONER_ADDRESS,
   TESTNET_LP_TOKEN_ADDRESS,
+  TESTNET_NFT_ADDRESS,
   TESTNET_BURN_ADDRESS,
   TESTNET_TREN_FUND_WALLET,
   TESTNET_BURN_AMOUNT,
@@ -461,7 +462,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
 
   // NFT count for requirement display
   const { data: nftBalance } = useReadContract({
-    address: TESTNET_MEGACHAD_ADDRESS, // placeholder — will be NFT contract
+    address: TESTNET_NFT_ADDRESS,
     abi: [{ type: 'function', name: 'balanceOf', inputs: [{ name: 'owner', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' }] as const,
     functionName: 'balanceOf',
     args: [address],
@@ -469,13 +470,13 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
 
   // Write contracts
   const { writeContract: writeApproveMegachad, data: approveMegachadHash } = useWriteContract();
-  const { isSuccess: approveMegachadConfirmed } = useWaitForTransactionReceipt({ hash: approveMegachadHash });
+  const { isSuccess: approveMegachadConfirmed } = useWaitForTransactionReceipt({ hash: approveMegachadHash, query: { enabled: !!approveMegachadHash } });
 
   const { writeContract: writeApproveMegagooner, data: approveMegagoonerHash } = useWriteContract();
-  const { isSuccess: approveMegagoonerConfirmed } = useWaitForTransactionReceipt({ hash: approveMegagoonerHash });
+  const { isSuccess: approveMegagoonerConfirmed } = useWaitForTransactionReceipt({ hash: approveMegagoonerHash, query: { enabled: !!approveMegagoonerHash } });
 
   const { writeContract: writeBurn, data: burnHash } = useWriteContract();
-  const { isSuccess: burnConfirmed } = useWaitForTransactionReceipt({ hash: burnHash });
+  const { isSuccess: burnConfirmed } = useWaitForTransactionReceipt({ hash: burnHash, query: { enabled: !!burnHash } });
 
   const [status, setStatus] = useState<'idle' | 'approving-megachad' | 'approving-megagooner' | 'burning' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -504,6 +505,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [TESTNET_FRAMEMOGGER_ADDRESS, megachadRequired],
+        gas: 200000n,
       }, {
         onError: () => { setStatus('error'); setErrorMsg('$MEGACHAD approval rejected'); },
       });
@@ -514,6 +516,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [TESTNET_FRAMEMOGGER_ADDRESS, megagoonerRequired],
+        gas: 200000n,
       }, {
         onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); },
       });
@@ -529,6 +532,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
       abi: FRAMEMOGGER_ABI,
       functionName: 'burnMEGACHAD',
       args: [parsedAmount],
+      gas: 500000n,
     }, {
       onError: () => { setStatus('error'); setErrorMsg('Framemogger transaction failed'); },
     });
@@ -544,6 +548,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_FRAMEMOGGER_ADDRESS, megagoonerRequired],
+          gas: 200000n,
         }, {
           onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); },
         });
@@ -724,14 +729,14 @@ function StakingSection({ address }: { address: `0x${string}` }) {
   const [errorMsg, setErrorMsg] = useState('');
 
   // Balances
-  const { data: megachadBalance } = useReadContract({
+  const { data: megachadBalance, refetch: refetchBalance } = useReadContract({
     address: TESTNET_MEGACHAD_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
     args: [address],
   });
 
-  const { data: allowance } = useReadContract({
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: TESTNET_MEGACHAD_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'allowance',
@@ -762,14 +767,14 @@ function StakingSection({ address }: { address: `0x${string}` }) {
   });
 
   // Write contracts
-  const { writeContract: writeApprove, data: approveHash } = useWriteContract();
-  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
+  const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
+  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash, query: { enabled: !!approveHash } });
 
-  const { writeContract: writeStake, data: stakeHash } = useWriteContract();
-  const { isSuccess: stakeConfirmed } = useWaitForTransactionReceipt({ hash: stakeHash });
+  const { writeContract: writeStake, data: stakeHash, reset: resetStake } = useWriteContract();
+  const { isSuccess: stakeConfirmed } = useWaitForTransactionReceipt({ hash: stakeHash, query: { enabled: !!stakeHash } });
 
-  const { writeContract: writeClaim, data: claimHash } = useWriteContract();
-  const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash });
+  const { writeContract: writeClaim, data: claimHash, reset: resetClaim } = useWriteContract();
+  const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash, query: { enabled: !!claimHash } });
 
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
@@ -777,6 +782,8 @@ function StakingSection({ address }: { address: `0x${string}` }) {
   const handleStakeUnstake = () => {
     if (!amount || parsedAmount <= 0n) { setErrorMsg('Enter an amount'); return; }
     setErrorMsg('');
+    resetApprove();
+    resetStake();
 
     if (action === 'stake') {
       if (megachadBalance !== undefined && parsedAmount > megachadBalance) {
@@ -789,7 +796,8 @@ function StakingSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_MOGGER_STAKING_ADDRESS, parsedAmount],
-        }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
+          gas: 200000n,
+        });
       } else {
         executeStake();
       }
@@ -803,7 +811,8 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         abi: MOGGER_STAKING_ABI,
         functionName: 'unstake',
         args: [parsedAmount],
-      }, { onError: () => { setStatus('error'); setErrorMsg('Unstake failed'); } });
+        gas: 200000n,
+      });
     }
   };
 
@@ -814,36 +823,41 @@ function StakingSection({ address }: { address: `0x${string}` }) {
       abi: MOGGER_STAKING_ABI,
       functionName: 'stake',
       args: [parsedAmount],
-    }, { onError: () => { setStatus('error'); setErrorMsg('Stake failed'); } });
+      gas: 200000n,
+    });
   };
 
   const handleClaim = () => {
+    resetClaim();
     setStatus('claiming');
     writeClaim({
       address: TESTNET_MOGGER_STAKING_ADDRESS,
       abi: MOGGER_STAKING_ABI,
       functionName: 'claimRewards',
-    }, { onError: () => { setStatus('error'); setErrorMsg('Claim failed'); } });
+      gas: 200000n,
+    });
   };
 
   useEffect(() => {
     if (approveConfirmed && status === 'approving') executeStake();
-  }, [approveConfirmed]);
+  }, [approveConfirmed, status]);
 
   useEffect(() => {
     if (stakeConfirmed && (status === 'staking' || status === 'unstaking')) {
       setStatus('done');
       setAmount('');
       refetchStaker();
+      refetchBalance();
+      refetchAllowance();
     }
-  }, [stakeConfirmed]);
+  }, [stakeConfirmed, status]);
 
   useEffect(() => {
     if (claimConfirmed && status === 'claiming') {
       setStatus('done');
       refetchStaker();
     }
-  }, [claimConfirmed]);
+  }, [claimConfirmed, status]);
 
   return (
     <div className="beta-card">
@@ -878,12 +892,12 @@ function StakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} $MEGACHAD</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">TOTAL REWARDS DISTRIBUTED</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'} $MEGAGOONER</span>
+          <span className="beta-stat-label">REWARD RATE</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'}/sec</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">REWARD RATE</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'}/sec</span>
+          <span className="beta-stat-label">REWARDS REMAINING</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'} $MEGAGOONER</span>
         </div>
       </div>
 
@@ -899,11 +913,11 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${Number(stakerInfo[3]) / 100}x` : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[2]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">EFFECTIVE STAKE</span>
-          <span className="beta-stat-value">{stakerInfo ? fmtBig(stakerInfo[4]) : '—'}</span>
+          <span className="beta-stat-label">NFT COUNT</span>
+          <span className="beta-stat-value">{stakerInfo ? Number(stakerInfo[3]).toString() : '—'}</span>
         </div>
       </div>
 
@@ -988,14 +1002,14 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const [errorMsg, setErrorMsg] = useState('');
 
   // LP balance
-  const { data: lpBalance } = useReadContract({
+  const { data: lpBalance, refetch: refetchLpBalance } = useReadContract({
     address: TESTNET_LP_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
     args: [address],
   });
 
-  const { data: allowance } = useReadContract({
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: TESTNET_LP_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'allowance',
@@ -1034,14 +1048,14 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   });
 
   // Write contracts
-  const { writeContract: writeApprove, data: approveHash } = useWriteContract();
-  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash });
+  const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
+  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash, query: { enabled: !!approveHash } });
 
-  const { writeContract: writeStake, data: stakeHash } = useWriteContract();
-  const { isSuccess: stakeConfirmed } = useWaitForTransactionReceipt({ hash: stakeHash });
+  const { writeContract: writeStake, data: stakeHash, reset: resetStake } = useWriteContract();
+  const { isSuccess: stakeConfirmed } = useWaitForTransactionReceipt({ hash: stakeHash, query: { enabled: !!stakeHash } });
 
-  const { writeContract: writeClaim, data: claimHash } = useWriteContract();
-  const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash });
+  const { writeContract: writeClaim, data: claimHash, reset: resetClaim } = useWriteContract();
+  const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash, query: { enabled: !!claimHash } });
 
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
@@ -1049,6 +1063,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const handleStakeUnstake = () => {
     if (!amount || parsedAmount <= 0n) { setErrorMsg('Enter an amount'); return; }
     setErrorMsg('');
+    resetApprove();
+    resetStake();
 
     if (action === 'stake') {
       if (lpBalance !== undefined && parsedAmount > lpBalance) {
@@ -1061,6 +1077,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_JESTERGOONER_ADDRESS, parsedAmount],
+          gas: 200000n,
         }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
       } else {
         executeStake();
@@ -1078,6 +1095,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         abi: JESTERGOONER_ABI,
         functionName: 'unstake',
         args: [parsedAmount],
+        gas: 200000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Unstake failed'); } });
     }
   };
@@ -1089,42 +1107,47 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       abi: JESTERGOONER_ABI,
       functionName: 'stake',
       args: [parsedAmount],
+      gas: 500000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Stake failed'); } });
   };
 
   const handleClaim = () => {
+    resetClaim();
     setStatus('claiming');
     writeClaim({
       address: TESTNET_JESTERGOONER_ADDRESS,
       abi: JESTERGOONER_ABI,
       functionName: 'claimRewards',
+      gas: 200000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Claim failed'); } });
   };
 
   useEffect(() => {
     if (approveConfirmed && status === 'approving') executeStake();
-  }, [approveConfirmed]);
+  }, [approveConfirmed, status]);
 
   useEffect(() => {
     if (stakeConfirmed && (status === 'staking' || status === 'unstaking')) {
       setStatus('done');
       setAmount('');
       refetchStaker();
+      refetchLpBalance();
+      refetchAllowance();
     }
-  }, [stakeConfirmed]);
+  }, [stakeConfirmed, status]);
 
   useEffect(() => {
     if (claimConfirmed && status === 'claiming') {
       setStatus('done');
       refetchStaker();
     }
-  }, [claimConfirmed]);
+  }, [claimConfirmed, status]);
 
   // Lock countdown
   const [lockTimeLeft, setLockTimeLeft] = useState(0);
   useEffect(() => {
     if (!stakerInfo) return;
-    const lockEnd = Number(stakerInfo[2]);
+    const lockEnd = Number(stakerInfo[1]);
     if (lockEnd === 0) return;
     const update = () => setLockTimeLeft(Math.max(0, lockEnd - Math.floor(Date.now() / 1000)));
     update();
@@ -1168,12 +1191,12 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} LP</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">TOTAL REWARDS</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'} $MEGAGOONER</span>
+          <span className="beta-stat-label">REWARD RATE</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'}/sec</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">REWARD RATE</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'}/sec</span>
+          <span className="beta-stat-label">REWARDS REMAINING</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'} $MEGAGOONER</span>
         </div>
       </div>
 
@@ -1201,15 +1224,11 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       <div className="beta-stat-row">
         <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${Number(stakerInfo[4]) / 100}x` : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[4]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">TIME MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${Number(stakerInfo[5]) / 100}x` : '—'}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">EFFECTIVE STAKE</span>
-          <span className="beta-stat-value">{stakerInfo ? fmtBig(stakerInfo[6]) : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[3]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
       </div>
 
