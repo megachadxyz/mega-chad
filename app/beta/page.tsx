@@ -254,7 +254,7 @@ function BurnSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'transfer',
           args: [TESTNET_TREN_FUND_WALLET, HALF_AMOUNT],
-          gas: 200000n,
+          gas: 500000n,
         });
       }, 500);
       return () => clearTimeout(timer);
@@ -303,7 +303,7 @@ function BurnSection({ address }: { address: `0x${string}` }) {
       abi: ERC20_ABI,
       functionName: 'transfer',
       args: [TESTNET_BURN_ADDRESS, HALF_AMOUNT],
-      gas: 200000n,
+      gas: 500000n,
     });
   };
 
@@ -514,7 +514,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [TESTNET_FRAMEMOGGER_ADDRESS, megachadRequired],
-        gas: 200000n,
+        gas: 500000n,
       }, {
         onError: () => { setStatus('error'); setErrorMsg('$MEGACHAD approval rejected'); },
       });
@@ -525,7 +525,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [TESTNET_FRAMEMOGGER_ADDRESS, megagoonerRequired],
-        gas: 200000n,
+        gas: 500000n,
       }, {
         onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); },
       });
@@ -557,7 +557,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_FRAMEMOGGER_ADDRESS, megagoonerRequired],
-          gas: 200000n,
+          gas: 500000n,
         }, {
           onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); },
         });
@@ -828,7 +828,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_MOGGER_STAKING_ADDRESS, parsedAmount],
-          gas: 200000n,
+          gas: 500000n,
         });
       } else {
         executeStake();
@@ -843,7 +843,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         abi: MOGGER_STAKING_ABI,
         functionName: 'unstake',
         args: [parsedAmount],
-        gas: 200000n,
+        gas: 500000n,
       });
     }
   };
@@ -855,7 +855,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
       abi: MOGGER_STAKING_ABI,
       functionName: 'stake',
       args: [parsedAmount],
-      gas: 200000n,
+      gas: 500000n,
     });
   };
 
@@ -866,7 +866,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
       address: TESTNET_MOGGER_STAKING_ADDRESS,
       abi: MOGGER_STAKING_ABI,
       functionName: 'claimRewards',
-      gas: 200000n,
+      gas: 500000n,
     });
   };
 
@@ -1138,7 +1138,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_JESTERGOONER_ADDRESS, parsedAmount],
-          gas: 200000n,
+          gas: 500000n,
         }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
       } else {
         executeStake();
@@ -1156,7 +1156,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         abi: JESTERGOONER_ABI,
         functionName: 'unstake',
         args: [parsedAmount],
-        gas: 200000n,
+        gas: 500000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Unstake failed'); } });
     }
   };
@@ -1179,7 +1179,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       address: TESTNET_JESTERGOONER_ADDRESS,
       abi: JESTERGOONER_ABI,
       functionName: 'claimRewards',
-      gas: 200000n,
+      gas: 500000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Claim failed'); } });
   };
 
