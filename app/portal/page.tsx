@@ -149,10 +149,10 @@ export default function PortalPage() {
         clearInterval(interval);
       } else {
         fetchPortalData();
-        interval = setInterval(fetchPortalData, 30000);
+        interval = setInterval(fetchPortalData, 60000);
       }
     };
-    interval = setInterval(fetchPortalData, 30000);
+    interval = setInterval(fetchPortalData, 60000);
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       clearInterval(interval);
@@ -191,7 +191,7 @@ export default function PortalPage() {
       lastCheck = Date.now();
     };
     pollEvents();
-    const interval = setInterval(pollEvents, 15000);
+    const interval = setInterval(pollEvents, 60000);
     return () => clearInterval(interval);
   }, []);
 

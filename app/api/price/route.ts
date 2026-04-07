@@ -103,7 +103,7 @@ export async function GET() {
       },
       {
         headers: {
-          'Cache-Control': 'public, max-age=15, s-maxage=15',
+          'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=120',
         },
       },
     );

@@ -7,7 +7,6 @@ import {
 } from '@/lib/erc8004';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export interface MegaNameProfile {
   avatar?: string;
@@ -453,7 +452,10 @@ export async function GET() {
     }
 
     console.log('[Chadboard] Returning', entries.length, 'entries');
-    return NextResponse.json({ entries, agentId: MEGACHAD_AGENT_ID?.toString() ?? null });
+    return NextResponse.json(
+      { entries, agentId: MEGACHAD_AGENT_ID?.toString() ?? null },
+      { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } },
+    );
   } catch (err) {
     console.error('[Chadboard] FATAL ERROR:', err);
     console.error('[Chadboard] Error details:', err instanceof Error ? err.message : String(err));

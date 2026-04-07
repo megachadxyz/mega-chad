@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 /**
  * GET /api/events
@@ -61,22 +61,19 @@ export async function GET() {
         lastBurnCount = initialStats.totalBurns || 0;
       }
 
-      // Poll loop
+      // Poll loop — single check midway through the connection
       const interval = setInterval(async () => {
         tick++;
 
-        // Heartbeat every 15s
-        if (tick % 3 === 0) {
-          send('heartbeat', { timestamp: new Date().toISOString() });
-        }
+        // Heartbeat every 10s
+        send('heartbeat', { timestamp: new Date().toISOString() });
 
-        // Stats every 30s
-        if (tick % 6 === 0) {
+        // Stats once at ~10s
+        if (tick === 1) {
           const stats = await fetchStats();
           if (stats) {
             send('stats', stats);
 
-            // Check for new burns
             if (lastBurnCount >= 0 && stats.totalBurns > lastBurnCount) {
               const gallery = await fetchGallery();
               if (gallery?.burns?.length) {
@@ -88,14 +85,14 @@ export async function GET() {
             lastBurnCount = stats.totalBurns || lastBurnCount;
           }
         }
-      }, 5_000);
+      }, 10_000);
 
       // Cleanup after maxDuration
       setTimeout(() => {
         clearInterval(interval);
         send('close', { reason: 'Max duration reached, reconnect to continue' });
         controller.close();
-      }, 55_000); // 55s to stay under 60s maxDuration
+      }, 25_000); // 25s to stay under 30s maxDuration
     },
   });
 
