@@ -1035,10 +1035,11 @@ function StakingSection({ address }: { address: `0x${string}` }) {
 function LPStakingSection({ address }: { address: `0x${string}` }) {
   const [amount, setAmount] = useState('');
   const [action, setAction] = useState<'stake' | 'unstake'>('stake');
-  const [status, setStatus] = useState<'idle' | 'approving' | 'approving-b' | 'adding' | 'staking' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'approving' | 'approving-b' | 'adding' | 'removing' | 'staking' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [showAddLiquidity, setShowAddLiquidity] = useState(false);
+  const [liqPanel, setLiqPanel] = useState<'none' | 'add' | 'remove'>('none');
   const [liqAmountA, setLiqAmountA] = useState('');
+  const [removeLiqAmount, setRemoveLiqAmount] = useState('');
 
   // Token balances
   const { data: megachadBalance, refetch: refetchMegachadBal } = useReadContract({
@@ -1085,15 +1086,13 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     args: [address, TESTNET_LP_TOKEN_ADDRESS],
   });
 
-  // Staker info: (staked, effectiveStake, lockEnd, pendingReward, timeMultiplier, nftMultiplier, canUnstake)
+  // Staker info: (staked, effectiveStake, pendingReward, multiplier, nftCount)
   const { data: stakerInfo, refetch: refetchStaker } = useReadContract({
     address: TESTNET_JESTERGOONER_ADDRESS,
     abi: JESTERGOONER_ABI,
     functionName: 'getStakerInfo',
     args: [address],
   });
-
-  const canUnstake = stakerInfo ? stakerInfo[6] : false;
 
   // Global stats: (totalStaked, totalEffectiveStake, currentWeek, weeklyEmission, rewardsRemaining)
   const { data: globalStats } = useReadContract({
@@ -1135,6 +1134,16 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     : '';
   const parsedLiqB = liqAmountB ? parseUnits(liqAmountB, 18) : 0n;
 
+  // Remove liquidity: estimate tokens returned
+  const parsedRemoveLiq = removeLiqAmount ? parseUnits(removeLiqAmount, 18) : 0n;
+  const removeEstimate = (() => {
+    if (!lpReserves || !lpTotalSupply || parsedRemoveLiq <= 0n || lpTotalSupply <= 0n) return null;
+    const share = Number(formatUnits(parsedRemoveLiq, 18)) / Number(formatUnits(lpTotalSupply, 18));
+    const estA = Number(formatUnits(lpReserves[0], 18)) * share;
+    const estB = Number(formatUnits(lpReserves[1], 18)) * share;
+    return { megachad: estA, megagooner: estB };
+  })();
+
   const lpStakingAPY = (() => {
     if (!globalStats || !lpReserves || !lpTotalSupply) return undefined;
     const totalEffective = Number(formatUnits(globalStats[1], 18));
@@ -1160,6 +1169,9 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const { writeContract: writeAddLiq, data: addLiqHash, reset: resetAddLiq } = useWriteContract();
   const { isSuccess: addLiqConfirmed } = useWaitForTransactionReceipt({ hash: addLiqHash, query: { enabled: !!addLiqHash } });
 
+  const { writeContract: writeRemoveLiq, data: removeLiqHash, reset: resetRemoveLiq } = useWriteContract();
+  const { isSuccess: removeLiqConfirmed } = useWaitForTransactionReceipt({ hash: removeLiqHash, query: { enabled: !!removeLiqHash } });
+
   const { writeContract: writeStake, data: stakeHash, reset: resetStake } = useWriteContract();
   const { isSuccess: stakeConfirmed } = useWaitForTransactionReceipt({ hash: stakeHash, query: { enabled: !!stakeHash } });
 
@@ -1180,7 +1192,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     resetAddLiq();
 
     const needsApproveA = megachadAllowanceLP !== undefined && megachadAllowanceLP < parsedLiqA;
-    const needsApproveB = megagoonerAllowanceLP !== undefined && megagoonerAllowanceLP < parsedLiqB;
+    const needsApproveBToken = megagoonerAllowanceLP !== undefined && megagoonerAllowanceLP < parsedLiqB;
 
     if (needsApproveA) {
       setStatus('approving');
@@ -1191,7 +1203,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         args: [TESTNET_LP_TOKEN_ADDRESS, parsedLiqA],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
-    } else if (needsApproveB) {
+    } else if (needsApproveBToken) {
       setStatus('approving-b');
       writeApproveB({
         address: TESTNET_MEGAGOONER_ADDRESS,
@@ -1206,8 +1218,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   };
 
   const executeApproveB = () => {
-    const needsApproveB = megagoonerAllowanceLP !== undefined && megagoonerAllowanceLP < parsedLiqB;
-    if (needsApproveB) {
+    const needsApproveBToken = megagoonerAllowanceLP !== undefined && megagoonerAllowanceLP < parsedLiqB;
+    if (needsApproveBToken) {
       setStatus('approving-b');
       writeApproveB({
         address: TESTNET_MEGAGOONER_ADDRESS,
@@ -1232,10 +1244,26 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     }, { onError: () => { setStatus('error'); setErrorMsg('Add liquidity failed'); } });
   };
 
+  // ── Remove Liquidity flow ──
+  const handleRemoveLiquidity = () => {
+    if (parsedRemoveLiq <= 0n) { setErrorMsg('Enter an amount'); return; }
+    if (lpBalance !== undefined && parsedRemoveLiq > lpBalance) { setErrorMsg('Insufficient LP balance'); return; }
+    setErrorMsg('');
+    resetRemoveLiq();
+    setStatus('removing');
+    writeRemoveLiq({
+      address: TESTNET_LP_TOKEN_ADDRESS,
+      abi: LP_ABI,
+      functionName: 'removeLiquidity',
+      args: [parsedRemoveLiq, address],
+      gas: 2000000n,
+    }, { onError: () => { setStatus('error'); setErrorMsg('Remove liquidity failed'); } });
+  };
+
   // Chain: approveA → approveB → addLiquidity
   useEffect(() => {
-    if (approveConfirmed && status === 'approving' && showAddLiquidity) executeApproveB();
-  }, [approveConfirmed, status, showAddLiquidity]);
+    if (approveConfirmed && status === 'approving' && liqPanel === 'add') executeApproveB();
+  }, [approveConfirmed, status, liqPanel]);
 
   useEffect(() => {
     if (approveBConfirmed && status === 'approving-b') executeAddLiquidity();
@@ -1250,6 +1278,16 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       refetchGoonerBal();
     }
   }, [addLiqConfirmed, status]);
+
+  useEffect(() => {
+    if (removeLiqConfirmed && status === 'removing') {
+      setStatus('done');
+      setRemoveLiqAmount('');
+      refetchLpBalance();
+      refetchMegachadBal();
+      refetchGoonerBal();
+    }
+  }, [removeLiqConfirmed, status]);
 
   // ── Stake / Unstake flow ──
   const handleStakeUnstake = () => {
@@ -1275,9 +1313,6 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         executeStake();
       }
     } else {
-      if (!canUnstake) {
-        setErrorMsg('Lock period has not ended yet'); return;
-      }
       if (stakerInfo && parsedAmount > stakerInfo[0]) {
         setErrorMsg('Cannot unstake more than staked'); return;
       }
@@ -1314,16 +1349,17 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     }, { onError: () => { setStatus('error'); setErrorMsg('Claim failed'); } });
   };
 
-  // Stake approve → stake chain (reuse approveConfirmed for stake flow when not in add-liq flow)
+  // Stake approve → stake chain (only when not in add-liq panel)
   useEffect(() => {
-    if (approveConfirmed && status === 'approving' && !showAddLiquidity) executeStake();
-  }, [approveConfirmed, status, showAddLiquidity]);
+    if (approveConfirmed && status === 'approving' && liqPanel !== 'add') executeStake();
+  }, [approveConfirmed, status, liqPanel]);
 
   useEffect(() => {
     if (stakeConfirmed && (status === 'staking' || status === 'unstaking')) {
       setStatus('done');
       setAmount('');
       refetchStaker();
+      refetchEarned();
       refetchLpBalance();
       refetchAllowance();
     }
@@ -1337,18 +1373,6 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     }
   }, [claimConfirmed, status]);
 
-  // Lock countdown (lockEnd is at index 2 in V2)
-  const [lockTimeLeft, setLockTimeLeft] = useState(0);
-  useEffect(() => {
-    if (!stakerInfo) return;
-    const lockEnd = Number(stakerInfo[2]);
-    if (lockEnd === 0) return;
-    const update = () => setLockTimeLeft(Math.max(0, lockEnd - Math.floor(Date.now() / 1000)));
-    update();
-    const iv = setInterval(update, 60000);
-    return () => clearInterval(iv);
-  }, [stakerInfo]);
-
   const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
 
   return (
@@ -1358,8 +1382,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         <span className="beta-card-badge">LP STAKING</span>
       </div>
       <p className="beta-card-desc">
-        Stake MEGACHAD/MEGAGOONER LP tokens to earn $MEGAGOONER rewards. 4-week minimum lock period.
-        Receives 40% of weekly $MEGAGOONER emissions.
+        Stake MEGACHAD/MEGAGOONER LP tokens to earn $MEGAGOONER rewards. No lock period — stake and unstake freely.
+        Receives 60% of weekly $MEGAGOONER emissions.
       </p>
 
       {/* NFT Requirement */}
@@ -1368,16 +1392,15 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         <p>You must hold at least 1 Looksmaxxed NFT to be eligible for any emissions. No NFT = no rewards.</p>
       </div>
 
-      {/* NFT + Time Boost explanation */}
+      {/* NFT Boost explanation */}
       <div className="beta-info-box">
-        <h4>BOOST MULTIPLIERS</h4>
-        <p><strong>NFT Boost</strong> — Looksmaxxed NFT holdings increase your effective stake:</p>
+        <h4>NFT BOOST MULTIPLIERS</h4>
+        <p>Looksmaxxed NFT holdings increase your effective stake:</p>
         <ul>
           <li><strong>Tier 1 (1-9 NFTs):</strong> 1.0x base</li>
           <li><strong>Tier 2 (10-24 NFTs):</strong> 1.075x</li>
           <li><strong>Tier 3 (25+ NFTs):</strong> 1.15x</li>
         </ul>
-        <p><strong>Time Boost</strong> — The longer you stake, the higher your time multiplier grows, further increasing your effective stake and share of rewards.</p>
       </div>
 
       {/* Global stats */}
@@ -1411,24 +1434,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value highlight">{fmtBig(earned)} $MEGAGOONER</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">LOCK STATUS</span>
-          <span className={`beta-stat-value ${canUnstake ? 'text-green' : 'text-orange'}`}>
-            {stakerInfo && stakerInfo[0] > 0n
-              ? canUnstake ? 'UNLOCKED' : `LOCKED (${fmtCountdown(lockTimeLeft)})`
-              : 'NO POSITION'}
-          </span>
-        </div>
-      </div>
-
-      {/* Multipliers */}
-      <div className="beta-stat-row">
-        <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[5]) / 10000).toFixed(2)}x` : '—'}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">TIME MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[4]) / 10000).toFixed(2)}x` : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[3]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">LP BALANCE</span>
@@ -1443,18 +1450,25 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </button>
       )}
 
-      {/* ── Add Liquidity Section ── */}
+      {/* ── Liquidity Management ── */}
       <div style={{ margin: '1.5rem 0 0.5rem', borderTop: '1px solid rgba(247,134,198,0.2)', paddingTop: '1rem' }}>
-        <button
-          className="beta-btn-secondary"
-          onClick={() => { setShowAddLiquidity(!showAddLiquidity); setErrorMsg(''); setStatus('idle'); }}
-          style={{ width: '100%', marginBottom: showAddLiquidity ? '1rem' : 0 }}
-        >
-          {showAddLiquidity ? 'HIDE LIQUIDITY' : 'ADD LIQUIDITY'}
-        </button>
+        <div className="beta-toggle-row">
+          <button
+            className={`beta-toggle${liqPanel === 'add' ? ' active' : ''}`}
+            onClick={() => { setLiqPanel(liqPanel === 'add' ? 'none' : 'add'); setErrorMsg(''); setStatus('idle'); }}
+          >
+            ADD LIQUIDITY
+          </button>
+          <button
+            className={`beta-toggle${liqPanel === 'remove' ? ' active' : ''}`}
+            onClick={() => { setLiqPanel(liqPanel === 'remove' ? 'none' : 'remove'); setErrorMsg(''); setStatus('idle'); }}
+          >
+            REMOVE LIQUIDITY
+          </button>
+        </div>
       </div>
 
-      {showAddLiquidity && (
+      {liqPanel === 'add' && (
         <div style={{ padding: '1rem', border: '1px solid rgba(247,134,198,0.15)', borderRadius: '8px', marginBottom: '1.5rem' }}>
           <p className="beta-card-desc" style={{ marginBottom: '0.75rem' }}>
             Deposit $MEGACHAD and $MEGAGOONER in the current pool ratio to receive LP tokens.
@@ -1527,6 +1541,64 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </div>
       )}
 
+      {liqPanel === 'remove' && (
+        <div style={{ padding: '1rem', border: '1px solid rgba(247,134,198,0.15)', borderRadius: '8px', marginBottom: '1.5rem' }}>
+          <p className="beta-card-desc" style={{ marginBottom: '0.75rem' }}>
+            Burn LP tokens to withdraw your $MEGACHAD and $MEGAGOONER from the pool.
+          </p>
+
+          <div className="beta-input-group">
+            <label className="beta-input-label">LP TOKENS TO REMOVE</label>
+            <div className="beta-input-row">
+              <input
+                type="number"
+                value={removeLiqAmount}
+                onChange={(e) => setRemoveLiqAmount(e.target.value)}
+                placeholder="0.0"
+                className="beta-input"
+                min="0"
+              />
+              <button
+                className="beta-btn-max"
+                onClick={() => {
+                  if (lpBalance) setRemoveLiqAmount(formatUnits(lpBalance, 18));
+                }}
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+
+          {removeEstimate && (
+            <div className="beta-stat-row" style={{ margin: '0.75rem 0' }}>
+              <div className="beta-stat">
+                <span className="beta-stat-label">YOU RECEIVE (EST.)</span>
+                <span className="beta-stat-value">{removeEstimate.megachad.toFixed(2)} $MEGACHAD</span>
+              </div>
+              <div className="beta-stat">
+                <span className="beta-stat-label">&nbsp;</span>
+                <span className="beta-stat-value">{removeEstimate.megagooner.toFixed(2)} $MEGAGOONER</span>
+              </div>
+            </div>
+          )}
+
+          <div className="beta-stat-row" style={{ margin: '0.5rem 0' }}>
+            <div className="beta-stat">
+              <span className="beta-stat-label">YOUR LP BALANCE</span>
+              <span className="beta-stat-value">{fmtBig(lpBalance)} LP</span>
+            </div>
+          </div>
+
+          <button
+            className="beta-btn-primary"
+            onClick={handleRemoveLiquidity}
+            disabled={isBusy || parsedRemoveLiq <= 0n}
+          >
+            {status === 'removing' ? 'REMOVING LIQUIDITY...' : 'REMOVE LIQUIDITY'}
+          </button>
+        </div>
+      )}
+
       {/* ── Stake / Unstake ── */}
       <div className="beta-toggle-row">
         <button
@@ -1570,7 +1642,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
       {status !== 'idle' && status !== 'done' && (
         <div className={`beta-status ${status === 'error' ? 'error' : ''}`}>
-          {status === 'approving' && !showAddLiquidity && 'Approving LP tokens...'}
+          {status === 'approving' && liqPanel !== 'add' && 'Approving LP tokens...'}
           {status === 'staking' && 'Staking LP tokens...'}
           {status === 'unstaking' && 'Unstaking LP tokens...'}
           {status === 'claiming' && 'Claiming $MEGAGOONER rewards...'}

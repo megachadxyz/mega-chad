@@ -17,9 +17,39 @@ const TREN_FUND_PRIVATE_KEY = process.env.TREN_FUND_PRIVATE_KEY as `0x${string}`
 const MEGACHAD_DRIP = parseUnits('500000', 18);
 const MEGAGOONER_DRIP = parseUnits('5000', 18);
 
-// Cooldown: 1 drip per token per address per 24 hours (in-memory, resets on cold start)
-const cooldowns = new Map<string, number>();
-const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+// Cooldown: 1 drip per token per address per 24 hours
+// Persisted in Upstash Redis so it survives serverless cold starts
+const COOLDOWN_SECONDS = 24 * 60 * 60; // 24 hours
+
+async function getCooldownRemaining(key: string): Promise<number> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return 0; // If Redis not configured, no cooldown enforcement
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(['TTL', key]),
+    cache: 'no-store',
+  });
+  if (!res.ok) return 0;
+  const { result } = await res.json();
+  // TTL returns -2 (key doesn't exist) or -1 (no expiry) or positive seconds
+  return typeof result === 'number' && result > 0 ? result : 0;
+}
+
+async function setCooldown(key: string): Promise<void> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return;
+
+  await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(['SET', key, Date.now().toString(), 'EX', COOLDOWN_SECONDS]),
+    cache: 'no-store',
+  });
+}
 
 export async function POST(request: Request) {
   try {
@@ -43,12 +73,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faucet not configured. Set TREN_FUND_PRIVATE_KEY.' }, { status: 503 });
     }
 
-    // Cooldown check (per token per address)
-    const cooldownKey = `${address.toLowerCase()}-${token}`;
-    const lastDrip = cooldowns.get(cooldownKey);
-    if (lastDrip && Date.now() - lastDrip < COOLDOWN_MS) {
-      const remaining = Math.ceil((COOLDOWN_MS - (Date.now() - lastDrip)) / 3600000);
-      return NextResponse.json({ error: `Cooldown active. Try again in ~${remaining}h` }, { status: 429 });
+    // Cooldown check (per token per address, persisted in Redis)
+    const cooldownKey = `faucet:cooldown:${address.toLowerCase()}:${token}`;
+    const remainingSeconds = await getCooldownRemaining(cooldownKey);
+    if (remainingSeconds > 0) {
+      const remainingHours = Math.ceil(remainingSeconds / 3600);
+      return NextResponse.json({ error: `Cooldown active. Try again in ~${remainingHours}h` }, { status: 429 });
     }
 
     const account = privateKeyToAccount(TREN_FUND_PRIVATE_KEY);
@@ -88,16 +118,8 @@ export async function POST(request: Request) {
     // Wait for confirmation
     await publicClient.waitForTransactionReceipt({ hash });
 
-    // Set cooldown
-    cooldowns.set(cooldownKey, Date.now());
-
-    // Cap map size
-    if (cooldowns.size > 5000) {
-      const cutoff = Date.now() - COOLDOWN_MS;
-      for (const [k, v] of cooldowns) {
-        if (v < cutoff) cooldowns.delete(k);
-      }
-    }
+    // Set 24h cooldown in Redis (auto-expires)
+    await setCooldown(cooldownKey);
 
     return NextResponse.json({
       success: true,

@@ -13,9 +13,9 @@ contract DeployStakingV2 is Script {
         address nftContract = 0x8Ba2A1f997FCae0486085E8Df521e28586f42255;
         address lpToken = 0xE150698cCcce99e0385146A70E0E150b4A2ebC70;
 
-        // Budgets: 60/40 split of 20M MEGAGOONER
-        uint256 moggerBudget = 12_000_000 * 1e18;
-        uint256 jesterBudget = 8_000_000 * 1e18;
+        // Budgets: 40/60 split of 20M MEGAGOONER
+        uint256 moggerBudget = 8_000_000 * 1e18;
+        uint256 jesterBudget = 12_000_000 * 1e18;
 
         vm.startBroadcast();
 

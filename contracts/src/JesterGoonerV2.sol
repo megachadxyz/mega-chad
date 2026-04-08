@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title JesterGoonerV2 — Stake MEGACHAD/MEGAGOONER LP to earn MEGAGOONER (proportional emissions)
 /// @notice 225-week quadratic emission schedule. Rewards shared proportionally by effective stake.
-///         4-week minimum lock, 52-week maximum. Time multiplier: 1.0x (4wk) → 2.0x (52wk).
+///         No lock period — stake and unstake freely, just like MoggerStaking.
 ///         NFT tier multipliers: 1-9 NFTs 1.0x, 10-24 1.075x, 25+ 1.15x.
 ///         Requires 1+ Looksmaxxed NFT for any emissions eligibility.
 contract JesterGoonerV2 is Ownable {
@@ -22,14 +22,6 @@ contract JesterGoonerV2 is Ownable {
     uint256 public constant WEEK_DURATION = 1 weeks;
     uint256 public constant QUADRATIC_SUM = 3_822_225; // sum(k^2, k=1..225) = 225*226*451/6
 
-    // Lock constraints
-    uint256 public constant MIN_LOCK_DURATION = 4 weeks;
-    uint256 public constant MAX_LOCK_DURATION = 52 weeks;
-
-    // Time multiplier: 4 weeks = 1.0x (10000), 52 weeks = 2.0x (20000)
-    uint256 private constant TIME_MULT_BASE = 10000;
-    uint256 private constant TIME_MULT_MAX = 20000;
-
     // Synthetix accumulator
     uint256 public rewardPerTokenStored;
     uint256 public lastUpdateTime;
@@ -39,15 +31,13 @@ contract JesterGoonerV2 is Ownable {
     struct Staker {
         uint256 staked;
         uint256 effectiveStake;
-        uint256 lockEnd;
-        uint256 lockDuration;
         uint256 rewardPerTokenPaid;
         uint256 rewards;
     }
 
     mapping(address => Staker) public stakers;
 
-    event Staked(address indexed user, uint256 amount, uint256 lockUntil);
+    event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
     event RewardsClaimed(address indexed user, uint256 reward);
 
@@ -67,35 +57,6 @@ contract JesterGoonerV2 is Ownable {
 
     // ── Core actions ──────────────────────────────────────
 
-    function stake(uint256 amount, uint256 lockDuration) external {
-        require(amount > 0, "zero amount");
-        require(nft.balanceOf(msg.sender) >= 1, "need 1+ Looksmaxxed NFT");
-        require(lockDuration >= MIN_LOCK_DURATION, "lock too short");
-        require(lockDuration <= MAX_LOCK_DURATION, "lock too long");
-
-        _updateReward(msg.sender);
-
-        require(lpToken.transferFrom(msg.sender, address(this), amount), "transfer failed");
-
-        Staker storage s = stakers[msg.sender];
-
-        // If already staked, new lock must be at least as long as remaining lock
-        if (s.staked > 0 && s.lockEnd > block.timestamp) {
-            uint256 remaining = s.lockEnd - block.timestamp;
-            require(lockDuration >= remaining, "cannot shorten existing lock");
-        }
-
-        s.staked += amount;
-        s.lockEnd = block.timestamp + lockDuration;
-        s.lockDuration = lockDuration;
-        totalStaked += amount;
-
-        _recalcEffectiveStake(msg.sender);
-
-        emit Staked(msg.sender, amount, s.lockEnd);
-    }
-
-    /// @notice Convenience overload: stake with minimum lock (4 weeks)
     function stake(uint256 amount) external {
         require(amount > 0, "zero amount");
         require(nft.balanceOf(msg.sender) >= 1, "need 1+ Looksmaxxed NFT");
@@ -105,27 +66,17 @@ contract JesterGoonerV2 is Ownable {
         require(lpToken.transferFrom(msg.sender, address(this), amount), "transfer failed");
 
         Staker storage s = stakers[msg.sender];
-
-        uint256 lockDuration = MIN_LOCK_DURATION;
-        if (s.staked > 0 && s.lockEnd > block.timestamp) {
-            uint256 remaining = s.lockEnd - block.timestamp;
-            if (remaining > lockDuration) lockDuration = remaining;
-        }
-
         s.staked += amount;
-        s.lockEnd = block.timestamp + lockDuration;
-        s.lockDuration = lockDuration;
         totalStaked += amount;
 
         _recalcEffectiveStake(msg.sender);
 
-        emit Staked(msg.sender, amount, s.lockEnd);
+        emit Staked(msg.sender, amount);
     }
 
     function unstake(uint256 amount) external {
         Staker storage s = stakers[msg.sender];
         require(s.staked >= amount && amount > 0, "invalid amount");
-        require(block.timestamp >= s.lockEnd, "still locked");
 
         _updateReward(msg.sender);
 
@@ -165,22 +116,6 @@ contract JesterGoonerV2 is Ownable {
         return s.rewards + (s.effectiveStake * (rpt - s.rewardPerTokenPaid)) / 1e18;
     }
 
-    function canUnstake(address account) external view returns (bool) {
-        Staker storage s = stakers[account];
-        return block.timestamp >= s.lockEnd && s.staked > 0;
-    }
-
-    function getTimeMultiplier(address account) public view returns (uint256) {
-        Staker storage s = stakers[account];
-        if (s.staked == 0) return TIME_MULT_BASE;
-        uint256 duration = s.lockDuration;
-        if (duration <= MIN_LOCK_DURATION) return TIME_MULT_BASE;
-        if (duration >= MAX_LOCK_DURATION) return TIME_MULT_MAX;
-        uint256 range = MAX_LOCK_DURATION - MIN_LOCK_DURATION;
-        uint256 extra = duration - MIN_LOCK_DURATION;
-        return TIME_MULT_BASE + (extra * (TIME_MULT_MAX - TIME_MULT_BASE)) / range;
-    }
-
     function getNFTMultiplier(address account) public view returns (uint256) {
         uint256 nftCount = nft.balanceOf(account);
         if (nftCount == 0) return 0;
@@ -204,21 +139,17 @@ contract JesterGoonerV2 is Ownable {
     function getStakerInfo(address account) external view returns (
         uint256 staked,
         uint256 effectiveStake,
-        uint256 lockEnd,
         uint256 pendingReward,
-        uint256 timeMultiplier,
-        uint256 nftMultiplier,
-        bool _canUnstake
+        uint256 multiplier,
+        uint256 nftCount
     ) {
         Staker storage s = stakers[account];
         staked = s.staked;
         effectiveStake = s.effectiveStake;
-        lockEnd = s.lockEnd;
         uint256 rpt = _rewardPerTokenView();
         pendingReward = s.rewards + (s.effectiveStake * (rpt - s.rewardPerTokenPaid)) / 1e18;
-        timeMultiplier = getTimeMultiplier(account);
-        nftMultiplier = getNFTMultiplier(account);
-        _canUnstake = block.timestamp >= s.lockEnd && s.staked > 0;
+        multiplier = getNFTMultiplier(account);
+        nftCount = nft.balanceOf(account);
     }
 
     function getGlobalStats() external view returns (
@@ -281,9 +212,8 @@ contract JesterGoonerV2 is Ownable {
     function _recalcEffectiveStake(address account) internal {
         Staker storage s = stakers[account];
         uint256 oldEffective = s.effectiveStake;
-        uint256 nftMult = getNFTMultiplier(account);
-        uint256 timeMult = getTimeMultiplier(account);
-        uint256 newEffective = (s.staked * nftMult * timeMult) / (10000 * 10000);
+        uint256 multiplier = getNFTMultiplier(account);
+        uint256 newEffective = (s.staked * multiplier) / 10000;
 
         s.effectiveStake = newEffective;
         totalEffectiveStake = totalEffectiveStake - oldEffective + newEffective;
