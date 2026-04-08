@@ -1188,7 +1188,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [TESTNET_LP_TOKEN_ADDRESS, parsedLiqA],
-        gas: 500000n,
+        gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else if (needsApproveB) {
       setStatus('approving-b');
@@ -1197,7 +1197,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [TESTNET_LP_TOKEN_ADDRESS, parsedLiqB],
-        gas: 500000n,
+        gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else {
       executeAddLiquidity();
@@ -1213,7 +1213,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [TESTNET_LP_TOKEN_ADDRESS, parsedLiqB],
-        gas: 500000n,
+        gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else {
       executeAddLiquidity();
@@ -1227,7 +1227,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       abi: LP_ABI,
       functionName: 'addLiquidity',
       args: [parsedLiqA, parsedLiqB, address],
-      gas: 500000n,
+      gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Add liquidity failed'); } });
   };
 
@@ -1268,7 +1268,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_JESTERGOONER_ADDRESS, parsedAmount],
-          gas: 500000n,
+          gas: 2000000n,
         }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
       } else {
         executeStake();
@@ -1286,7 +1286,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         abi: JESTERGOONER_ABI,
         functionName: 'unstake',
         args: [parsedAmount],
-        gas: 500000n,
+        gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Unstake failed'); } });
     }
   };
@@ -1298,7 +1298,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       abi: JESTERGOONER_ABI,
       functionName: 'stake',
       args: [parsedAmount],
-      gas: 500000n,
+      gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Stake failed'); } });
   };
 
@@ -1309,7 +1309,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       address: TESTNET_JESTERGOONER_ADDRESS,
       abi: JESTERGOONER_ABI,
       functionName: 'claimRewards',
-      gas: 500000n,
+      gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Claim failed'); } });
   };
 
