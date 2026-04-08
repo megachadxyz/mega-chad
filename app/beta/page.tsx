@@ -768,7 +768,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
   });
 
   // Earned
-  const { data: earned } = useReadContract({
+  const { data: earned, refetch: refetchEarned } = useReadContract({
     address: TESTNET_MOGGER_STAKING_ADDRESS,
     abi: MOGGER_STAKING_ABI,
     functionName: 'earned',
@@ -888,6 +888,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     if (claimConfirmed && status === 'claiming') {
       setStatus('done');
       refetchStaker();
+      refetchEarned();
     }
   }, [claimConfirmed, status]);
 
@@ -1102,7 +1103,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   });
 
   // Earned
-  const { data: earned } = useReadContract({
+  const { data: earned, refetch: refetchEarned } = useReadContract({
     address: TESTNET_JESTERGOONER_ADDRESS,
     abi: JESTERGOONER_ABI,
     functionName: 'earned',
@@ -1332,6 +1333,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     if (claimConfirmed && status === 'claiming') {
       setStatus('done');
       refetchStaker();
+      refetchEarned();
     }
   }, [claimConfirmed, status]);
 
