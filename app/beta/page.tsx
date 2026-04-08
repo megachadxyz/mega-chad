@@ -487,7 +487,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
   const { writeContract: writeBurn, data: burnHash } = useWriteContract();
   const { isSuccess: burnConfirmed } = useWaitForTransactionReceipt({ hash: burnHash, query: { enabled: !!burnHash } });
 
-  const [status, setStatus] = useState<'idle' | 'approving-megachad' | 'approving-megagooner' | 'burning' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'approving-megachad' | 'approving-megagooner' | 'burning' | 'minting' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   const megachadRequired = burnReqs ? burnReqs[0] : 0n;
@@ -572,11 +572,29 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
   }, [approveMegagoonerConfirmed]);
 
   useEffect(() => {
-    if (burnConfirmed && status === 'burning') {
-      setStatus('done');
-      setBurnAmount('');
-      refetchMegachad();
-      refetchMegagooner();
+    if (burnConfirmed && status === 'burning' && burnHash) {
+      // Burn confirmed — now mint the testnet NFT
+      setStatus('minting');
+      fetch('/api/beta/mint-nft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, burnTxHash: burnHash }),
+      })
+        .then((res) => res.json())
+        .then(() => {
+          setStatus('done');
+          setBurnAmount('');
+          refetchMegachad();
+          refetchMegagooner();
+        })
+        .catch(() => {
+          // NFT mint failed but burn succeeded — still mark done
+          setStatus('done');
+          setBurnAmount('');
+          refetchMegachad();
+          refetchMegagooner();
+          setErrorMsg('Burn succeeded but NFT mint failed — contact team');
+        });
     }
   }, [burnConfirmed]);
 
@@ -700,15 +718,16 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         </div>
       )}
 
-      {(status === 'approving-megachad' || status === 'approving-megagooner' || status === 'burning') && (
+      {(status === 'approving-megachad' || status === 'approving-megagooner' || status === 'burning' || status === 'minting') && (
         <div className="beta-status">
           {status === 'approving-megachad' && 'Approving $MEGACHAD...'}
           {status === 'approving-megagooner' && 'Approving $MEGAGOONER for deflation burn...'}
           {status === 'burning' && 'Sending via Framemogger...'}
+          {status === 'minting' && 'Minting Looksmaxxed NFT...'}
         </div>
       )}
       {status === 'done' && (
-        <div className="beta-status success">Complete! $MEGACHAD sent to Tren Fund, $MEGAGOONER deflated.</div>
+        <div className="beta-status success">Complete! $MEGACHAD sent to Tren Fund, $MEGAGOONER deflated, NFT minted.</div>
       )}
       {status === 'error' && (
         <div className="beta-status error">{errorMsg || 'Transaction failed'}</div>
@@ -720,7 +739,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
       <button
         className="beta-btn-primary"
         onClick={handleBurn}
-        disabled={status === 'approving-megachad' || status === 'approving-megagooner' || status === 'burning'}
+        disabled={status === 'approving-megachad' || status === 'approving-megagooner' || status === 'burning' || status === 'minting'}
       >
         {needsMegachadApproval || needsMegagoonerApproval ? 'APPROVE & SEND' : 'SEND $MEGACHAD'}
       </button>
