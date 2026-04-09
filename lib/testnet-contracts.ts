@@ -17,15 +17,30 @@ export const TESTNET_JESTERGOONER_V1_ADDRESS = '0x2Ac6DF4FA8422a2bF3579ba9Dbed43
 export const TESTNET_MOGGER_STAKING_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_MOGGER_STAKING_CONTRACT ||
   '0xc06A86687574a2612c2438299935c6033a8A132C') as `0x${string}`;
 
+// V2 JesterGooner (deprecated — kept for migration)
+export const TESTNET_JESTERGOONER_V2_ADDRESS = '0xa7E8839E5f2570E12148DDeA22b383a6bd15DaA8' as `0x${string}`;
+
+// V3 JesterGooner (multi-pool LP staking)
 export const TESTNET_JESTERGOONER_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_JESTERGOONER_CONTRACT ||
-  '0xa7E8839E5f2570E12148DDeA22b383a6bd15DaA8') as `0x${string}`;
+  '0x10d5f83A3F97C9aCF62ed8Ceb05E57154323D95a') as `0x${string}`;
 
 export const TESTNET_JESTERMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_JESTERMOGGER_CONTRACT ||
   '0x78546877Fe4079e5ca36A1c5C27a6F5ec23088c4') as `0x${string}`;
 
-// MEGACHAD/MEGAGOONER LP token (for JESTERGOONER staking)
+// LP tokens
 export const TESTNET_LP_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_LP_TOKEN_CONTRACT ||
-  '0xE150698cCcce99e0385146A70E0E150b4A2ebC70') as `0x${string}`;
+  '0xE150698cCcce99e0385146A70E0E150b4A2ebC70') as `0x${string}`; // MEGACHAD/MEGAGOONER
+
+export const TESTNET_LP_ETH_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_LP_ETH_CONTRACT ||
+  '0x09B2EA3257aB03fF11Fe7bB82C48bC5EBF85A224') as `0x${string}`; // MEGACHAD/WETH
+
+export const TESTNET_LP_USDM_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_LP_USDM_CONTRACT ||
+  '0x69709876fc50942F54e127F7cA5Ac422940De2FF') as `0x${string}`; // MEGACHAD/USDm
+
+// WETH and USDm
+export const TESTNET_WETH_ADDRESS = '0x4200000000000000000000000000000000000006' as `0x${string}`;
+export const TESTNET_USDM_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_USDM_CONTRACT ||
+  '0x112410FcD45b4143D601e17843319d568eB9Fecb') as `0x${string}`;
 
 export const TESTNET_NFT_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_NFT_CONTRACT ||
   '0x8Ba2A1f997FCae0486085E8Df521e28586f42255') as `0x${string}`;
@@ -129,6 +144,52 @@ export const JESTERGOONER_ABI = [
   { type: 'event', name: 'RewardsClaimed', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'reward', type: 'uint256', indexed: false }] },
 ] as const;
 
+// ── JesterGooner V1 ABI (old contract with lock periods — for migration) ──
+export const JESTERGOONER_V1_ABI = [
+  { type: 'function', name: 'unstake', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'claimRewards', inputs: [], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'totalStaked', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'earned', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getStakerInfo', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: 'staked', type: 'uint256' }, { name: 'effectiveStake', type: 'uint256' }, { name: 'lockEnd', type: 'uint256' }, { name: 'pendingReward', type: 'uint256' }, { name: 'timeMultiplier', type: 'uint256' }, { name: 'nftMultiplier', type: 'uint256' }, { name: '_canUnstake', type: 'bool' }], stateMutability: 'view' },
+] as const;
+
+// ── JesterGoonerV3 ABI (multi-pool LP staking) ──
+export const JESTERGOONER_V3_ABI = [
+  { type: 'function', name: 'stake', inputs: [{ name: 'pid', type: 'uint256' }, { name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'unstake', inputs: [{ name: 'pid', type: 'uint256' }, { name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'claimRewards', inputs: [{ name: 'pid', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'claimAllRewards', inputs: [], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'refreshEffectiveStake', inputs: [{ name: 'pid', type: 'uint256' }, { name: 'account', type: 'address' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'poolLength', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'totalAllocPoint', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'earned', inputs: [{ name: 'pid', type: 'uint256' }, { name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'earnedAll', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: 'total', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getNFTMultiplier', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getCurrentWeek', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getWeeklyEmission', inputs: [{ name: 'week', type: 'uint256' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getPoolInfo', inputs: [{ name: 'pid', type: 'uint256' }], outputs: [{ name: 'lpToken', type: 'address' }, { name: 'allocPoint', type: 'uint256' }, { name: 'totalStaked', type: 'uint256' }, { name: 'totalEffectiveStake', type: 'uint256' }, { name: 'weeklyEmission', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getUserInfo', inputs: [{ name: 'pid', type: 'uint256' }, { name: 'account', type: 'address' }], outputs: [{ name: 'staked', type: 'uint256' }, { name: 'effectiveStake', type: 'uint256' }, { name: 'pendingReward', type: 'uint256' }, { name: 'multiplier', type: 'uint256' }, { name: 'nftCount', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getGlobalStats', inputs: [], outputs: [{ name: 'currentWeek', type: 'uint256' }, { name: 'totalWeeklyEmission', type: 'uint256' }, { name: 'rewardsRemaining', type: 'uint256' }, { name: 'numPools', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'event', name: 'Staked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'pid', type: 'uint256', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'Unstaked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'pid', type: 'uint256', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'RewardsClaimed', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'pid', type: 'uint256', indexed: true }, { name: 'reward', type: 'uint256', indexed: false }] },
+] as const;
+
+// ── WETH ABI (deposit/withdraw) ──
+export const WETH_ABI = [
+  { type: 'function', name: 'deposit', inputs: [], outputs: [], stateMutability: 'payable' },
+  { type: 'function', name: 'withdraw', inputs: [{ name: 'wad', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'balanceOf', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'approve', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'allowance', inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+] as const;
+
+// ── MockUSDm ABI (testnet faucet stablecoin) ──
+export const MOCK_USDM_ABI = [
+  ...ERC20_ABI,
+  { type: 'function', name: 'mint', inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+] as const;
+
 // ── MegaChadLP ABI (AMM + price/APY calculation) ──
 export const LP_ABI = [
   { type: 'function', name: 'tokenA', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
@@ -142,6 +203,7 @@ export const LP_ABI = [
   { type: 'function', name: 'approve', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'nonpayable' },
   { type: 'function', name: 'addLiquidity', inputs: [{ name: 'amountA', type: 'uint256' }, { name: 'amountB', type: 'uint256' }, { name: 'to', type: 'address' }], outputs: [{ name: 'liquidity', type: 'uint256' }], stateMutability: 'nonpayable' },
   { type: 'function', name: 'removeLiquidity', inputs: [{ name: 'liquidity', type: 'uint256' }, { name: 'to', type: 'address' }], outputs: [{ name: 'amountA', type: 'uint256' }, { name: 'amountB', type: 'uint256' }], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'swap', inputs: [{ name: 'amountAIn', type: 'uint256' }, { name: 'amountBIn', type: 'uint256' }, { name: 'to', type: 'address' }], outputs: [], stateMutability: 'nonpayable' },
 ] as const;
 
 // ── Jestermogger ABI (governance) ──

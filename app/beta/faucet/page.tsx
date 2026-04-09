@@ -6,6 +6,7 @@ import { formatUnits } from 'viem';
 import {
   TESTNET_MEGACHAD_ADDRESS,
   TESTNET_MEGAGOONER_ADDRESS,
+  TESTNET_USDM_ADDRESS,
   ERC20_ABI,
 } from '@/lib/testnet-contracts';
 
@@ -66,8 +67,10 @@ export default function FaucetPage() {
 function FaucetCard({ address }: { address: `0x${string}` }) {
   const [megachadStatus, setMegachadStatus] = useState<'idle' | 'dripping' | 'done' | 'error'>('idle');
   const [megagoonerStatus, setMegagoonerStatus] = useState<'idle' | 'dripping' | 'done' | 'error'>('idle');
+  const [usdmStatus, setUsdmStatus] = useState<'idle' | 'dripping' | 'done' | 'error'>('idle');
   const [megachadMsg, setMegachadMsg] = useState('');
   const [megagoonerMsg, setMegagoonerMsg] = useState('');
+  const [usdmMsg, setUsdmMsg] = useState('');
 
   const { data: megachadBalance, refetch: refetchMegachad } = useReadContract({
     address: TESTNET_MEGACHAD_ADDRESS,
@@ -83,9 +86,16 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
     args: [address],
   });
 
-  const drip = async (token: 'megachad' | 'megagooner') => {
-    const setStatus = token === 'megachad' ? setMegachadStatus : setMegagoonerStatus;
-    const setMsg = token === 'megachad' ? setMegachadMsg : setMegagoonerMsg;
+  const { data: usdmBalance, refetch: refetchUsdm } = useReadContract({
+    address: TESTNET_USDM_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+  });
+
+  const drip = async (token: 'megachad' | 'megagooner' | 'usdm') => {
+    const setStatus = token === 'megachad' ? setMegachadStatus : token === 'megagooner' ? setMegagoonerStatus : setUsdmStatus;
+    const setMsg = token === 'megachad' ? setMegachadMsg : token === 'megagooner' ? setMegagoonerMsg : setUsdmMsg;
 
     setStatus('dripping');
     setMsg('');
@@ -104,6 +114,7 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
         setMsg(`Received ${data.amount} ${data.token}`);
         refetchMegachad();
         refetchMegagooner();
+        refetchUsdm();
       } else {
         setStatus('error');
         setMsg(data.error || 'Faucet error');
@@ -121,8 +132,8 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
         <span className="beta-card-badge">TREN FUND</span>
       </div>
       <p className="beta-card-desc">
-        Claim 500,000 $MEGACHAD and 5,000 $MEGAGOONER per drip from the Tren Fund. 24h cooldown per token per wallet.
-        Use these tokens to test Burn to Looksmaxx, Framemogger, Mogger Staking, JESTERGOONER, and Governance.
+        Claim 500,000 $MEGACHAD, 5,000 $MEGAGOONER, and 1,000 $USDm per drip. 24h cooldown per token per wallet.
+        Use these tokens to test Burn to Looksmaxx, Framemogger, Mogger Staking, JESTERGOONER, LP pools, and Governance.
       </p>
 
       <div className="beta-stat-row">
@@ -133,6 +144,10 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
         <div className="beta-stat">
           <span className="beta-stat-label">YOUR $MEGAGOONER BALANCE</span>
           <span className="beta-stat-value">{fmtBig(megagoonerBalance)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">YOUR $USDm BALANCE</span>
+          <span className="beta-stat-value">{fmtBig(usdmBalance)}</span>
         </div>
       </div>
 
@@ -165,13 +180,27 @@ function FaucetCard({ address }: { address: `0x${string}` }) {
             </span>
           )}
         </div>
+        <div className="beta-faucet-col">
+          <button
+            className="beta-btn-faucet megagooner"
+            onClick={() => drip('usdm')}
+            disabled={usdmStatus === 'dripping'}
+          >
+            {usdmStatus === 'dripping' ? 'DRIPPING...' : 'DRIP 1K $USDm'}
+          </button>
+          {usdmMsg && (
+            <span className={`beta-faucet-msg ${usdmStatus === 'error' ? 'error' : 'success'}`}>
+              {usdmMsg}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="beta-info-box" style={{ marginTop: '1.5rem' }}>
         <h4>HOW IT WORKS</h4>
         <ul>
           <li>All testnet tokens are held in the Tren Fund wallet</li>
-          <li>Each whitelisted wallet can claim 500,000 $MEGACHAD and 5,000 $MEGAGOONER every 24 hours</li>
+          <li>Each whitelisted wallet can claim 500,000 $MEGACHAD, 5,000 $MEGAGOONER, and 1,000 $USDm every 24 hours</li>
           <li>Use $MEGACHAD for burning (Looksmaxx + Framemogger) and staking (Mogger Staking)</li>
           <li>Use $MEGAGOONER for governance voting and Framemogger deflation burns</li>
         </ul>

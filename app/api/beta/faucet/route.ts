@@ -6,7 +6,9 @@ import { isWalletWhitelisted } from '@/lib/beta-auth';
 import {
   TESTNET_MEGACHAD_ADDRESS,
   TESTNET_MEGAGOONER_ADDRESS,
+  TESTNET_USDM_ADDRESS,
   ERC20_ABI,
+  MOCK_USDM_ABI,
 } from '@/lib/testnet-contracts';
 
 // Faucet drips from the Tren Fund wallet
@@ -16,6 +18,7 @@ const TREN_FUND_PRIVATE_KEY = process.env.TREN_FUND_PRIVATE_KEY as `0x${string}`
 // Drip amounts per 24h per wallet (enough for burns, staking, and protocol testing)
 const MEGACHAD_DRIP = parseUnits('500000', 18);
 const MEGAGOONER_DRIP = parseUnits('5000', 18);
+const USDM_DRIP = parseUnits('1000', 18);
 
 // Cooldown: 1 drip per token per address per 24 hours
 // Persisted in Upstash Redis so it survives serverless cold starts
@@ -59,8 +62,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid address required' }, { status: 400 });
     }
 
-    if (!token || !['megachad', 'megagooner'].includes(token)) {
-      return NextResponse.json({ error: 'Token must be "megachad" or "megagooner"' }, { status: 400 });
+    if (!token || !['megachad', 'megagooner', 'usdm'].includes(token)) {
+      return NextResponse.json({ error: 'Token must be "megachad", "megagooner", or "usdm"' }, { status: 400 });
     }
 
     // Whitelist check
@@ -91,6 +94,19 @@ export async function POST(request: Request) {
       chain: megaethTestnet,
       transport: http(),
     });
+
+    // USDm uses mint (no faucet balance needed), others use transfer
+    if (token === 'usdm') {
+      const hash = await walletClient.writeContract({
+        address: TESTNET_USDM_ADDRESS,
+        abi: MOCK_USDM_ABI,
+        functionName: 'mint',
+        args: [address as `0x${string}`, USDM_DRIP],
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      await setCooldown(cooldownKey);
+      return NextResponse.json({ success: true, hash, amount: '1,000', token: '$USDm' });
+    }
 
     const tokenAddress = token === 'megachad' ? TESTNET_MEGACHAD_ADDRESS : TESTNET_MEGAGOONER_ADDRESS;
     const amount = token === 'megachad' ? MEGACHAD_DRIP : MEGAGOONER_DRIP;

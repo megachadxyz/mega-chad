@@ -3,11 +3,12 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /// @title MegaChadLP — Simple MEGACHAD/MEGAGOONER LP token for testnet
 /// @notice Minimal constant-product AMM pair with ERC20 LP token.
 ///         Suitable for testnet staking via JESTERGOONER.
-contract MegaChadLP is ERC20 {
+contract MegaChadLP is ERC20, ReentrancyGuard {
     IERC20 public immutable tokenA; // MEGACHAD
     IERC20 public immutable tokenB; // MEGAGOONER
 
@@ -20,17 +21,18 @@ contract MegaChadLP is ERC20 {
     event Burn(address indexed to, uint256 amountA, uint256 amountB, uint256 liquidity);
     event Swap(address indexed sender, uint256 amountAIn, uint256 amountBIn, uint256 amountAOut, uint256 amountBOut);
 
-    constructor(address _tokenA, address _tokenB) ERC20("MEGACHAD-MEGAGOONER LP", "MC-MG-LP") {
+    constructor(address _tokenA, address _tokenB, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
         require(_tokenA != address(0) && _tokenB != address(0), "zero address");
         require(_tokenA != _tokenB, "identical tokens");
         tokenA = IERC20(_tokenA);
         tokenB = IERC20(_tokenB);
     }
 
-    /// @notice Add liquidity — transfer both tokens first, then call mint
-    function addLiquidity(uint256 amountA, uint256 amountB, address to) external returns (uint256 liquidity) {
+    /// @notice Add liquidity — pull tokens, compute LP shares, mint
+    function addLiquidity(uint256 amountA, uint256 amountB, address to) external nonReentrant returns (uint256 liquidity) {
         require(amountA > 0 && amountB > 0, "zero amounts");
 
+        // Pull tokens first (will revert if insufficient allowance/balance)
         tokenA.transferFrom(msg.sender, address(this), amountA);
         tokenB.transferFrom(msg.sender, address(this), amountB);
 
@@ -55,7 +57,7 @@ contract MegaChadLP is ERC20 {
     }
 
     /// @notice Remove liquidity — burn LP tokens to receive both tokens back
-    function removeLiquidity(uint256 liquidity, address to) external returns (uint256 amountA, uint256 amountB) {
+    function removeLiquidity(uint256 liquidity, address to) external nonReentrant returns (uint256 amountA, uint256 amountB) {
         require(liquidity > 0, "zero liquidity");
 
         uint256 _totalSupply = totalSupply();
@@ -65,9 +67,11 @@ contract MegaChadLP is ERC20 {
 
         _burn(msg.sender, liquidity);
 
+        // Update reserves before external calls (checks-effects-interactions)
         reserveA -= amountA;
         reserveB -= amountB;
 
+        // External calls last
         tokenA.transfer(to, amountA);
         tokenB.transfer(to, amountB);
 
@@ -75,7 +79,7 @@ contract MegaChadLP is ERC20 {
     }
 
     /// @notice Simple constant-product swap (0.3% fee)
-    function swap(uint256 amountAIn, uint256 amountBIn, address to) external {
+    function swap(uint256 amountAIn, uint256 amountBIn, address to) external nonReentrant {
         require(amountAIn > 0 || amountBIn > 0, "zero input");
         require(!(amountAIn > 0 && amountBIn > 0), "one token at a time");
 

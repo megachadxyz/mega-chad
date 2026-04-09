@@ -26,6 +26,15 @@ import {
   MOGGER_STAKING_ABI,
   JESTERGOONER_ABI,
   LP_ABI,
+  TESTNET_JESTERGOONER_V1_ADDRESS,
+  JESTERGOONER_V1_ABI,
+  TESTNET_JESTERGOONER_V2_ADDRESS,
+  TESTNET_LP_ETH_ADDRESS,
+  TESTNET_LP_USDM_ADDRESS,
+  TESTNET_WETH_ADDRESS,
+  TESTNET_USDM_ADDRESS,
+  JESTERGOONER_V3_ABI,
+  WETH_ABI,
 } from '@/lib/testnet-contracts';
 
 // ── Helpers ──────────────────────────────────────────────
@@ -56,7 +65,7 @@ function fmtCountdown(seconds: number): string {
   return `${m}m`;
 }
 
-type ActiveTab = 'burn' | 'framemogger' | 'staking' | 'lp-staking';
+type ActiveTab = 'burn' | 'framemogger' | 'staking' | 'lp-staking' | 'swap';
 
 // ═════════════════════════════════════════════════════════
 export default function BetaProtocol() {
@@ -115,6 +124,12 @@ export default function BetaProtocol() {
         >
           JESTERGOONER
         </button>
+        <button
+          className={`beta-tab${activeTab === 'swap' ? ' active' : ''}`}
+          onClick={() => setActiveTab('swap')}
+        >
+          SWAP
+        </button>
       </div>
 
       {/* Tab content */}
@@ -149,6 +164,7 @@ export default function BetaProtocol() {
             {activeTab === 'framemogger' && <FramemoggerSection address={address!} />}
             {activeTab === 'staking' && <StakingSection address={address!} />}
             {activeTab === 'lp-staking' && <LPStakingSection address={address!} />}
+            {activeTab === 'swap' && <SwapSection address={address!} />}
           </>
         )}
       </div>
@@ -1049,153 +1065,115 @@ function StakingSection({ address }: { address: `0x${string}` }) {
 }
 
 // ═════════════════════════════════════════════════════════
-// JESTERGOONER (Stake MEGACHAD/MEGAGOONER LP → Earn MEGAGOONER)
+// JESTERGOONER (Multi-Pool LP Staking → Earn MEGAGOONER)
 // ═════════════════════════════════════════════════════════
+
+const POOL_CONFIG = [
+  { pid: 0, name: 'MEGACHAD / MEGAGOONER', lpAddress: TESTNET_LP_TOKEN_ADDRESS, tokenBAddress: TESTNET_MEGAGOONER_ADDRESS, tokenBSymbol: 'MEGAGOONER', isEth: false },
+  { pid: 1, name: 'MEGACHAD / ETH', lpAddress: TESTNET_LP_ETH_ADDRESS, tokenBAddress: TESTNET_WETH_ADDRESS, tokenBSymbol: 'ETH', isEth: true },
+  { pid: 2, name: 'MEGACHAD / USDm', lpAddress: TESTNET_LP_USDM_ADDRESS, tokenBAddress: TESTNET_USDM_ADDRESS, tokenBSymbol: 'USDm', isEth: false },
+] as const;
+
 function LPStakingSection({ address }: { address: `0x${string}` }) {
+  const [selectedPool, setSelectedPool] = useState(0);
+  const pool = POOL_CONFIG[selectedPool];
+
+  // ── State ──
   const [amount, setAmount] = useState('');
   const [action, setAction] = useState<'stake' | 'unstake'>('stake');
-  const [status, setStatus] = useState<'idle' | 'approving' | 'approving-b' | 'adding' | 'removing' | 'staking' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'approving' | 'approving-b' | 'adding' | 'removing' | 'wrapping' | 'staking' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [liqPanel, setLiqPanel] = useState<'none' | 'add' | 'remove'>('none');
   const [liqAmountA, setLiqAmountA] = useState('');
   const [removeLiqAmount, setRemoveLiqAmount] = useState('');
 
-  // Token balances
+  // ── Token balances ──
   const { data: megachadBalance, refetch: refetchMegachadBal } = useReadContract({
-    address: TESTNET_MEGACHAD_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'balanceOf',
-    args: [address],
+    address: TESTNET_MEGACHAD_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
+  });
+  const { data: tokenBBalance, refetch: refetchTokenBBal } = useReadContract({
+    address: pool.tokenBAddress, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
   });
 
-  const { data: megagoonerBalance, refetch: refetchGoonerBal } = useReadContract({
-    address: TESTNET_MEGAGOONER_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'balanceOf',
-    args: [address],
-  });
-
-  // LP balance
+  // LP token balance (for this pool)
   const { data: lpBalance, refetch: refetchLpBalance } = useReadContract({
-    address: TESTNET_LP_TOKEN_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'balanceOf',
-    args: [address],
+    address: pool.lpAddress, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
   });
 
+  // ── Allowances ──
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: TESTNET_LP_TOKEN_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'allowance',
+    address: pool.lpAddress, abi: ERC20_ABI, functionName: 'allowance',
     args: [address, TESTNET_JESTERGOONER_ADDRESS],
   });
-
-  // Approvals for LP contract (for addLiquidity)
   const { data: megachadAllowanceLP } = useReadContract({
-    address: TESTNET_MEGACHAD_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'allowance',
-    args: [address, TESTNET_LP_TOKEN_ADDRESS],
+    address: TESTNET_MEGACHAD_ADDRESS, abi: ERC20_ABI, functionName: 'allowance',
+    args: [address, pool.lpAddress],
+  });
+  const { data: tokenBAllowanceLP } = useReadContract({
+    address: pool.tokenBAddress, abi: ERC20_ABI, functionName: 'allowance',
+    args: [address, pool.lpAddress],
   });
 
-  const { data: megagoonerAllowanceLP } = useReadContract({
-    address: TESTNET_MEGAGOONER_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'allowance',
-    args: [address, TESTNET_LP_TOKEN_ADDRESS],
+  // ── V3 contract reads (pid-based) ──
+  const { data: poolInfoData } = useReadContract({
+    address: TESTNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'getPoolInfo',
+    args: [BigInt(selectedPool)],
   });
-
-  // Staker info: (staked, effectiveStake, pendingReward, multiplier, nftCount)
-  const { data: stakerInfo, refetch: refetchStaker } = useReadContract({
-    address: TESTNET_JESTERGOONER_ADDRESS,
-    abi: JESTERGOONER_ABI,
-    functionName: 'getStakerInfo',
-    args: [address],
+  const { data: userInfoData, refetch: refetchStaker } = useReadContract({
+    address: TESTNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'getUserInfo',
+    args: [BigInt(selectedPool), address],
   });
-
-  // Global stats: (totalStaked, totalEffectiveStake, currentWeek, weeklyEmission, rewardsRemaining)
   const { data: globalStats } = useReadContract({
-    address: TESTNET_JESTERGOONER_ADDRESS,
-    abi: JESTERGOONER_ABI,
-    functionName: 'getGlobalStats',
+    address: TESTNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'getGlobalStats',
   });
-
-  // Earned
   const { data: earned, refetch: refetchEarned } = useReadContract({
-    address: TESTNET_JESTERGOONER_ADDRESS,
-    abi: JESTERGOONER_ABI,
-    functionName: 'earned',
+    address: TESTNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'earned',
+    args: [BigInt(selectedPool), address],
+  });
+  const { data: earnedAll } = useReadContract({
+    address: TESTNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'earnedAll',
     args: [address],
   });
 
-  // LP reserves for APY + ratio calculation
+  // ── LP reserves for ratio/APY ──
   const { data: lpReserves } = useReadContract({
-    address: TESTNET_LP_TOKEN_ADDRESS,
-    abi: LP_ABI,
-    functionName: 'getReserves',
+    address: pool.lpAddress, abi: LP_ABI, functionName: 'getReserves',
   });
-
   const { data: lpTotalSupply } = useReadContract({
-    address: TESTNET_LP_TOKEN_ADDRESS,
-    abi: LP_ABI,
-    functionName: 'totalSupply',
+    address: pool.lpAddress, abi: LP_ABI, functionName: 'totalSupply',
   });
 
-  // Pool ratio: MEGAGOONER per MEGACHAD
+  // ── Computed values ──
   const poolRatio = lpReserves && lpReserves[0] > 0n
     ? Number(formatUnits(lpReserves[1], 18)) / Number(formatUnits(lpReserves[0], 18))
-    : 0.05; // fallback 20:1
-
-  // Auto-calc MEGAGOONER amount from MEGACHAD input
+    : 0.05;
   const parsedLiqA = liqAmountA ? parseUnits(liqAmountA, 18) : 0n;
-  const liqAmountB = liqAmountA && Number(liqAmountA) > 0
-    ? (Number(liqAmountA) * poolRatio).toFixed(6)
-    : '';
+  const liqAmountB = liqAmountA && Number(liqAmountA) > 0 ? (Number(liqAmountA) * poolRatio).toFixed(6) : '';
   const parsedLiqB = liqAmountB ? parseUnits(liqAmountB, 18) : 0n;
-
-  // Remove liquidity: estimate tokens returned
   const parsedRemoveLiq = removeLiqAmount ? parseUnits(removeLiqAmount, 18) : 0n;
   const removeEstimate = (() => {
     if (!lpReserves || !lpTotalSupply || parsedRemoveLiq <= 0n || lpTotalSupply <= 0n) return null;
     const share = Number(formatUnits(parsedRemoveLiq, 18)) / Number(formatUnits(lpTotalSupply, 18));
-    const estA = Number(formatUnits(lpReserves[0], 18)) * share;
-    const estB = Number(formatUnits(lpReserves[1], 18)) * share;
-    return { megachad: estA, megagooner: estB };
+    return { tokenA: Number(formatUnits(lpReserves[0], 18)) * share, tokenB: Number(formatUnits(lpReserves[1], 18)) * share };
   })();
+  const poolAllocPct = poolInfoData ? Number(poolInfoData[1]) / 100 : 0;
+  const poolWeeklyEmission = poolInfoData ? poolInfoData[4] : undefined;
 
-  const lpStakingAPY = (() => {
-    if (!globalStats || !lpReserves || !lpTotalSupply) return undefined;
-    const totalEffective = Number(formatUnits(globalStats[1], 18));
-    const weeklyEmission = Number(formatUnits(globalStats[3], 18));
-    if (totalEffective <= 0 || weeklyEmission <= 0) return undefined;
-    const reserveA = Number(formatUnits(lpReserves[0], 18));
-    const reserveB = Number(formatUnits(lpReserves[1], 18));
-    const totalLP = Number(formatUnits(lpTotalSupply, 18));
-    if (reserveA <= 0 || reserveB <= 0 || totalLP <= 0) return undefined;
-    const goonerPrice = reserveA / reserveB;
-    const lpValuePerToken = (2 * reserveA) / totalLP;
-    const effectiveValue = totalEffective * lpValuePerToken;
-    return (weeklyEmission * 52 * goonerPrice / effectiveValue) * 100;
-  })();
-
-  // Write contracts
+  // ── Write hooks ──
   const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
   const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash, query: { enabled: !!approveHash } });
-
   const { writeContract: writeApproveB, data: approveBHash, reset: resetApproveB } = useWriteContract();
   const { isSuccess: approveBConfirmed } = useWaitForTransactionReceipt({ hash: approveBHash, query: { enabled: !!approveBHash } });
-
   const { writeContract: writeAddLiq, data: addLiqHash, reset: resetAddLiq } = useWriteContract();
   const { isSuccess: addLiqConfirmed } = useWaitForTransactionReceipt({ hash: addLiqHash, query: { enabled: !!addLiqHash } });
-
   const { writeContract: writeRemoveLiq, data: removeLiqHash, reset: resetRemoveLiq } = useWriteContract();
   const { isSuccess: removeLiqConfirmed } = useWaitForTransactionReceipt({ hash: removeLiqHash, query: { enabled: !!removeLiqHash } });
-
   const { writeContract: writeStake, data: stakeHash, reset: resetStake } = useWriteContract();
   const { isSuccess: stakeConfirmed } = useWaitForTransactionReceipt({ hash: stakeHash, query: { enabled: !!stakeHash } });
-
   const { writeContract: writeClaim, data: claimHash, reset: resetClaim } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash, query: { enabled: !!claimHash } });
+  const { writeContract: writeWrap, data: wrapHash, reset: resetWrap } = useWriteContract();
+  const { isSuccess: wrapConfirmed } = useWaitForTransactionReceipt({ hash: wrapHash, query: { enabled: !!wrapHash } });
 
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
@@ -1204,14 +1182,33 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const handleAddLiquidity = () => {
     if (parsedLiqA <= 0n || parsedLiqB <= 0n) { setErrorMsg('Enter an amount'); return; }
     if (megachadBalance !== undefined && parsedLiqA > megachadBalance) { setErrorMsg('Insufficient $MEGACHAD'); return; }
-    if (megagoonerBalance !== undefined && parsedLiqB > megagoonerBalance) { setErrorMsg('Insufficient $MEGAGOONER'); return; }
+    // For ETH pool, check native ETH balance is handled by wrapping step
+    if (!pool.isEth && tokenBBalance !== undefined && parsedLiqB > tokenBBalance) { setErrorMsg(`Insufficient $${pool.tokenBSymbol}`); return; }
     setErrorMsg('');
     resetApprove();
     resetApproveB();
     resetAddLiq();
+    resetWrap();
 
+    // For ETH pool: wrap ETH → WETH first
+    if (pool.isEth) {
+      setStatus('wrapping');
+      writeWrap({
+        address: TESTNET_WETH_ADDRESS,
+        abi: WETH_ABI,
+        functionName: 'deposit',
+        value: parsedLiqB,
+        gas: 2000000n,
+      }, { onError: () => { setStatus('error'); setErrorMsg('ETH wrap failed'); } });
+      return;
+    }
+
+    startApproveChain();
+  };
+
+  const startApproveChain = () => {
     const needsApproveA = megachadAllowanceLP !== undefined && megachadAllowanceLP < parsedLiqA;
-    const needsApproveBToken = megagoonerAllowanceLP !== undefined && megagoonerAllowanceLP < parsedLiqB;
+    const needsApproveBToken = tokenBAllowanceLP !== undefined && tokenBAllowanceLP < parsedLiqB;
 
     if (needsApproveA) {
       setStatus('approving');
@@ -1219,16 +1216,16 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         address: TESTNET_MEGACHAD_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [TESTNET_LP_TOKEN_ADDRESS, parsedLiqA],
+        args: [pool.lpAddress, parsedLiqA],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else if (needsApproveBToken) {
       setStatus('approving-b');
       writeApproveB({
-        address: TESTNET_MEGAGOONER_ADDRESS,
+        address: pool.tokenBAddress,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [TESTNET_LP_TOKEN_ADDRESS, parsedLiqB],
+        args: [pool.lpAddress, parsedLiqB],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else {
@@ -1237,14 +1234,14 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   };
 
   const executeApproveB = () => {
-    const needsApproveBToken = megagoonerAllowanceLP !== undefined && megagoonerAllowanceLP < parsedLiqB;
+    const needsApproveBToken = tokenBAllowanceLP !== undefined && tokenBAllowanceLP < parsedLiqB;
     if (needsApproveBToken) {
       setStatus('approving-b');
       writeApproveB({
-        address: TESTNET_MEGAGOONER_ADDRESS,
+        address: pool.tokenBAddress,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [TESTNET_LP_TOKEN_ADDRESS, parsedLiqB],
+        args: [pool.lpAddress, parsedLiqB],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else {
@@ -1255,7 +1252,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const executeAddLiquidity = () => {
     setStatus('adding');
     writeAddLiq({
-      address: TESTNET_LP_TOKEN_ADDRESS,
+      address: pool.lpAddress,
       abi: LP_ABI,
       functionName: 'addLiquidity',
       args: [parsedLiqA, parsedLiqB, address],
@@ -1271,7 +1268,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     resetRemoveLiq();
     setStatus('removing');
     writeRemoveLiq({
-      address: TESTNET_LP_TOKEN_ADDRESS,
+      address: pool.lpAddress,
       abi: LP_ABI,
       functionName: 'removeLiquidity',
       args: [parsedRemoveLiq, address],
@@ -1279,7 +1276,11 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     }, { onError: () => { setStatus('error'); setErrorMsg('Remove liquidity failed'); } });
   };
 
-  // Chain: approveA → approveB → addLiquidity
+  // Chain: wrap → approveA → approveB → addLiquidity
+  useEffect(() => {
+    if (wrapConfirmed && status === 'wrapping') startApproveChain();
+  }, [wrapConfirmed, status]);
+
   useEffect(() => {
     if (approveConfirmed && status === 'approving' && liqPanel === 'add') executeApproveB();
   }, [approveConfirmed, status, liqPanel]);
@@ -1294,7 +1295,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       setLiqAmountA('');
       refetchLpBalance();
       refetchMegachadBal();
-      refetchGoonerBal();
+      refetchTokenBBal();
     }
   }, [addLiqConfirmed, status]);
 
@@ -1304,7 +1305,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       setRemoveLiqAmount('');
       refetchLpBalance();
       refetchMegachadBal();
-      refetchGoonerBal();
+      refetchTokenBBal();
     }
   }, [removeLiqConfirmed, status]);
 
@@ -1322,7 +1323,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       if (needsApproval) {
         setStatus('approving');
         writeApprove({
-          address: TESTNET_LP_TOKEN_ADDRESS,
+          address: pool.lpAddress,
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TESTNET_JESTERGOONER_ADDRESS, parsedAmount],
@@ -1332,15 +1333,15 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         executeStake();
       }
     } else {
-      if (stakerInfo && parsedAmount > stakerInfo[0]) {
+      if (userInfoData && parsedAmount > userInfoData[0]) {
         setErrorMsg('Cannot unstake more than staked'); return;
       }
       setStatus('unstaking');
       writeStake({
         address: TESTNET_JESTERGOONER_ADDRESS,
-        abi: JESTERGOONER_ABI,
+        abi: JESTERGOONER_V3_ABI,
         functionName: 'unstake',
-        args: [parsedAmount],
+        args: [BigInt(selectedPool), parsedAmount],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Unstake failed'); } });
     }
@@ -1350,9 +1351,9 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     setStatus('staking');
     writeStake({
       address: TESTNET_JESTERGOONER_ADDRESS,
-      abi: JESTERGOONER_ABI,
+      abi: JESTERGOONER_V3_ABI,
       functionName: 'stake',
-      args: [parsedAmount],
+      args: [BigInt(selectedPool), parsedAmount],
       gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Stake failed'); } });
   };
@@ -1362,10 +1363,22 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     setStatus('claiming');
     writeClaim({
       address: TESTNET_JESTERGOONER_ADDRESS,
-      abi: JESTERGOONER_ABI,
+      abi: JESTERGOONER_V3_ABI,
       functionName: 'claimRewards',
+      args: [BigInt(selectedPool)],
       gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Claim failed'); } });
+  };
+
+  const handleClaimAll = () => {
+    resetClaim();
+    setStatus('claiming');
+    writeClaim({
+      address: TESTNET_JESTERGOONER_ADDRESS,
+      abi: JESTERGOONER_V3_ABI,
+      functionName: 'claimAllRewards',
+      gas: 2000000n,
+    }, { onError: () => { setStatus('error'); setErrorMsg('Claim all failed'); } });
   };
 
   // Stake approve → stake chain (only when not in add-liq panel)
@@ -1392,18 +1405,228 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     }
   }, [claimConfirmed, status]);
 
+  // ── V1 Migration: old JesterGooner with lock periods ──
+  const { data: v1StakerInfo, refetch: refetchV1Staker } = useReadContract({
+    address: TESTNET_JESTERGOONER_V1_ADDRESS,
+    abi: JESTERGOONER_V1_ABI,
+    functionName: 'getStakerInfo',
+    args: [address],
+  });
+  const { data: v1Earned, refetch: refetchV1Earned } = useReadContract({
+    address: TESTNET_JESTERGOONER_V1_ADDRESS,
+    abi: JESTERGOONER_V1_ABI,
+    functionName: 'earned',
+    args: [address],
+  });
+  const { writeContract: writeV1Unstake, data: v1UnstakeHash, reset: resetV1Unstake } = useWriteContract();
+  const { isSuccess: v1UnstakeConfirmed } = useWaitForTransactionReceipt({ hash: v1UnstakeHash, query: { enabled: !!v1UnstakeHash } });
+  const { writeContract: writeV1Claim, data: v1ClaimHash, reset: resetV1Claim } = useWriteContract();
+  const { isSuccess: v1ClaimConfirmed } = useWaitForTransactionReceipt({ hash: v1ClaimHash, query: { enabled: !!v1ClaimHash } });
+
+  const v1Staked = v1StakerInfo ? v1StakerInfo[0] : 0n;
+  const v1LockEnd = v1StakerInfo ? Number(v1StakerInfo[2]) : 0;
+  const v1CanUnstake = v1StakerInfo ? v1StakerInfo[6] : false;
+  const [v1Status, setV1Status] = useState<'idle' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
+  const [v1Error, setV1Error] = useState('');
+
+  // ── V2 Migration: old JesterGooner V2 (single pool, no lock) ──
+  const { data: v2StakerInfo, refetch: refetchV2Staker } = useReadContract({
+    address: TESTNET_JESTERGOONER_V2_ADDRESS,
+    abi: JESTERGOONER_ABI,
+    functionName: 'getStakerInfo',
+    args: [address],
+  });
+  const { data: v2Earned, refetch: refetchV2Earned } = useReadContract({
+    address: TESTNET_JESTERGOONER_V2_ADDRESS,
+    abi: JESTERGOONER_ABI,
+    functionName: 'earned',
+    args: [address],
+  });
+  const { writeContract: writeV2Unstake, data: v2UnstakeHash, reset: resetV2Unstake } = useWriteContract();
+  const { isSuccess: v2UnstakeConfirmed } = useWaitForTransactionReceipt({ hash: v2UnstakeHash, query: { enabled: !!v2UnstakeHash } });
+  const { writeContract: writeV2Claim, data: v2ClaimHash, reset: resetV2Claim } = useWriteContract();
+  const { isSuccess: v2ClaimConfirmed } = useWaitForTransactionReceipt({ hash: v2ClaimHash, query: { enabled: !!v2ClaimHash } });
+
+  const v2Staked = v2StakerInfo ? v2StakerInfo[0] : 0n;
+  const [v2Status, setV2Status] = useState<'idle' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
+  const [v2Error, setV2Error] = useState('');
+
+  const handleV1Unstake = () => {
+    resetV1Unstake();
+    setV1Status('unstaking');
+    setV1Error('');
+    writeV1Unstake({
+      address: TESTNET_JESTERGOONER_V1_ADDRESS,
+      abi: JESTERGOONER_V1_ABI,
+      functionName: 'unstake',
+      args: [v1Staked],
+      gas: 2000000n,
+    }, { onError: (err) => { setV1Status('error'); setV1Error(err.message?.includes('locked') ? 'Still locked' : 'Unstake failed'); } });
+  };
+
+  const handleV1Claim = () => {
+    resetV1Claim();
+    setV1Status('claiming');
+    setV1Error('');
+    writeV1Claim({
+      address: TESTNET_JESTERGOONER_V1_ADDRESS,
+      abi: JESTERGOONER_V1_ABI,
+      functionName: 'claimRewards',
+      gas: 2000000n,
+    }, { onError: () => { setV1Status('error'); setV1Error('Claim failed'); } });
+  };
+
+  const handleV2Unstake = () => {
+    resetV2Unstake();
+    setV2Status('unstaking');
+    setV2Error('');
+    writeV2Unstake({
+      address: TESTNET_JESTERGOONER_V2_ADDRESS,
+      abi: JESTERGOONER_ABI,
+      functionName: 'unstake',
+      args: [v2Staked],
+      gas: 2000000n,
+    }, { onError: () => { setV2Status('error'); setV2Error('Unstake failed'); } });
+  };
+
+  const handleV2Claim = () => {
+    resetV2Claim();
+    setV2Status('claiming');
+    setV2Error('');
+    writeV2Claim({
+      address: TESTNET_JESTERGOONER_V2_ADDRESS,
+      abi: JESTERGOONER_ABI,
+      functionName: 'claimRewards',
+      gas: 2000000n,
+    }, { onError: () => { setV2Status('error'); setV2Error('Claim failed'); } });
+  };
+
+  useEffect(() => {
+    if (v1UnstakeConfirmed && v1Status === 'unstaking') {
+      setV1Status('done');
+      refetchV1Staker();
+      refetchV1Earned();
+      refetchLpBalance();
+    }
+  }, [v1UnstakeConfirmed, v1Status]);
+
+  useEffect(() => {
+    if (v1ClaimConfirmed && v1Status === 'claiming') {
+      setV1Status('done');
+      refetchV1Staker();
+      refetchV1Earned();
+    }
+  }, [v1ClaimConfirmed, v1Status]);
+
+  useEffect(() => {
+    if (v2UnstakeConfirmed && v2Status === 'unstaking') {
+      setV2Status('done');
+      refetchV2Staker();
+      refetchV2Earned();
+      refetchLpBalance();
+    }
+  }, [v2UnstakeConfirmed, v2Status]);
+
+  useEffect(() => {
+    if (v2ClaimConfirmed && v2Status === 'claiming') {
+      setV2Status('done');
+      refetchV2Staker();
+      refetchV2Earned();
+    }
+  }, [v2ClaimConfirmed, v2Status]);
+
+  const v1LockTimeLeft = v1LockEnd > 0 ? Math.max(0, v1LockEnd - Math.floor(Date.now() / 1000)) : 0;
+  const v1LockDisplay = v1LockTimeLeft > 0
+    ? `${Math.floor(v1LockTimeLeft / 86400)}d ${Math.floor((v1LockTimeLeft % 86400) / 3600)}h`
+    : 'Unlocked';
+
   const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
 
   return (
     <div className="beta-card">
       <div className="beta-card-header">
-        <h2>JESTERGOONER</h2>
-        <span className="beta-card-badge">LP STAKING</span>
+        <h2>JESTERGOONER V3</h2>
+        <span className="beta-card-badge">MULTI-POOL LP STAKING</span>
       </div>
       <p className="beta-card-desc">
-        Stake MEGACHAD/MEGAGOONER LP tokens to earn $MEGAGOONER rewards. No lock period — stake and unstake freely.
-        Receives 60% of weekly $MEGAGOONER emissions.
+        Stake LP tokens across multiple pools to earn $MEGAGOONER rewards. No lock period — stake and unstake freely.
       </p>
+
+      {/* V1 Migration Banner */}
+      {v1Staked > 0n && (
+        <div className="beta-info-box beta-info-warning" style={{ borderColor: '#F786C6' }}>
+          <h4>V1 MIGRATION REQUIRED</h4>
+          <p>You have <strong>{Number(formatUnits(v1Staked, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} LP</strong> staked in V1 (lock-based).</p>
+          <div className="beta-stat-row" style={{ margin: '0.5rem 0' }}>
+            <div className="beta-stat">
+              <span className="beta-stat-label">LOCK STATUS</span>
+              <span className="beta-stat-value">{v1LockDisplay}</span>
+            </div>
+            <div className="beta-stat">
+              <span className="beta-stat-label">PENDING REWARDS</span>
+              <span className="beta-stat-value">{v1Earned ? Number(formatUnits(v1Earned, 18)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0'} $MEGAGOONER</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <button
+              className="beta-btn-primary"
+              onClick={handleV1Unstake}
+              disabled={!v1CanUnstake || v1Status === 'unstaking' || v1Status === 'claiming'}
+              style={{ flex: 1, opacity: v1CanUnstake ? 1 : 0.5 }}
+            >
+              {v1Status === 'unstaking' ? 'UNSTAKING...' : v1CanUnstake ? 'UNSTAKE FROM V1' : `LOCKED (${v1LockDisplay})`}
+            </button>
+            {v1Earned !== undefined && v1Earned > 0n && (
+              <button
+                className="beta-btn-secondary"
+                onClick={handleV1Claim}
+                disabled={v1Status === 'unstaking' || v1Status === 'claiming'}
+                style={{ flex: 1 }}
+              >
+                {v1Status === 'claiming' ? 'CLAIMING...' : 'CLAIM V1 REWARDS'}
+              </button>
+            )}
+          </div>
+          {v1Status === 'done' && <div className="beta-status success" style={{ marginTop: '0.5rem' }}>V1 transaction confirmed!</div>}
+          {v1Status === 'error' && <div className="beta-status error" style={{ marginTop: '0.5rem' }}>{v1Error || 'V1 transaction failed'}</div>}
+        </div>
+      )}
+
+      {/* V2 Migration Banner */}
+      {v2Staked > 0n && (
+        <div className="beta-info-box beta-info-warning" style={{ borderColor: '#F786C6' }}>
+          <h4>V2 MIGRATION REQUIRED</h4>
+          <p>You have <strong>{Number(formatUnits(v2Staked, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} LP</strong> staked in V2 (single pool). Unstake and re-stake in V3 to earn from the new multi-pool system.</p>
+          <div className="beta-stat-row" style={{ margin: '0.5rem 0' }}>
+            <div className="beta-stat">
+              <span className="beta-stat-label">PENDING REWARDS</span>
+              <span className="beta-stat-value">{v2Earned ? Number(formatUnits(v2Earned, 18)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0'} $MEGAGOONER</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <button
+              className="beta-btn-primary"
+              onClick={handleV2Unstake}
+              disabled={v2Status === 'unstaking' || v2Status === 'claiming'}
+              style={{ flex: 1 }}
+            >
+              {v2Status === 'unstaking' ? 'UNSTAKING...' : 'UNSTAKE FROM V2'}
+            </button>
+            {v2Earned !== undefined && v2Earned > 0n && (
+              <button
+                className="beta-btn-secondary"
+                onClick={handleV2Claim}
+                disabled={v2Status === 'unstaking' || v2Status === 'claiming'}
+                style={{ flex: 1 }}
+              >
+                {v2Status === 'claiming' ? 'CLAIMING...' : 'CLAIM V2 REWARDS'}
+              </button>
+            )}
+          </div>
+          {v2Status === 'done' && <div className="beta-status success" style={{ marginTop: '0.5rem' }}>V2 transaction confirmed!</div>}
+          {v2Status === 'error' && <div className="beta-status error" style={{ marginTop: '0.5rem' }}>{v2Error || 'V2 transaction failed'}</div>}
+        </div>
+      )}
 
       {/* NFT Requirement */}
       <div className="beta-info-box beta-info-warning">
@@ -1425,28 +1648,65 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       {/* Global stats */}
       <div className="beta-stat-row">
         <div className="beta-stat">
-          <span className="beta-stat-label">TOTAL LP STAKED</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} LP</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">APY</span>
-          <span className="beta-stat-value">{fmtAPY(lpStakingAPY)}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">WEEKLY EMISSION</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[3]) : '—'} $MEGAGOONER</span>
-        </div>
-        <div className="beta-stat">
           <span className="beta-stat-label">WEEK</span>
-          <span className="beta-stat-value">{globalStats ? `${Number(globalStats[2])} / 225` : '—'}</span>
+          <span className="beta-stat-value">{globalStats ? `${Number(globalStats[0])} / 225` : '—'}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">TOTAL WEEKLY EMISSION</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'} $MEGAGOONER</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">REWARDS REMAINING</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'} $MEGAGOONER</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">POOLS</span>
+          <span className="beta-stat-value">{globalStats ? Number(globalStats[3]).toString() : '—'}</span>
         </div>
       </div>
 
-      {/* Your position */}
+      {/* Claim All Rewards */}
+      {earnedAll !== undefined && earnedAll > 0n && (
+        <button className="beta-btn-secondary" onClick={handleClaimAll} disabled={isBusy} style={{ marginBottom: '1rem' }}>
+          CLAIM ALL: {fmtBig(earnedAll)} $MEGAGOONER
+        </button>
+      )}
+
+      {/* ── Pool Selector Tabs ── */}
+      <div className="beta-toggle-row" style={{ marginBottom: '1rem' }}>
+        {POOL_CONFIG.map((p, i) => (
+          <button
+            key={i}
+            className={`beta-toggle${selectedPool === i ? ' active' : ''}`}
+            onClick={() => { setSelectedPool(i); setAmount(''); setLiqPanel('none'); setErrorMsg(''); setStatus('idle'); }}
+            style={{ fontSize: '0.7rem', padding: '0.4rem 0.6rem' }}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Pool-specific stats */}
+      <div className="beta-stat-row">
+        <div className="beta-stat">
+          <span className="beta-stat-label">POOL ALLOCATION</span>
+          <span className="beta-stat-value">{poolAllocPct.toFixed(1)}%</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">POOL WEEKLY EMISSION</span>
+          <span className="beta-stat-value">{poolWeeklyEmission ? fmtBig(poolWeeklyEmission) : '—'} $MEGAGOONER</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">TOTAL LP STAKED</span>
+          <span className="beta-stat-value">{poolInfoData ? fmtBig(poolInfoData[2]) : '—'} LP</span>
+        </div>
+      </div>
+
+      {/* Your position in selected pool */}
       <div className="beta-stat-row">
         <div className="beta-stat">
           <span className="beta-stat-label">YOUR LP STAKED</span>
-          <span className="beta-stat-value">{stakerInfo ? fmtBig(stakerInfo[0]) : '—'} LP</span>
+          <span className="beta-stat-value">{userInfoData ? fmtBig(userInfoData[0]) : '—'} LP</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">PENDING REWARDS</span>
@@ -1454,7 +1714,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
-          <span className="beta-stat-value">{stakerInfo ? `${(Number(stakerInfo[3]) / 10000).toFixed(2)}x` : '—'}</span>
+          <span className="beta-stat-value">{userInfoData ? `${(Number(userInfoData[3]) / 10000).toFixed(2)}x` : '—'}</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">LP BALANCE</span>
@@ -1462,10 +1722,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </div>
       </div>
 
-      {/* Claim */}
+      {/* Claim this pool */}
       {earned !== undefined && earned > 0n && (
         <button className="beta-btn-secondary" onClick={handleClaim} disabled={isBusy}>
-          CLAIM {fmtBig(earned)} $MEGAGOONER
+          CLAIM {fmtBig(earned)} $MEGAGOONER (THIS POOL)
         </button>
       )}
 
@@ -1490,13 +1750,14 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       {liqPanel === 'add' && (
         <div style={{ padding: '1rem', border: '1px solid rgba(247,134,198,0.15)', borderRadius: '8px', marginBottom: '1.5rem' }}>
           <p className="beta-card-desc" style={{ marginBottom: '0.75rem' }}>
-            Deposit $MEGACHAD and $MEGAGOONER in the current pool ratio to receive LP tokens.
+            Deposit $MEGACHAD and ${pool.tokenBSymbol} in the current pool ratio to receive LP tokens.
+            {pool.isEth && ' ETH will be automatically wrapped to WETH.'}
           </p>
 
           <div className="beta-stat-row" style={{ marginBottom: '0.75rem' }}>
             <div className="beta-stat">
               <span className="beta-stat-label">POOL RATIO</span>
-              <span className="beta-stat-value">1 MEGACHAD = {poolRatio.toFixed(4)} MEGAGOONER</span>
+              <span className="beta-stat-value">1 MEGACHAD = {poolRatio.toFixed(4)} {pool.tokenBSymbol}</span>
             </div>
           </div>
 
@@ -1523,7 +1784,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           </div>
 
           <div className="beta-input-group" style={{ marginTop: '0.5rem' }}>
-            <label className="beta-input-label">$MEGAGOONER AMOUNT (auto)</label>
+            <label className="beta-input-label">${pool.tokenBSymbol} AMOUNT (auto)</label>
             <div className="beta-input-row">
               <input
                 type="text"
@@ -1542,8 +1803,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
               <span className="beta-stat-value">{fmtBig(megachadBalance)}</span>
             </div>
             <div className="beta-stat">
-              <span className="beta-stat-label">YOUR $MEGAGOONER</span>
-              <span className="beta-stat-value">{fmtBig(megagoonerBalance)}</span>
+              <span className="beta-stat-label">YOUR ${pool.tokenBSymbol}</span>
+              <span className="beta-stat-value">{fmtBig(tokenBBalance)}</span>
             </div>
           </div>
 
@@ -1552,8 +1813,9 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
             onClick={handleAddLiquidity}
             disabled={isBusy || parsedLiqA <= 0n}
           >
-            {status === 'approving' ? 'APPROVING $MEGACHAD...'
-              : status === 'approving-b' ? 'APPROVING $MEGAGOONER...'
+            {status === 'wrapping' ? 'WRAPPING ETH...'
+              : status === 'approving' ? 'APPROVING $MEGACHAD...'
+              : status === 'approving-b' ? `APPROVING $${pool.tokenBSymbol}...`
               : status === 'adding' ? 'ADDING LIQUIDITY...'
               : 'ADD LIQUIDITY'}
           </button>
@@ -1563,7 +1825,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       {liqPanel === 'remove' && (
         <div style={{ padding: '1rem', border: '1px solid rgba(247,134,198,0.15)', borderRadius: '8px', marginBottom: '1.5rem' }}>
           <p className="beta-card-desc" style={{ marginBottom: '0.75rem' }}>
-            Burn LP tokens to withdraw your $MEGACHAD and $MEGAGOONER from the pool.
+            Burn LP tokens to withdraw your $MEGACHAD and ${pool.tokenBSymbol} from the pool.
           </p>
 
           <div className="beta-input-group">
@@ -1592,11 +1854,11 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
             <div className="beta-stat-row" style={{ margin: '0.75rem 0' }}>
               <div className="beta-stat">
                 <span className="beta-stat-label">YOU RECEIVE (EST.)</span>
-                <span className="beta-stat-value">{removeEstimate.megachad.toFixed(2)} $MEGACHAD</span>
+                <span className="beta-stat-value">{removeEstimate.tokenA.toFixed(2)} $MEGACHAD</span>
               </div>
               <div className="beta-stat">
                 <span className="beta-stat-label">&nbsp;</span>
-                <span className="beta-stat-value">{removeEstimate.megagooner.toFixed(2)} $MEGAGOONER</span>
+                <span className="beta-stat-value">{removeEstimate.tokenB.toFixed(2)} ${pool.tokenBSymbol}</span>
               </div>
             </div>
           )}
@@ -1651,7 +1913,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
             className="beta-btn-max"
             onClick={() => {
               if (action === 'stake' && lpBalance) setAmount(formatUnits(lpBalance, 18));
-              if (action === 'unstake' && stakerInfo) setAmount(formatUnits(stakerInfo[0], 18));
+              if (action === 'unstake' && userInfoData) setAmount(formatUnits(userInfoData[0], 18));
             }}
           >
             MAX
@@ -1661,6 +1923,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
       {status !== 'idle' && status !== 'done' && (
         <div className={`beta-status ${status === 'error' ? 'error' : ''}`}>
+          {status === 'wrapping' && 'Wrapping ETH to WETH...'}
           {status === 'approving' && liqPanel !== 'add' && 'Approving LP tokens...'}
           {status === 'staking' && 'Staking LP tokens...'}
           {status === 'unstaking' && 'Unstaking LP tokens...'}
@@ -1677,6 +1940,300 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         disabled={isBusy}
       >
         {needsApproval ? `APPROVE & ${action.toUpperCase()}` : action === 'stake' ? 'STAKE LP' : 'UNSTAKE LP'}
+      </button>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════
+// SWAP — Buy / Sell MEGAGOONER via LP
+// ═════════════════════════════════════════════════════════
+
+function SwapSection({ address }: { address: `0x${string}` }) {
+  const [direction, setDirection] = useState<'buy' | 'sell'>('buy');
+  const [inputAmount, setInputAmount] = useState('');
+  const [status, setStatus] = useState<'idle' | 'approving' | 'swapping' | 'done' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Balances
+  const { data: megachadBalance, refetch: refetchChad } = useReadContract({
+    address: TESTNET_MEGACHAD_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+  });
+
+  const { data: megagoonerBalance, refetch: refetchGooner } = useReadContract({
+    address: TESTNET_MEGAGOONER_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+  });
+
+  // Allowances on LP contract
+  const { data: chadAllowance, refetch: refetchChadAllowance } = useReadContract({
+    address: TESTNET_MEGACHAD_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: [address, TESTNET_LP_TOKEN_ADDRESS],
+  });
+
+  const { data: goonerAllowance, refetch: refetchGoonerAllowance } = useReadContract({
+    address: TESTNET_MEGAGOONER_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: [address, TESTNET_LP_TOKEN_ADDRESS],
+  });
+
+  // Reserves for quote
+  const { data: reserves } = useReadContract({
+    address: TESTNET_LP_TOKEN_ADDRESS,
+    abi: LP_ABI,
+    functionName: 'getReserves',
+  });
+
+  const parsedInput = inputAmount && Number(inputAmount) > 0 ? parseUnits(inputAmount, 18) : 0n;
+
+  // Compute output estimate (constant-product with 0.3% fee)
+  const outputEstimate = (() => {
+    if (!reserves || parsedInput <= 0n) return 0n;
+    const [reserveA, reserveB] = reserves; // A = MEGACHAD, B = MEGAGOONER
+    if (reserveA <= 0n || reserveB <= 0n) return 0n;
+
+    if (direction === 'buy') {
+      // Sending MEGACHAD (A) to get MEGAGOONER (B)
+      const amountInWithFee = parsedInput * 997n;
+      return (amountInWithFee * reserveB) / (reserveA * 1000n + amountInWithFee);
+    } else {
+      // Sending MEGAGOONER (B) to get MEGACHAD (A)
+      const amountInWithFee = parsedInput * 997n;
+      return (amountInWithFee * reserveA) / (reserveB * 1000n + amountInWithFee);
+    }
+  })();
+
+  // Price impact
+  const priceImpact = (() => {
+    if (!reserves || parsedInput <= 0n) return 0;
+    const [reserveA, reserveB] = reserves;
+    if (reserveA <= 0n || reserveB <= 0n) return 0;
+    const spotPrice = direction === 'buy'
+      ? Number(formatUnits(reserveB, 18)) / Number(formatUnits(reserveA, 18))
+      : Number(formatUnits(reserveA, 18)) / Number(formatUnits(reserveB, 18));
+    if (spotPrice <= 0) return 0;
+    const effectivePrice = Number(formatUnits(outputEstimate, 18)) / Number(inputAmount);
+    return Math.abs(1 - effectivePrice / spotPrice) * 100;
+  })();
+
+  // Spot price
+  const spotPrice = (() => {
+    if (!reserves) return null;
+    const [rA, rB] = reserves;
+    if (rA <= 0n || rB <= 0n) return null;
+    return Number(formatUnits(rA, 18)) / Number(formatUnits(rB, 18));
+  })();
+
+  const inputToken = direction === 'buy' ? 'MEGACHAD' : 'MEGAGOONER';
+  const outputToken = direction === 'buy' ? 'MEGAGOONER' : 'MEGACHAD';
+  const inputBalance = direction === 'buy' ? megachadBalance : megagoonerBalance;
+  const currentAllowance = direction === 'buy' ? chadAllowance : goonerAllowance;
+  const needsApproval = currentAllowance !== undefined && parsedInput > 0n && currentAllowance < parsedInput;
+
+  // Write hooks
+  const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
+  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({ hash: approveHash, query: { enabled: !!approveHash } });
+
+  const { writeContract: writeSwap, data: swapHash, reset: resetSwap } = useWriteContract();
+  const { isSuccess: swapConfirmed } = useWaitForTransactionReceipt({ hash: swapHash, query: { enabled: !!swapHash } });
+
+  const executeSwap = () => {
+    setStatus('swapping');
+    const args: [bigint, bigint, `0x${string}`] = direction === 'buy'
+      ? [parsedInput, 0n, address]
+      : [0n, parsedInput, address];
+
+    writeSwap({
+      address: TESTNET_LP_TOKEN_ADDRESS,
+      abi: LP_ABI,
+      functionName: 'swap',
+      args,
+      gas: 2000000n,
+    }, { onError: () => { setStatus('error'); setErrorMsg('Swap failed'); } });
+  };
+
+  const handleSwap = () => {
+    if (parsedInput <= 0n) { setErrorMsg('Enter an amount'); return; }
+    if (inputBalance !== undefined && parsedInput > inputBalance) { setErrorMsg(`Insufficient $${inputToken}`); return; }
+    setErrorMsg('');
+    resetApprove();
+    resetSwap();
+
+    if (needsApproval) {
+      setStatus('approving');
+      const tokenAddr = direction === 'buy' ? TESTNET_MEGACHAD_ADDRESS : TESTNET_MEGAGOONER_ADDRESS;
+      writeApprove({
+        address: tokenAddr,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [TESTNET_LP_TOKEN_ADDRESS, parsedInput],
+        gas: 2000000n,
+      }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
+    } else {
+      executeSwap();
+    }
+  };
+
+  // Chain: approve → swap
+  useEffect(() => {
+    if (approveConfirmed && status === 'approving') {
+      refetchChadAllowance();
+      refetchGoonerAllowance();
+      executeSwap();
+    }
+  }, [approveConfirmed, status]);
+
+  useEffect(() => {
+    if (swapConfirmed && status === 'swapping') {
+      setStatus('done');
+      setInputAmount('');
+      refetchChad();
+      refetchGooner();
+      refetchChadAllowance();
+      refetchGoonerAllowance();
+    }
+  }, [swapConfirmed, status]);
+
+  const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
+
+  return (
+    <div className="beta-card">
+      <div className="beta-card-header">
+        <h2>SWAP</h2>
+        <span className="beta-card-badge">DEX</span>
+      </div>
+      <p className="beta-card-desc">
+        Buy or sell $MEGAGOONER using $MEGACHAD via the MEGACHAD/MEGAGOONER liquidity pool. 0.3% swap fee.
+      </p>
+
+      {/* Price info */}
+      {spotPrice !== null && (
+        <div className="beta-stat-row">
+          <div className="beta-stat">
+            <span className="beta-stat-label">PRICE</span>
+            <span className="beta-stat-value">1 $MEGAGOONER = {spotPrice.toFixed(2)} $MEGACHAD</span>
+          </div>
+          <div className="beta-stat">
+            <span className="beta-stat-label">POOL RESERVES</span>
+            <span className="beta-stat-value">
+              {reserves ? `${fmtBig(reserves[0])} MEGACHAD / ${fmtBig(reserves[1])} MEGAGOONER` : '—'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Direction toggle */}
+      <div className="beta-toggle-row">
+        <button
+          className={`beta-toggle${direction === 'buy' ? ' active' : ''}`}
+          onClick={() => { setDirection('buy'); setInputAmount(''); setErrorMsg(''); setStatus('idle'); }}
+        >
+          BUY $MEGAGOONER
+        </button>
+        <button
+          className={`beta-toggle${direction === 'sell' ? ' active' : ''}`}
+          onClick={() => { setDirection('sell'); setInputAmount(''); setErrorMsg(''); setStatus('idle'); }}
+        >
+          SELL $MEGAGOONER
+        </button>
+      </div>
+
+      {/* Input */}
+      <div className="beta-input-group">
+        <label className="beta-input-label">YOU PAY (${inputToken})</label>
+        <div className="beta-input-row">
+          <input
+            type="number"
+            value={inputAmount}
+            onChange={(e) => setInputAmount(e.target.value)}
+            placeholder="0.0"
+            className="beta-input"
+            min="0"
+          />
+          <button
+            className="beta-btn-max"
+            onClick={() => { if (inputBalance) setInputAmount(formatUnits(inputBalance, 18)); }}
+          >
+            MAX
+          </button>
+        </div>
+        <span className="beta-input-hint">Balance: {fmtBig(inputBalance)} ${inputToken}</span>
+      </div>
+
+      {/* Output estimate */}
+      <div className="beta-input-group" style={{ marginTop: '0.5rem' }}>
+        <label className="beta-input-label">YOU RECEIVE (${outputToken})</label>
+        <div className="beta-input-row">
+          <input
+            type="text"
+            value={outputEstimate > 0n ? Number(formatUnits(outputEstimate, 18)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : ''}
+            readOnly
+            placeholder="—"
+            className="beta-input"
+            style={{ opacity: 0.7 }}
+          />
+        </div>
+      </div>
+
+      {/* Swap details */}
+      {parsedInput > 0n && outputEstimate > 0n && (
+        <div className="beta-stat-row" style={{ margin: '0.75rem 0' }}>
+          <div className="beta-stat">
+            <span className="beta-stat-label">RATE</span>
+            <span className="beta-stat-value">
+              1 ${inputToken} = {(Number(formatUnits(outputEstimate, 18)) / Number(inputAmount)).toFixed(4)} ${outputToken}
+            </span>
+          </div>
+          <div className="beta-stat">
+            <span className="beta-stat-label">PRICE IMPACT</span>
+            <span className="beta-stat-value" style={{ color: priceImpact > 5 ? '#ff4444' : priceImpact > 1 ? '#ffaa00' : '#44ff44' }}>
+              {priceImpact.toFixed(2)}%
+            </span>
+          </div>
+          <div className="beta-stat">
+            <span className="beta-stat-label">FEE</span>
+            <span className="beta-stat-value">0.3%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Status */}
+      {status !== 'idle' && status !== 'done' && (
+        <div className={`beta-status ${status === 'error' ? 'error' : ''}`}>
+          {status === 'approving' && `Approving $${inputToken}...`}
+          {status === 'swapping' && 'Swapping...'}
+          {status === 'error' && (errorMsg || 'Transaction failed')}
+        </div>
+      )}
+      {status === 'done' && <div className="beta-status success">Swap confirmed!</div>}
+      {errorMsg && status === 'idle' && <div className="beta-status error">{errorMsg}</div>}
+
+      {/* Price impact warning */}
+      {priceImpact > 5 && (
+        <div className="beta-info-box beta-info-warning">
+          <h4>HIGH PRICE IMPACT</h4>
+          <p>This trade has a {priceImpact.toFixed(1)}% price impact. Consider swapping a smaller amount.</p>
+        </div>
+      )}
+
+      <button
+        className="beta-btn-primary"
+        onClick={handleSwap}
+        disabled={isBusy || parsedInput <= 0n}
+      >
+        {needsApproval
+          ? `APPROVE & SWAP`
+          : status === 'approving' ? `APPROVING...`
+          : status === 'swapping' ? 'SWAPPING...'
+          : direction === 'buy' ? 'BUY $MEGAGOONER' : 'SELL $MEGAGOONER'}
       </button>
     </div>
   );
