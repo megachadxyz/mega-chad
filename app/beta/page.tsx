@@ -288,14 +288,28 @@ function BurnSection({ address }: { address: `0x${string}` }) {
     }
   }, [trenTxHash, status]);
 
-  // When tren transfer confirmed, simulate generation
+  // When tren transfer confirmed, mint NFT
   useEffect(() => {
-    if (trenConfirmed && status === 'confirming2') {
+    if (trenConfirmed && status === 'confirming2' && burnTxHash) {
       setStatus('generating');
-      setTimeout(() => {
-        setStatus('done');
-        refetchBalance();
-      }, 2000);
+      fetch('/api/beta/mint-nft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, burnTxHash }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setStatus('done');
+          refetchBalance();
+          if (data.error) {
+            setErrorMsg(`Burn succeeded but NFT mint failed: ${data.error}`);
+          }
+        })
+        .catch(() => {
+          setStatus('done');
+          refetchBalance();
+          setErrorMsg('Burn succeeded but NFT mint failed — contact team');
+        });
     }
     if (trenFailed && status === 'confirming2') {
       setStatus('error');
