@@ -65,7 +65,7 @@ function fmtCountdown(seconds: number): string {
   return `${m}m`;
 }
 
-type ActiveTab = 'burn' | 'framemogger' | 'staking' | 'lp-staking' | 'swap';
+type ActiveTab = 'burn' | 'staking' | 'lp-staking' | 'swap' | 'framemogger';
 
 // ═════════════════════════════════════════════════════════
 export default function BetaProtocol() {
@@ -107,12 +107,6 @@ export default function BetaProtocol() {
           BURN TO LOOKSMAXX
         </button>
         <button
-          className={`beta-tab${activeTab === 'framemogger' ? ' active' : ''}`}
-          onClick={() => setActiveTab('framemogger')}
-        >
-          FRAMEMOGGER
-        </button>
-        <button
           className={`beta-tab${activeTab === 'staking' ? ' active' : ''}`}
           onClick={() => setActiveTab('staking')}
         >
@@ -129,6 +123,12 @@ export default function BetaProtocol() {
           onClick={() => setActiveTab('swap')}
         >
           SWAP
+        </button>
+        <button
+          className={`beta-tab${activeTab === 'framemogger' ? ' active' : ''}`}
+          onClick={() => setActiveTab('framemogger')}
+        >
+          FRAMEMOGGER
         </button>
       </div>
 
@@ -426,218 +426,168 @@ function BurnSection({ address }: { address: `0x${string}` }) {
 // FRAMEMOGGER (Send MEGACHAD to Tren Fund, Burn MEGAGOONER for deflation)
 // ═════════════════════════════════════════════════════════
 function FramemoggerSection({ address }: { address: `0x${string}` }) {
-  const [burnAmount, setBurnAmount] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
 
   // Balances
   const { data: megachadBalance, refetch: refetchMegachad } = useReadContract({
-    address: TESTNET_MEGACHAD_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'balanceOf',
-    args: [address],
+    address: TESTNET_MEGACHAD_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
   });
-
   const { data: megagoonerBalance, refetch: refetchMegagooner } = useReadContract({
-    address: TESTNET_MEGAGOONER_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'balanceOf',
-    args: [address],
+    address: TESTNET_MEGAGOONER_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
   });
 
-  // Allowance checks (both tokens need approval)
+  // Allowances (both tokens need approval to Framemogger)
   const { data: megachadAllowance } = useReadContract({
-    address: TESTNET_MEGACHAD_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'allowance',
+    address: TESTNET_MEGACHAD_ADDRESS, abi: ERC20_ABI, functionName: 'allowance',
     args: [address, TESTNET_FRAMEMOGGER_ADDRESS],
   });
-
   const { data: megagoonerAllowance } = useReadContract({
-    address: TESTNET_MEGAGOONER_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: 'allowance',
+    address: TESTNET_MEGAGOONER_ADDRESS, abi: ERC20_ABI, functionName: 'allowance',
     args: [address, TESTNET_FRAMEMOGGER_ADDRESS],
   });
 
-  // Burn requirements (how much MEGACHAD + MEGAGOONER needed)
-  const parsedAmount = burnAmount ? parseUnits(burnAmount, 18) : 0n;
-  const { data: burnReqs } = useReadContract({
-    address: TESTNET_FRAMEMOGGER_ADDRESS,
-    abi: FRAMEMOGGER_ABI,
-    functionName: 'getBurnRequirements',
-    args: [parsedAmount],
-    query: { enabled: parsedAmount > 0n },
+  // Parsed input + MEGAGOONER requirement (1:4 ratio)
+  const parsedAmount = sendAmount ? parseUnits(sendAmount, 18) : 0n;
+  const { data: megagoonerNeeded } = useReadContract({
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'getBurnRequirements',
+    args: [parsedAmount], query: { enabled: parsedAmount > 0n },
   });
 
-  // Week info
-  const { data: weekInfo } = useReadContract({
-    address: TESTNET_FRAMEMOGGER_ADDRESS,
-    abi: FRAMEMOGGER_ABI,
-    functionName: 'getCurrentWeekInfo',
+  // Current week number
+  const { data: currentWeek } = useReadContract({
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'getCurrentWeek',
   });
 
-  // Top 3 burners
+  // Week stats (totalSent, uniqueSenders, timeRemaining)
+  const { data: weekStats } = useReadContract({
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'getWeekStats',
+    args: currentWeek !== undefined ? [currentWeek] : undefined,
+    query: { enabled: currentWeek !== undefined },
+  });
+
+  // Top 3 senders this week
   const { data: top3 } = useReadContract({
-    address: TESTNET_FRAMEMOGGER_ADDRESS,
-    abi: FRAMEMOGGER_ABI,
-    functionName: 'getCurrentTop3',
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'getWeekTop3',
+    args: currentWeek !== undefined ? [currentWeek] : undefined,
+    query: { enabled: currentWeek !== undefined },
   });
 
-  // Can propose
+  // Can propose (top 3 current or previous week)
   const { data: canPropose } = useReadContract({
-    address: TESTNET_FRAMEMOGGER_ADDRESS,
-    abi: FRAMEMOGGER_ABI,
-    functionName: 'canPropose',
-    args: [address],
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'canPropose', args: [address],
   });
 
-  // User weekly burns
-  const { data: userBurns } = useReadContract({
-    address: TESTNET_FRAMEMOGGER_ADDRESS,
-    abi: FRAMEMOGGER_ABI,
-    functionName: 'getUserWeeklyBurns',
-    args: weekInfo ? [weekInfo[0], address] : undefined,
-    query: { enabled: !!weekInfo },
+  // User sends this week
+  const { data: userWeeklySent } = useReadContract({
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'weeklyUserSent',
+    args: currentWeek !== undefined ? [currentWeek, address] : undefined,
+    query: { enabled: currentWeek !== undefined },
   });
 
-  // NFT count for requirement display
+  // Lifetime stats
+  const { data: totalSentAllTime } = useReadContract({
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'totalSentAllTime',
+  });
+  const { data: totalGoonerBurned } = useReadContract({
+    address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI, functionName: 'totalMegagoonerBurned',
+  });
+
+  // NFT count
   const { data: nftBalance } = useReadContract({
     address: TESTNET_NFT_ADDRESS,
     abi: [{ type: 'function', name: 'balanceOf', inputs: [{ name: 'owner', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' }] as const,
-    functionName: 'balanceOf',
-    args: [address],
+    functionName: 'balanceOf', args: [address],
   });
 
-  // Write contracts
+  // Write hooks
   const { writeContract: writeApproveMegachad, data: approveMegachadHash } = useWriteContract();
   const { isSuccess: approveMegachadConfirmed } = useWaitForTransactionReceipt({ hash: approveMegachadHash, query: { enabled: !!approveMegachadHash } });
-
   const { writeContract: writeApproveMegagooner, data: approveMegagoonerHash } = useWriteContract();
   const { isSuccess: approveMegagoonerConfirmed } = useWaitForTransactionReceipt({ hash: approveMegagoonerHash, query: { enabled: !!approveMegagoonerHash } });
+  const { writeContract: writeSend, data: sendHash } = useWriteContract();
+  const { isSuccess: sendConfirmed } = useWaitForTransactionReceipt({ hash: sendHash, query: { enabled: !!sendHash } });
 
-  const { writeContract: writeBurn, data: burnHash } = useWriteContract();
-  const { isSuccess: burnConfirmed } = useWaitForTransactionReceipt({ hash: burnHash, query: { enabled: !!burnHash } });
-
-  const [status, setStatus] = useState<'idle' | 'approving-megachad' | 'approving-megagooner' | 'burning' | 'minting' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'approving-megachad' | 'approving-megagooner' | 'sending' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const megachadRequired = burnReqs ? burnReqs[0] : 0n;
-  const megagoonerRequired = burnReqs ? burnReqs[1] : 0n;
-  const needsMegachadApproval = megachadAllowance !== undefined && megachadRequired > 0n && megachadAllowance < megachadRequired;
+  const megagoonerRequired = megagoonerNeeded ?? 0n;
+  const needsMegachadApproval = megachadAllowance !== undefined && parsedAmount > 0n && megachadAllowance < parsedAmount;
   const needsMegagoonerApproval = megagoonerAllowance !== undefined && megagoonerRequired > 0n && megagoonerAllowance < megagoonerRequired;
 
-  const handleBurn = () => {
-    if (!burnAmount || parsedAmount <= 0n) {
-      setErrorMsg('Enter an amount'); return;
-    }
-    if (megachadBalance !== undefined && megachadRequired > megachadBalance) {
-      setErrorMsg('Insufficient $MEGACHAD balance'); return;
-    }
+  const handleSend = () => {
+    if (!sendAmount || parsedAmount <= 0n) { setErrorMsg('Enter an amount'); return; }
+    if (parsedAmount < 4n * (10n ** 18n)) { setErrorMsg('Minimum 4 $MEGACHAD (to burn at least 1 $MEGAGOONER)'); return; }
+    if (megachadBalance !== undefined && parsedAmount > megachadBalance) { setErrorMsg('Insufficient $MEGACHAD'); return; }
     if (megagoonerBalance !== undefined && megagoonerRequired > megagoonerBalance) {
       setErrorMsg(`Insufficient $MEGAGOONER — need ${fmtBig(megagoonerRequired)} for deflation`); return;
     }
+    if (nftBalance !== undefined && nftBalance < 1n) { setErrorMsg('Requires 1+ Looksmaxxed NFT'); return; }
     setErrorMsg('');
 
     if (needsMegachadApproval) {
       setStatus('approving-megachad');
       writeApproveMegachad({
-        address: TESTNET_MEGACHAD_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [TESTNET_FRAMEMOGGER_ADDRESS, megachadRequired],
-        gas: 500000n,
-      }, {
-        onError: () => { setStatus('error'); setErrorMsg('$MEGACHAD approval rejected'); },
-      });
+        address: TESTNET_MEGACHAD_ADDRESS, abi: ERC20_ABI, functionName: 'approve',
+        args: [TESTNET_FRAMEMOGGER_ADDRESS, parsedAmount],
+      }, { onError: () => { setStatus('error'); setErrorMsg('$MEGACHAD approval rejected'); } });
     } else if (needsMegagoonerApproval) {
       setStatus('approving-megagooner');
       writeApproveMegagooner({
-        address: TESTNET_MEGAGOONER_ADDRESS,
-        abi: ERC20_ABI,
-        functionName: 'approve',
+        address: TESTNET_MEGAGOONER_ADDRESS, abi: ERC20_ABI, functionName: 'approve',
         args: [TESTNET_FRAMEMOGGER_ADDRESS, megagoonerRequired],
-        gas: 500000n,
-      }, {
-        onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); },
-      });
+      }, { onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); } });
     } else {
-      executeBurn();
+      executeSend();
     }
   };
 
-  const executeBurn = () => {
-    setStatus('burning');
-    writeBurn({
-      address: TESTNET_FRAMEMOGGER_ADDRESS,
-      abi: FRAMEMOGGER_ABI,
-      functionName: 'burnMEGACHAD',
-      args: [parsedAmount],
-      gas: 500000n,
-    }, {
-      onError: () => { setStatus('error'); setErrorMsg('Framemogger transaction failed'); },
-    });
+  const executeSend = () => {
+    setStatus('sending');
+    writeSend({
+      address: TESTNET_FRAMEMOGGER_ADDRESS, abi: FRAMEMOGGER_ABI,
+      functionName: 'sendMegachad', args: [parsedAmount],
+    }, { onError: () => { setStatus('error'); setErrorMsg('Framemogger transaction failed'); } });
   };
 
-  // Chain approvals: MEGACHAD → MEGAGOONER → burn
+  // Chain: approve MEGACHAD → approve MEGAGOONER → send
   useEffect(() => {
     if (approveMegachadConfirmed && status === 'approving-megachad') {
       if (needsMegagoonerApproval) {
         setStatus('approving-megagooner');
         writeApproveMegagooner({
-          address: TESTNET_MEGAGOONER_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: 'approve',
+          address: TESTNET_MEGAGOONER_ADDRESS, abi: ERC20_ABI, functionName: 'approve',
           args: [TESTNET_FRAMEMOGGER_ADDRESS, megagoonerRequired],
-          gas: 500000n,
-        }, {
-          onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); },
-        });
+        }, { onError: () => { setStatus('error'); setErrorMsg('$MEGAGOONER approval rejected'); } });
       } else {
-        executeBurn();
+        executeSend();
       }
     }
   }, [approveMegachadConfirmed]);
 
   useEffect(() => {
-    if (approveMegagoonerConfirmed && status === 'approving-megagooner') executeBurn();
+    if (approveMegagoonerConfirmed && status === 'approving-megagooner') executeSend();
   }, [approveMegagoonerConfirmed]);
 
   useEffect(() => {
-    if (burnConfirmed && status === 'burning' && burnHash) {
-      // Burn confirmed — now mint the testnet NFT
-      setStatus('minting');
-      fetch('/api/beta/mint-nft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, burnTxHash: burnHash }),
-      })
-        .then((res) => res.json())
-        .then(() => {
-          setStatus('done');
-          setBurnAmount('');
-          refetchMegachad();
-          refetchMegagooner();
-        })
-        .catch(() => {
-          // NFT mint failed but burn succeeded — still mark done
-          setStatus('done');
-          setBurnAmount('');
-          refetchMegachad();
-          refetchMegagooner();
-          setErrorMsg('Burn succeeded but NFT mint failed — contact team');
-        });
+    if (sendConfirmed && status === 'sending') {
+      setStatus('done');
+      setSendAmount('');
+      refetchMegachad();
+      refetchMegagooner();
     }
-  }, [burnConfirmed]);
+  }, [sendConfirmed]);
 
   // Countdown timer
   const [timeLeft, setTimeLeft] = useState(0);
   useEffect(() => {
-    if (!weekInfo) return;
-    const endTime = Number(weekInfo[2]);
-    const update = () => setTimeLeft(Math.max(0, endTime - Math.floor(Date.now() / 1000)));
-    update();
-    const iv = setInterval(update, 60000);
+    if (weekStats === undefined) return;
+    const remaining = Number(weekStats[2]);
+    setTimeLeft(remaining);
+    const iv = setInterval(() => setTimeLeft((t) => Math.max(0, t - 60)), 60000);
     return () => clearInterval(iv);
-  }, [weekInfo]);
+  }, [weekStats]);
+
+  const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
 
   return (
     <div className="beta-card">
@@ -647,7 +597,7 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
       </div>
       <p className="beta-card-desc">
         Send $MEGACHAD to the Tren Fund for future ecosystem use, while permanently burning $MEGAGOONER
-        for deflation. For every 1 $MEGACHAD sent, 0.25 $MEGAGOONER is destroyed (1:4 ratio).
+        for deflation. For every 4 $MEGACHAD sent, 1 $MEGAGOONER is destroyed.
         Requires 1+ Looksmaxxed NFT. Top 3 weekly senders earn the right to create governance proposals.
       </p>
 
@@ -656,43 +606,69 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         <h4>HOW IT WORKS</h4>
         <ul>
           <li>$MEGACHAD is sent to the Tren Fund — not burned, reserved for future ecosystem use</li>
-          <li>$MEGAGOONER is permanently burned at a 1:4 ratio (0.25 $MEGAGOONER per 1 $MEGACHAD sent)</li>
+          <li>$MEGAGOONER is permanently burned at a 4:1 ratio (1 $MEGAGOONER destroyed per 4 $MEGACHAD sent)</li>
           <li>Requires holding at least 1 Looksmaxxed NFT to participate</li>
-          <li>Top 3 weekly participants can submit governance proposals via Jestermogger</li>
+          <li>Top 3 weekly senders can submit governance proposals via Jestermogger</li>
         </ul>
       </div>
+
+      {/* NFT gate warning */}
+      {nftBalance !== undefined && nftBalance < 1n && (
+        <div className="beta-info-box beta-info-warning">
+          <h4>NFT REQUIRED</h4>
+          <p>You need at least 1 Looksmaxxed NFT to use Framemogger. Burn $MEGACHAD in the &quot;Burn to Looksmaxx&quot; tab to mint one.</p>
+        </div>
+      )}
 
       {/* Week info */}
       <div className="beta-stat-row">
         <div className="beta-stat">
           <span className="beta-stat-label">CURRENT WEEK</span>
-          <span className="beta-stat-value">{weekInfo ? Number(weekInfo[0]).toString() : '—'}</span>
+          <span className="beta-stat-value">{currentWeek !== undefined ? Number(currentWeek).toString() : '—'}</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">TIME REMAINING</span>
           <span className="beta-stat-value">{fmtCountdown(timeLeft)}</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">TOTAL BURNED THIS WEEK</span>
-          <span className="beta-stat-value">{weekInfo ? fmtBig(weekInfo[3]) : '—'} $MEGACHAD</span>
+          <span className="beta-stat-label">SENT THIS WEEK</span>
+          <span className="beta-stat-value">{weekStats ? fmtBig(weekStats[0]) : '—'} $MEGACHAD</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">UNIQUE BURNERS</span>
-          <span className="beta-stat-value">{weekInfo ? Number(weekInfo[4]).toString() : '—'}</span>
+          <span className="beta-stat-label">UNIQUE SENDERS</span>
+          <span className="beta-stat-value">{weekStats ? Number(weekStats[1]).toString() : '—'}</span>
+        </div>
+      </div>
+
+      {/* Lifetime stats */}
+      <div className="beta-stat-row">
+        <div className="beta-stat">
+          <span className="beta-stat-label">ALL-TIME $MEGACHAD SENT</span>
+          <span className="beta-stat-value">{fmtBig(totalSentAllTime)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">ALL-TIME $MEGAGOONER BURNED</span>
+          <span className="beta-stat-value">{fmtBig(totalGoonerBurned)}</span>
         </div>
       </div>
 
       {/* Top 3 */}
       <div className="beta-top3">
-        <h3>TOP 3 BURNERS THIS WEEK</h3>
+        <h3>TOP 3 SENDERS THIS WEEK</h3>
         <div className="beta-top3-list">
-          {top3 && top3[0].map((burner: string, i: number) => (
+          {top3 ? top3[0].map((sender: string, i: number) => (
             <div key={i} className="beta-top3-item">
               <span className="beta-top3-rank">#{i + 1}</span>
               <span className="beta-top3-addr">
-                {burner === '0x0000000000000000000000000000000000000000' ? '—' : truncAddr(burner)}
+                {sender === '0x0000000000000000000000000000000000000000' ? '—' : truncAddr(sender)}
               </span>
-              <span className="beta-top3-amount">{fmtBig(top3[1][i])} $MEGACHAD</span>
+              <span className="beta-top3-amount">{top3 ? fmtBig(top3[1][i]) : '0'} $MEGACHAD</span>
+            </div>
+          )) : [0, 1, 2].map((i) => (
+            <div key={i} className="beta-top3-item">
+              <span className="beta-top3-rank">#{i + 1}</span>
+              <span className="beta-top3-addr">—</span>
+              <span className="beta-top3-amount">—</span>
             </div>
           ))}
         </div>
@@ -709,8 +685,8 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{fmtBig(megagoonerBalance)}</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">YOUR BURNS THIS WEEK</span>
-          <span className="beta-stat-value">{userBurns !== undefined ? fmtBig(userBurns) : '—'} $MEGACHAD</span>
+          <span className="beta-stat-label">YOUR SENDS THIS WEEK</span>
+          <span className="beta-stat-value">{userWeeklySent !== undefined ? fmtBig(userWeeklySent) : '—'} $MEGACHAD</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">CAN PROPOSE</span>
@@ -720,21 +696,21 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
         </div>
       </div>
 
-      {/* Burn input */}
+      {/* Send input */}
       <div className="beta-input-group">
         <label className="beta-input-label">AMOUNT ($MEGACHAD TO SEND)</label>
         <div className="beta-input-row">
           <input
             type="number"
-            value={burnAmount}
-            onChange={(e) => setBurnAmount(e.target.value)}
+            value={sendAmount}
+            onChange={(e) => setSendAmount(e.target.value)}
             placeholder="0.0"
             className="beta-input"
             min="0"
           />
           <button
             className="beta-btn-max"
-            onClick={() => megachadBalance && setBurnAmount(formatUnits(megachadBalance, 18))}
+            onClick={() => megachadBalance && setSendAmount(formatUnits(megachadBalance, 18))}
           >
             MAX
           </button>
@@ -742,22 +718,21 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
       </div>
 
       {/* Requirements preview */}
-      {parsedAmount > 0n && burnReqs && (
+      {parsedAmount > 0n && megagoonerNeeded !== undefined && (
         <div className="beta-requirements">
-          <span>Requires: {fmtBig(burnReqs[0])} $MEGACHAD (to Tren Fund) + {fmtBig(burnReqs[1])} $MEGAGOONER (burned for deflation)</span>
+          <span>Sends {fmtBig(parsedAmount)} $MEGACHAD to Tren Fund + burns {fmtBig(megagoonerNeeded)} $MEGAGOONER for deflation</span>
         </div>
       )}
 
-      {(status === 'approving-megachad' || status === 'approving-megagooner' || status === 'burning' || status === 'minting') && (
+      {isBusy && (
         <div className="beta-status">
           {status === 'approving-megachad' && 'Approving $MEGACHAD...'}
-          {status === 'approving-megagooner' && 'Approving $MEGAGOONER for deflation burn...'}
-          {status === 'burning' && 'Sending via Framemogger...'}
-          {status === 'minting' && 'Minting Looksmaxxed NFT...'}
+          {status === 'approving-megagooner' && 'Approving $MEGAGOONER for deflation...'}
+          {status === 'sending' && 'Sending via Framemogger...'}
         </div>
       )}
       {status === 'done' && (
-        <div className="beta-status success">Complete! $MEGACHAD sent to Tren Fund, $MEGAGOONER deflated, NFT minted.</div>
+        <div className="beta-status success">Complete! $MEGACHAD sent to Tren Fund, $MEGAGOONER permanently deflated.</div>
       )}
       {status === 'error' && (
         <div className="beta-status error">{errorMsg || 'Transaction failed'}</div>
@@ -768,8 +743,8 @@ function FramemoggerSection({ address }: { address: `0x${string}` }) {
 
       <button
         className="beta-btn-primary"
-        onClick={handleBurn}
-        disabled={status === 'approving-megachad' || status === 'approving-megagooner' || status === 'burning' || status === 'minting'}
+        onClick={handleSend}
+        disabled={isBusy}
       >
         {needsMegachadApproval || needsMegagoonerApproval ? 'APPROVE & SEND' : 'SEND $MEGACHAD'}
       </button>

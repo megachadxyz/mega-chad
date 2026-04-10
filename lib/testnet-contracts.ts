@@ -85,25 +85,26 @@ export const MEGAGOONER_ABI = [
 
 // ── Framemogger ABI (burn MEGACHAD → mint MEGAGOONER) ──
 export const FRAMEMOGGER_ABI = [
-  { type: 'function', name: 'burnMEGACHAD', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
-  { type: 'function', name: 'BURN_RATIO', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
-  { type: 'function', name: 'MIN_BURN_AMOUNT', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  // Matches deployed Framemogger.sol on testnet
+  { type: 'function', name: 'sendMegachad', inputs: [{ name: 'megachadAmount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'MEGAGOONER_RATIO', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
   { type: 'function', name: 'WEEK_DURATION', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
   { type: 'function', name: 'megachad', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
   { type: 'function', name: 'megagooner', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
-  { type: 'function', name: 'treasury', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
+  { type: 'function', name: 'trenFund', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
   { type: 'function', name: 'genesisTimestamp', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
   { type: 'function', name: 'getCurrentWeek', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getTimeRemaining', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
   { type: 'function', name: 'canPropose', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' },
-  { type: 'function', name: 'getBurnRequirements', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [{ name: 'megachadRequired', type: 'uint256' }, { name: 'megagoonerRequired', type: 'uint256' }], stateMutability: 'view' },
-  { type: 'function', name: 'getCurrentTop3', inputs: [], outputs: [{ name: 'burners', type: 'address[3]' }, { name: 'amounts', type: 'uint256[3]' }], stateMutability: 'view' },
-  { type: 'function', name: 'getCurrentWeekInfo', inputs: [], outputs: [{ name: 'week', type: 'uint256' }, { name: 'startTime', type: 'uint256' }, { name: 'endTime', type: 'uint256' }, { name: 'totalBurned', type: 'uint256' }, { name: 'uniqueBurners', type: 'uint256' }, { name: 'topBurners', type: 'address[3]' }, { name: 'topAmounts', type: 'uint256[3]' }], stateMutability: 'view' },
-  { type: 'function', name: 'getUserWeeklyBurns', inputs: [{ name: 'week', type: 'uint256' }, { name: 'user', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
-  { type: 'function', name: 'getWeekStats', inputs: [{ name: 'week', type: 'uint256' }], outputs: [{ name: 'totalBurned', type: 'uint256' }, { name: 'uniqueBurners', type: 'uint256' }, { name: 'timeUntilEnd', type: 'uint256' }], stateMutability: 'view' },
-  { type: 'function', name: 'getWeekTop3', inputs: [{ name: 'week', type: 'uint256' }], outputs: [{ name: 'burners', type: 'address[3]' }, { name: 'amounts', type: 'uint256[3]' }], stateMutability: 'view' },
-  { type: 'event', name: 'MEGACHADBurned', inputs: [{ name: 'burner', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }, { name: 'week', type: 'uint256', indexed: false }] },
-  { type: 'event', name: 'NewWeekStarted', inputs: [{ name: 'week', type: 'uint256', indexed: true }, { name: 'startTime', type: 'uint256', indexed: false }] },
-  { type: 'event', name: 'TopBurnersUpdated', inputs: [{ name: 'week', type: 'uint256', indexed: true }, { name: 'topBurners', type: 'address[3]', indexed: false }, { name: 'amounts', type: 'uint256[3]', indexed: false }] },
+  { type: 'function', name: 'getBurnRequirements', inputs: [{ name: 'megachadAmount', type: 'uint256' }], outputs: [{ name: 'megagoonerNeeded', type: 'uint256' }], stateMutability: 'pure' },
+  { type: 'function', name: 'getWeekTop3', inputs: [{ name: 'week', type: 'uint256' }], outputs: [{ name: '', type: 'address[3]' }, { name: '', type: 'uint256[3]' }], stateMutability: 'view' },
+  { type: 'function', name: 'getWeekStats', inputs: [{ name: 'week', type: 'uint256' }], outputs: [{ name: 'totalSent', type: 'uint256' }, { name: 'uniqueSenders', type: 'uint256' }, { name: 'timeRemaining', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'weeklyUserSent', inputs: [{ name: 'week', type: 'uint256' }, { name: 'user', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'totalSentAllTime', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'totalMegagoonerBurned', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'totalUserSent', inputs: [{ name: 'user', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'event', name: 'MegachadSent', inputs: [{ name: 'sender', type: 'address', indexed: true }, { name: 'megachadAmount', type: 'uint256', indexed: false }, { name: 'megagoonerBurned', type: 'uint256', indexed: false }, { name: 'week', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'TopBurnersUpdated', inputs: [{ name: 'week', type: 'uint256', indexed: true }, { name: 'top3', type: 'address[3]', indexed: false }, { name: 'amounts', type: 'uint256[3]', indexed: false }] },
 ] as const;
 
 // ── MoggerStakingV2 ABI (stake MEGACHAD → earn MEGAGOONER, proportional emissions) ──
