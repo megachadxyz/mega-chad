@@ -1074,6 +1074,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [liqPanel, setLiqPanel] = useState<'none' | 'add' | 'remove'>('none');
   const [liqAmountA, setLiqAmountA] = useState('');
+  const [liqAmountB, setLiqAmountB] = useState('');
+  const [lastEditedSide, setLastEditedSide] = useState<'a' | 'b'>('a');
   const [removeLiqAmount, setRemoveLiqAmount] = useState('');
 
   // ── Token balances ──
@@ -1136,8 +1138,29 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const poolRatio = lpReserves && lpReserves[0] > 0n
     ? Number(formatUnits(lpReserves[1], 18)) / Number(formatUnits(lpReserves[0], 18))
     : 0.05;
+  const inversePoolRatio = poolRatio > 0 ? 1 / poolRatio : 0;
+
+  // Auto-calculate the other side when one side changes
+  const handleLiqAmountAChange = (val: string) => {
+    setLiqAmountA(val);
+    setLastEditedSide('a');
+    if (val && Number(val) > 0) {
+      setLiqAmountB((Number(val) * poolRatio).toFixed(6));
+    } else {
+      setLiqAmountB('');
+    }
+  };
+  const handleLiqAmountBChange = (val: string) => {
+    setLiqAmountB(val);
+    setLastEditedSide('b');
+    if (val && Number(val) > 0) {
+      setLiqAmountA((Number(val) * inversePoolRatio).toFixed(6));
+    } else {
+      setLiqAmountA('');
+    }
+  };
+
   const parsedLiqA = liqAmountA ? parseUnits(liqAmountA, 18) : 0n;
-  const liqAmountB = liqAmountA && Number(liqAmountA) > 0 ? (Number(liqAmountA) * poolRatio).toFixed(6) : '';
   const parsedLiqB = liqAmountB ? parseUnits(liqAmountB, 18) : 0n;
   const parsedRemoveLiq = removeLiqAmount ? parseUnits(removeLiqAmount, 18) : 0n;
   const removeEstimate = (() => {
@@ -1282,6 +1305,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     if (addLiqConfirmed && status === 'adding') {
       setStatus('done');
       setLiqAmountA('');
+      setLiqAmountB('');
       refetchLpBalance();
       refetchMegachadBal();
       refetchTokenBBal();
@@ -1756,7 +1780,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
               <input
                 type="number"
                 value={liqAmountA}
-                onChange={(e) => setLiqAmountA(e.target.value)}
+                onChange={(e) => handleLiqAmountAChange(e.target.value)}
                 placeholder="0.0"
                 className="beta-input"
                 min="0"
@@ -1764,7 +1788,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
               <button
                 className="beta-btn-max"
                 onClick={() => {
-                  if (megachadBalance) setLiqAmountA(formatUnits(megachadBalance, 18));
+                  if (megachadBalance) handleLiqAmountAChange(formatUnits(megachadBalance, 18));
                 }}
               >
                 MAX
@@ -1773,16 +1797,24 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           </div>
 
           <div className="beta-input-group" style={{ marginTop: '0.5rem' }}>
-            <label className="beta-input-label">${pool.tokenBSymbol} AMOUNT (auto)</label>
+            <label className="beta-input-label">${pool.tokenBSymbol} AMOUNT</label>
             <div className="beta-input-row">
               <input
-                type="text"
+                type="number"
                 value={liqAmountB}
-                readOnly
-                placeholder="—"
+                onChange={(e) => handleLiqAmountBChange(e.target.value)}
+                placeholder="0.0"
                 className="beta-input"
-                style={{ opacity: 0.7 }}
+                min="0"
               />
+              <button
+                className="beta-btn-max"
+                onClick={() => {
+                  if (tokenBBalance) handleLiqAmountBChange(formatUnits(tokenBBalance, 18));
+                }}
+              >
+                MAX
+              </button>
             </div>
           </div>
 
