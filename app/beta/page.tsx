@@ -1244,7 +1244,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     address: TESTNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'earned',
     args: [BigInt(selectedPool), address],
   });
-  const { data: earnedAll } = useReadContract({
+  const { data: earnedAll, refetch: refetchEarnedAll } = useReadContract({
     address: TESTNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'earnedAll',
     args: [address],
   });
@@ -1557,6 +1557,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       setStatus('done');
       refetchStaker();
       refetchEarned();
+      refetchEarnedAll();
     }
   }, [claimConfirmed, status]);
 
