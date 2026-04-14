@@ -556,6 +556,16 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
           placeholder="0"
           className="beta-input"
         />
+        <div className="beta-info-box" style={{ marginTop: '0.5rem' }}>
+          <p className="beta-dim" style={{ marginBottom: '0.25rem' }}>
+            Amount of native ETH (in <strong>wei</strong>) the timelock should forward with the call.
+          </p>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem' }}>
+            <li>Leave as <code>0</code> for almost all proposals — token transfers, parameter changes, staking updates, etc.</li>
+            <li>Only set &gt; 0 if the target function is <code>payable</code> and actually needs ETH (e.g. funding a contract, paying a fee).</li>
+            <li>1 ETH = <code>1000000000000000000</code> wei (10<sup>18</sup>).</li>
+          </ul>
+        </div>
       </div>
 
       <div className="beta-input-group">
@@ -567,6 +577,34 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
           placeholder="0x"
           className="beta-input"
         />
+        <div className="beta-info-box" style={{ marginTop: '0.5rem' }}>
+          <p className="beta-dim" style={{ marginBottom: '0.25rem' }}>
+            ABI-encoded function call the timelock will execute on the target. Must start with <code>0x</code>.
+          </p>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem' }}>
+            <li>Use <code>0x</code> for a no-op proposal (signal-only) or when calling a function with no arguments and no side effects.</li>
+            <li>
+              To build it, ABI-encode the function selector + args. Easiest options:
+              <ul style={{ margin: '0.25rem 0 0.25rem 1rem' }}>
+                <li>
+                  <strong>viem</strong>:
+                  {' '}<code>encodeFunctionData(&#123; abi, functionName: &quot;transfer&quot;, args: [to, amount] &#125;)</code>
+                </li>
+                <li><strong>ethers</strong>: <code>iface.encodeFunctionData(&quot;transfer&quot;, [to, amount])</code></li>
+                <li><strong>cast</strong>: <code>cast calldata &quot;transfer(address,uint256)&quot; 0x... 1000000000000000000</code></li>
+              </ul>
+            </li>
+            <li>
+              Common examples:
+              <ul style={{ margin: '0.25rem 0 0.25rem 1rem' }}>
+                <li><strong>ERC20 transfer from treasury:</strong> target = MEGACHAD, calldata = <code>transfer(recipient, amount)</code></li>
+                <li><strong>Change staking alloc point:</strong> target = JesterGoonerV3, calldata = <code>setAllocPoint(pid, newAllocPoint)</code></li>
+                <li><strong>Update burn parameters:</strong> target = Framemogger, calldata = the relevant setter</li>
+              </ul>
+            </li>
+            <li>Always double-check encoding on a tool like <code>cast</code> or 4byte.directory before submitting — a bad selector will revert on execute.</li>
+          </ul>
+        </div>
       </div>
 
       {status !== 'idle' && status !== 'done' && (
