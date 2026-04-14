@@ -796,16 +796,6 @@ export default function Home() {
                       View NFT
                     </a>
                   )}
-                  <a
-                    href={`https://x.com/intent/tweet?text=${encodeURIComponent(
-                      `Just burned ${BURN_AMOUNT_DISPLAY.toLocaleString()} $MEGACHAD to create this. @megachadxyz`
-                    )}&url=${encodeURIComponent(result.ipfsUrl)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-primary"
-                  >
-                    Share on X
-                  </a>
                 </div>
               </div>
             )}
@@ -896,20 +886,6 @@ export default function Home() {
               <li><Link href="/portal">Portal</Link></li>
             </ul>
             <div className="footer-social">
-              <a
-                href="https://x.com/megachadxyz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-social-link"
-                aria-label="X / Twitter"
-              >
-                <Image
-                  src="/images/x-logo.svg"
-                  alt="X"
-                  width={24}
-                  height={24}
-                />
-              </a>
               <a
                 href="https://t.me/megachads"
                 target="_blank"

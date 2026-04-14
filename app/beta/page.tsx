@@ -98,6 +98,9 @@ export default function BetaProtocol() {
         </div>
       </section>
 
+      {/* Public stats (visible without wallet / stake) */}
+      <PublicStatsCard />
+
       {/* Tab navigation */}
       <div className="beta-tabs">
         <button
@@ -1057,6 +1060,126 @@ function StakingSection({ address }: { address: `0x${string}` }) {
 // JESTERGOONER (Multi-Pool LP Staking → Earn MEGAGOONER)
 // ═════════════════════════════════════════════════════════
 
+// Compute APY from a pool's weekly emission + staked LP + LP price + gooner price.
+// All amounts expressed as Number via formatUnits. Inputs of zero → undefined.
+function computePoolAPY(
+  weeklyEmissionRaw: bigint | undefined,
+  totalStakedRaw: bigint | undefined,
+  lpReserveMegachadRaw: bigint | undefined,
+  lpTotalSupplyRaw: bigint | undefined,
+  goonerPriceInMegachad: number | undefined
+): number | undefined {
+  if (!weeklyEmissionRaw || !totalStakedRaw || !lpReserveMegachadRaw || !lpTotalSupplyRaw || !goonerPriceInMegachad) return undefined;
+  const weekly = Number(formatUnits(weeklyEmissionRaw, 18));
+  const staked = Number(formatUnits(totalStakedRaw, 18));
+  const megachadReserve = Number(formatUnits(lpReserveMegachadRaw, 18));
+  const lpSupply = Number(formatUnits(lpTotalSupplyRaw, 18));
+  if (weekly <= 0 || staked <= 0 || lpSupply <= 0 || megachadReserve <= 0) return undefined;
+  const lpPriceInMegachad = (2 * megachadReserve) / lpSupply;
+  const stakedValueInMegachad = staked * lpPriceInMegachad;
+  if (stakedValueInMegachad <= 0) return undefined;
+  return (weekly * 52 * goonerPriceInMegachad / stakedValueInMegachad) * 100;
+}
+
+// ═════════════════════════════════════════════════════════
+// PUBLIC STATS (always visible, no wallet needed)
+// ═════════════════════════════════════════════════════════
+function PublicStatsCard() {
+  // Mogger staking globals
+  const { data: moggerGlobal } = useReadContract({
+    address: TESTNET_MOGGER_STAKING_ADDRESS,
+    abi: MOGGER_STAKING_ABI,
+    functionName: 'getGlobalStats',
+  });
+
+  // MEGACHAD/MEGAGOONER LP reserves — used for gooner price
+  const { data: mgReserves } = useReadContract({
+    address: TESTNET_LP_TOKEN_ADDRESS,
+    abi: LP_ABI,
+    functionName: 'getReserves',
+  });
+  const { data: mgLpSupply } = useReadContract({
+    address: TESTNET_LP_TOKEN_ADDRESS,
+    abi: LP_ABI,
+    functionName: 'totalSupply',
+  });
+
+  // JesterGoonerV3 per-pool info
+  const { data: pool0 } = useReadContract({
+    address: TESTNET_JESTERGOONER_ADDRESS,
+    abi: JESTERGOONER_V3_ABI,
+    functionName: 'getPoolInfo',
+    args: [0n],
+  });
+  const { data: pool1 } = useReadContract({
+    address: TESTNET_JESTERGOONER_ADDRESS,
+    abi: JESTERGOONER_V3_ABI,
+    functionName: 'getPoolInfo',
+    args: [1n],
+  });
+  const { data: pool2 } = useReadContract({
+    address: TESTNET_JESTERGOONER_ADDRESS,
+    abi: JESTERGOONER_V3_ABI,
+    functionName: 'getPoolInfo',
+    args: [2n],
+  });
+
+  // Per-pool LP reserves + totalSupply (for LP price)
+  const { data: lp1Reserves } = useReadContract({ address: TESTNET_LP_ETH_ADDRESS, abi: LP_ABI, functionName: 'getReserves' });
+  const { data: lp1Supply } = useReadContract({ address: TESTNET_LP_ETH_ADDRESS, abi: LP_ABI, functionName: 'totalSupply' });
+  const { data: lp2Reserves } = useReadContract({ address: TESTNET_LP_USDM_ADDRESS, abi: LP_ABI, functionName: 'getReserves' });
+  const { data: lp2Supply } = useReadContract({ address: TESTNET_LP_USDM_ADDRESS, abi: LP_ABI, functionName: 'totalSupply' });
+
+  // Gooner price (in MEGACHAD) from MC/MG reserves — tokenA is MEGACHAD
+  const goonerPrice = (() => {
+    if (!mgReserves) return undefined;
+    const a = Number(formatUnits(mgReserves[0], 18));
+    const b = Number(formatUnits(mgReserves[1], 18));
+    if (a <= 0 || b <= 0) return undefined;
+    return a / b;
+  })();
+
+  // Mogger APY: (weekly * 52 * goonerPrice / totalEffectiveStake) * 100
+  const moggerAPY = (() => {
+    if (!moggerGlobal || !goonerPrice) return undefined;
+    const totalEffective = Number(formatUnits(moggerGlobal[1], 18));
+    const weekly = Number(formatUnits(moggerGlobal[3], 18));
+    if (totalEffective <= 0 || weekly <= 0) return undefined;
+    return (weekly * 52 * goonerPrice / totalEffective) * 100;
+  })();
+
+  const pool0APY = computePoolAPY(pool0?.[4], pool0?.[2], mgReserves?.[0], mgLpSupply, goonerPrice);
+  const pool1APY = computePoolAPY(pool1?.[4], pool1?.[2], lp1Reserves?.[0], lp1Supply, goonerPrice);
+  const pool2APY = computePoolAPY(pool2?.[4], pool2?.[2], lp2Reserves?.[0], lp2Supply, goonerPrice);
+
+  return (
+    <div className="beta-card" style={{ marginBottom: '1rem' }}>
+      <div className="beta-card-header">
+        <h2>CURRENT APY</h2>
+        <span className="beta-card-badge">LIVE — NO WALLET NEEDED</span>
+      </div>
+      <div className="beta-stat-row">
+        <div className="beta-stat">
+          <span className="beta-stat-label">MOGGER STAKING</span>
+          <span className="beta-stat-value">{fmtAPY(moggerAPY)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">JG: MEGACHAD / MEGAGOONER</span>
+          <span className="beta-stat-value">{fmtAPY(pool0APY)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">JG: MEGACHAD / ETH</span>
+          <span className="beta-stat-value">{fmtAPY(pool1APY)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">JG: MEGACHAD / USDm</span>
+          <span className="beta-stat-value">{fmtAPY(pool2APY)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const POOL_CONFIG = [
   { pid: 0, name: 'MEGACHAD / MEGAGOONER', lpAddress: TESTNET_LP_TOKEN_ADDRESS, tokenBAddress: TESTNET_MEGAGOONER_ADDRESS, tokenBSymbol: 'MEGAGOONER', isEth: false },
   { pid: 1, name: 'MEGACHAD / ETH', lpAddress: TESTNET_LP_ETH_ADDRESS, tokenBAddress: TESTNET_WETH_ADDRESS, tokenBSymbol: 'ETH', isEth: true },
@@ -1133,6 +1256,25 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const { data: lpTotalSupply } = useReadContract({
     address: pool.lpAddress, abi: LP_ABI, functionName: 'totalSupply',
   });
+
+  // MEGACHAD/MEGAGOONER LP reserves — used to price MEGAGOONER in MEGACHAD for APY
+  const { data: goonerLpReserves } = useReadContract({
+    address: TESTNET_LP_TOKEN_ADDRESS, abi: LP_ABI, functionName: 'getReserves',
+  });
+  const goonerPrice = (() => {
+    if (!goonerLpReserves) return undefined;
+    const a = Number(formatUnits(goonerLpReserves[0], 18));
+    const b = Number(formatUnits(goonerLpReserves[1], 18));
+    if (a <= 0 || b <= 0) return undefined;
+    return a / b;
+  })();
+  const selectedPoolAPY = computePoolAPY(
+    poolInfoData?.[4],
+    poolInfoData?.[2],
+    lpReserves?.[0],
+    lpTotalSupply,
+    goonerPrice,
+  );
 
   // ── Computed values ──
   const poolRatio = lpReserves && lpReserves[0] > 0n
@@ -1701,6 +1843,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
       {/* Pool-specific stats */}
       <div className="beta-stat-row">
+        <div className="beta-stat">
+          <span className="beta-stat-label">POOL APY</span>
+          <span className="beta-stat-value">{fmtAPY(selectedPoolAPY)}</span>
+        </div>
         <div className="beta-stat">
           <span className="beta-stat-label">POOL ALLOCATION</span>
           <span className="beta-stat-value">{poolAllocPct.toFixed(1)}%</span>

@@ -634,20 +634,6 @@ export default function PortalPage() {
             </ul>
             <div className="footer-social">
               <a
-                href="https://x.com/megachadxyz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-social-link"
-                aria-label="X / Twitter"
-              >
-                <Image
-                  src="/images/x-logo.svg"
-                  alt="X"
-                  width={18}
-                  height={18}
-                />
-              </a>
-              <a
                 href="https://t.me/megachads"
                 target="_blank"
                 rel="noopener noreferrer"

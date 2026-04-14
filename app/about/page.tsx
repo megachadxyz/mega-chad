@@ -206,7 +206,6 @@ export default function AboutPage() {
             leaderboard, and participate in burn-gated ChadChat.
           </p>
           <ul>
-            <li><a href="https://x.com/megachadxyz" target="_blank" rel="noopener noreferrer" className="github-link">X / Twitter</a></li>
             <li><a href="https://t.me/megachads" target="_blank" rel="noopener noreferrer" className="github-link">Telegram</a></li>
           </ul>
         </section>

@@ -764,20 +764,6 @@ export default function ChadboardPage() {
             </ul>
             <div className="footer-social">
               <a
-                href="https://x.com/megachadxyz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="footer-social-link"
-                aria-label="X / Twitter"
-              >
-                <Image
-                  src="/images/x-logo.svg"
-                  alt="X"
-                  width={24}
-                  height={24}
-                />
-              </a>
-              <a
                 href="https://t.me/megachads"
                 target="_blank"
                 rel="noopener noreferrer"

@@ -507,6 +507,18 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
           placeholder="0x..."
           className="beta-input"
         />
+        <div className="beta-info-box" style={{ marginTop: '0.5rem' }}>
+          <p className="beta-dim" style={{ marginBottom: '0.5rem' }}>
+            The target address should be whichever contract the proposal wants to interact with:
+          </p>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem' }}>
+            <li><strong>MEGACHAD token</strong> (<code>TESTNET_MEGACHAD_ADDRESS</code>) — token operations (e.g. transfer from treasury)</li>
+            <li><strong>MEGAGOONER token</strong> (<code>TESTNET_MEGAGOONER_ADDRESS</code>) — governance token changes</li>
+            <li><strong>Framemogger</strong> (<code>TESTNET_FRAMEMOGGER_ADDRESS</code>) — parameter changes to the burn mechanism</li>
+            <li><strong>JesterGoonerV3</strong> (<code>TESTNET_JESTERGOONER_ADDRESS</code>) — staking parameter changes (e.g. <code>setAllocPoint</code>)</li>
+            <li><strong>Any external contract</strong> — governance can call arbitrary contracts</li>
+          </ul>
+        </div>
       </div>
 
       <div className="beta-input-group">
