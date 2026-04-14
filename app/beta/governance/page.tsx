@@ -7,7 +7,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from 'wagmi';
-import { formatUnits } from 'viem';
+import { formatUnits, encodeFunctionData } from 'viem';
 import {
   TESTNET_JESTERMOGGER_ADDRESS,
   TESTNET_FRAMEMOGGER_ADDRESS,
@@ -19,6 +19,14 @@ import {
   ERC20_ABI,
   PROPOSAL_STATES,
 } from '@/lib/testnet-contracts';
+
+type TemplateKind = 'custom' | 'set-alloc' | 'signal-burn-price' | 'signal';
+
+const POOL_LABELS = [
+  '0 — MEGACHAD / MEGAGOONER',
+  '1 — MEGACHAD / ETH',
+  '2 — MEGACHAD / USDm',
+];
 
 function truncAddr(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -416,12 +424,19 @@ function ProposalCard({ proposalId, voterAddress }: { proposalId: number; voterA
 // CREATE PROPOSAL
 // ═════════════════════════════════════════════════════════
 function CreateProposal({ address }: { address: `0x${string}` }) {
+  const [template, setTemplate] = useState<TemplateKind>('set-alloc');
   const [description, setDescription] = useState('');
   const [targetAddr, setTargetAddr] = useState('');
   const [value, setValue] = useState('0');
   const [calldata, setCalldata] = useState('0x');
   const [status, setStatus] = useState<'idle' | 'proposing' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Template-specific inputs
+  const [allocPid, setAllocPid] = useState('0');
+  const [allocNew, setAllocNew] = useState('');
+  const [burnPriceNew, setBurnPriceNew] = useState('');
+  const [signalTarget, setSignalTarget] = useState<`0x${string}` | ''>('');
 
   const { data: canPropose } = useReadContract({
     address: TESTNET_FRAMEMOGGER_ADDRESS,
@@ -433,9 +448,93 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
   const { writeContract: writePropose, data: proposeHash } = useWriteContract();
   const { isSuccess: proposeConfirmed } = useWaitForTransactionReceipt({ hash: proposeHash });
 
+  // Build {target, value, calldata, description} from the selected template.
+  // Returns a string on validation error, or the built call on success.
+  const buildCall = (): string | {
+    target: `0x${string}`;
+    value: bigint;
+    calldata: `0x${string}`;
+    description: string;
+  } => {
+    if (template === 'custom') {
+      if (!description.trim()) return 'Description required';
+      if (!targetAddr.startsWith('0x') || targetAddr.length !== 42) return 'Valid target address required';
+      let v: bigint;
+      try { v = BigInt(value || '0'); } catch { return 'ETH value must be a whole number (wei)'; }
+      if (!calldata.startsWith('0x')) return 'Calldata must start with 0x';
+      return {
+        target: targetAddr as `0x${string}`,
+        value: v,
+        calldata: calldata as `0x${string}`,
+        description,
+      };
+    }
+
+    if (template === 'set-alloc') {
+      const pid = Number(allocPid);
+      const newAlloc = Number(allocNew);
+      if (!Number.isInteger(pid) || pid < 0 || pid > 2) return 'Pick a pool';
+      if (!Number.isFinite(newAlloc) || newAlloc <= 0) return 'New alloc point must be > 0';
+      const data = encodeFunctionData({
+        abi: [{
+          type: 'function',
+          name: 'setAllocPoint',
+          inputs: [
+            { name: 'pid', type: 'uint256' },
+            { name: 'newAllocPoint', type: 'uint256' },
+          ],
+          outputs: [],
+          stateMutability: 'nonpayable',
+        }] as const,
+        functionName: 'setAllocPoint',
+        args: [BigInt(pid), BigInt(newAlloc)],
+      });
+      const desc = description.trim() ||
+        `Set JesterGoonerV3 alloc point for pool ${pid} (${POOL_LABELS[pid]}) to ${newAlloc}`;
+      return {
+        target: TESTNET_JESTERGOONER_ADDRESS,
+        value: 0n,
+        calldata: data,
+        description: desc,
+      };
+    }
+
+    if (template === 'signal-burn-price') {
+      const newPrice = Number(burnPriceNew);
+      if (!Number.isFinite(newPrice) || newPrice <= 0) return 'New burn price must be > 0';
+      const desc = [
+        `[SIGNAL] Adjust Burn-to-Looksmaxx price to ${newPrice.toLocaleString()} $MEGACHAD`,
+        '',
+        'This is a non-binding signal proposal. The burn amount is currently a frontend constant,',
+        'not an on-chain parameter, so this vote records community intent only. If it passes, the',
+        'team will update the frontend constant in a follow-up deploy.',
+        '',
+        description.trim() ? `Rationale:\n${description.trim()}` : '',
+      ].filter(Boolean).join('\n');
+      return {
+        target: TESTNET_FRAMEMOGGER_ADDRESS,
+        value: 0n,
+        calldata: '0x',
+        description: desc,
+      };
+    }
+
+    // 'signal' — general-purpose signal-only proposal
+    if (!description.trim()) return 'Description required';
+    if (!signalTarget || !signalTarget.startsWith('0x') || signalTarget.length !== 42) {
+      return 'Pick a signal target contract';
+    }
+    return {
+      target: signalTarget,
+      value: 0n,
+      calldata: '0x',
+      description: `[SIGNAL] ${description.trim()}`,
+    };
+  };
+
   const handlePropose = () => {
-    if (!description.trim()) { setErrorMsg('Description required'); return; }
-    if (!targetAddr.startsWith('0x') || targetAddr.length !== 42) { setErrorMsg('Valid target address required'); return; }
+    const built = buildCall();
+    if (typeof built === 'string') { setErrorMsg(built); return; }
     setErrorMsg('');
     setStatus('proposing');
 
@@ -443,12 +542,7 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
       address: TESTNET_JESTERMOGGER_ADDRESS,
       abi: JESTERMOGGER_ABI,
       functionName: 'propose',
-      args: [
-        [targetAddr as `0x${string}`],
-        [BigInt(value || '0')],
-        [calldata as `0x${string}`],
-        description,
-      ],
+      args: [[built.target], [built.value], [built.calldata], built.description],
     }, {
       onError: (err) => {
         setStatus('error');
@@ -464,6 +558,8 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
       setTargetAddr('');
       setValue('0');
       setCalldata('0x');
+      setAllocNew('');
+      setBurnPriceNew('');
     }
   }, [proposeConfirmed]);
 
@@ -490,16 +586,117 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
       </p>
 
       <div className="beta-input-group">
-        <label className="beta-input-label">PROPOSAL DESCRIPTION</label>
+        <label className="beta-input-label">PROPOSAL TYPE</label>
+        <select
+          value={template}
+          onChange={(e) => { setTemplate(e.target.value as TemplateKind); setErrorMsg(''); }}
+          className="beta-input"
+        >
+          <option value="set-alloc">Set JesterGoonerV3 pool alloc point</option>
+          <option value="signal-burn-price">Signal: adjust Burn-to-Looksmaxx price (non-binding)</option>
+          <option value="signal">General signal / no-op (non-binding)</option>
+          <option value="custom">Custom / advanced (raw calldata)</option>
+        </select>
+        <p className="beta-dim" style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}>
+          Templates auto-build the target + calldata so you don&apos;t have to hand-encode anything.
+          Signal proposals are non-binding votes that record community intent without executing on-chain state changes.
+        </p>
+      </div>
+
+      {template === 'set-alloc' && (
+        <div className="beta-info-box" style={{ marginBottom: '1rem' }}>
+          <h4>SET POOL ALLOC POINT</h4>
+          <p className="beta-dim" style={{ fontSize: '0.78rem', marginBottom: '0.5rem' }}>
+            Calls <code>JesterGoonerV3.setAllocPoint(pid, newAllocPoint)</code>. Alloc points determine each pool&apos;s share of weekly $MEGAGOONER emissions.
+            Note: this call is <code>onlyOwner</code> — it only succeeds on execute if the Jestermogger timelock owns JesterGoonerV3.
+          </p>
+          <div className="beta-input-group">
+            <label className="beta-input-label">POOL</label>
+            <select value={allocPid} onChange={(e) => setAllocPid(e.target.value)} className="beta-input">
+              {POOL_LABELS.map((label, i) => <option key={i} value={i}>{label}</option>)}
+            </select>
+          </div>
+          <div className="beta-input-group" style={{ marginTop: '0.5rem' }}>
+            <label className="beta-input-label">NEW ALLOC POINT</label>
+            <input
+              type="number"
+              min="1"
+              value={allocNew}
+              onChange={(e) => setAllocNew(e.target.value)}
+              placeholder="e.g. 1000"
+              className="beta-input"
+            />
+          </div>
+        </div>
+      )}
+
+      {template === 'signal-burn-price' && (
+        <div className="beta-info-box" style={{ marginBottom: '1rem' }}>
+          <h4>ADJUST BURN-TO-LOOKSMAXX PRICE (SIGNAL)</h4>
+          <p className="beta-dim" style={{ fontSize: '0.78rem', marginBottom: '0.5rem' }}>
+            Non-binding. The burn amount is currently a frontend constant — this vote records community intent.
+            If it passes, the team updates the constant in a follow-up frontend deploy.
+          </p>
+          <div className="beta-input-group">
+            <label className="beta-input-label">NEW BURN PRICE ($MEGACHAD)</label>
+            <input
+              type="number"
+              min="1"
+              value={burnPriceNew}
+              onChange={(e) => setBurnPriceNew(e.target.value)}
+              placeholder="e.g. 150000"
+              className="beta-input"
+            />
+          </div>
+        </div>
+      )}
+
+      {template === 'signal' && (
+        <div className="beta-info-box" style={{ marginBottom: '1rem' }}>
+          <h4>GENERAL SIGNAL PROPOSAL</h4>
+          <p className="beta-dim" style={{ fontSize: '0.78rem', marginBottom: '0.5rem' }}>
+            Non-binding vote on anything — direction, priorities, budget intent. Encodes no on-chain action.
+            Pick a target contract as the &quot;subject&quot; of the signal (e.g. Framemogger for burn policy questions).
+          </p>
+          <div className="beta-input-group">
+            <label className="beta-input-label">SIGNAL SUBJECT (TARGET CONTRACT)</label>
+            <select
+              value={signalTarget}
+              onChange={(e) => setSignalTarget(e.target.value as `0x${string}`)}
+              className="beta-input"
+            >
+              <option value="">— Pick one —</option>
+              <option value={TESTNET_MEGACHAD_ADDRESS}>MEGACHAD token</option>
+              <option value={TESTNET_MEGAGOONER_ADDRESS}>MEGAGOONER token</option>
+              <option value={TESTNET_FRAMEMOGGER_ADDRESS}>Framemogger</option>
+              <option value={TESTNET_JESTERGOONER_ADDRESS}>JesterGoonerV3</option>
+              <option value={TESTNET_JESTERMOGGER_ADDRESS}>Jestermogger (governance)</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="beta-input-group">
+        <label className="beta-input-label">
+          {template === 'set-alloc' ? 'DESCRIPTION (OPTIONAL — AUTO-GENERATED IF BLANK)' : 'PROPOSAL DESCRIPTION'}
+        </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe what this proposal does and why..."
+          placeholder={
+            template === 'signal-burn-price'
+              ? 'Optional rationale for the signal vote...'
+              : template === 'set-alloc'
+              ? 'Leave blank to auto-generate, or add rationale...'
+              : 'Describe what this proposal does and why...'
+          }
           className="beta-textarea"
           rows={4}
         />
       </div>
 
+      {template === 'custom' && (
+      <>
       <div className="beta-input-group">
         <label className="beta-input-label">TARGET CONTRACT ADDRESS</label>
         <input
@@ -606,6 +803,8 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
           </ul>
         </div>
       </div>
+      </>
+      )}
 
       {status !== 'idle' && status !== 'done' && (
         <div className={`beta-status ${status === 'error' ? 'error' : ''}`}>
