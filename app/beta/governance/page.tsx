@@ -12,6 +12,8 @@ import {
   TESTNET_JESTERMOGGER_ADDRESS,
   TESTNET_FRAMEMOGGER_ADDRESS,
   TESTNET_MEGAGOONER_ADDRESS,
+  TESTNET_MEGACHAD_ADDRESS,
+  TESTNET_JESTERGOONER_ADDRESS,
   JESTERMOGGER_ABI,
   FRAMEMOGGER_ABI,
   ERC20_ABI,
@@ -509,13 +511,37 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
         />
         <div className="beta-info-box" style={{ marginTop: '0.5rem' }}>
           <p className="beta-dim" style={{ marginBottom: '0.5rem' }}>
-            The target address should be whichever contract the proposal wants to interact with:
+            The target address should be whichever contract the proposal wants to interact with. Click any address to use it:
           </p>
-          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem' }}>
-            <li><strong>MEGACHAD token</strong> (<code>TESTNET_MEGACHAD_ADDRESS</code>) — token operations (e.g. transfer from treasury)</li>
-            <li><strong>MEGAGOONER token</strong> (<code>TESTNET_MEGAGOONER_ADDRESS</code>) — governance token changes</li>
-            <li><strong>Framemogger</strong> (<code>TESTNET_FRAMEMOGGER_ADDRESS</code>) — parameter changes to the burn mechanism</li>
-            <li><strong>JesterGoonerV3</strong> (<code>TESTNET_JESTERGOONER_ADDRESS</code>) — staking parameter changes (e.g. <code>setAllocPoint</code>)</li>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem', listStyle: 'none' }}>
+            <li style={{ marginBottom: '0.4rem' }}>
+              <div><strong>MEGACHAD token</strong> — token operations (e.g. transfer from treasury)</div>
+              <code
+                onClick={() => setTargetAddr(TESTNET_MEGACHAD_ADDRESS)}
+                style={{ cursor: 'pointer', wordBreak: 'break-all' }}
+              >{TESTNET_MEGACHAD_ADDRESS}</code>
+            </li>
+            <li style={{ marginBottom: '0.4rem' }}>
+              <div><strong>MEGAGOONER token</strong> — governance token changes</div>
+              <code
+                onClick={() => setTargetAddr(TESTNET_MEGAGOONER_ADDRESS)}
+                style={{ cursor: 'pointer', wordBreak: 'break-all' }}
+              >{TESTNET_MEGAGOONER_ADDRESS}</code>
+            </li>
+            <li style={{ marginBottom: '0.4rem' }}>
+              <div><strong>Framemogger</strong> — parameter changes to the burn mechanism</div>
+              <code
+                onClick={() => setTargetAddr(TESTNET_FRAMEMOGGER_ADDRESS)}
+                style={{ cursor: 'pointer', wordBreak: 'break-all' }}
+              >{TESTNET_FRAMEMOGGER_ADDRESS}</code>
+            </li>
+            <li style={{ marginBottom: '0.4rem' }}>
+              <div><strong>JesterGoonerV3</strong> — staking parameter changes (e.g. <code>setAllocPoint</code>)</div>
+              <code
+                onClick={() => setTargetAddr(TESTNET_JESTERGOONER_ADDRESS)}
+                style={{ cursor: 'pointer', wordBreak: 'break-all' }}
+              >{TESTNET_JESTERGOONER_ADDRESS}</code>
+            </li>
             <li><strong>Any external contract</strong> — governance can call arbitrary contracts</li>
           </ul>
         </div>
