@@ -28,7 +28,7 @@ export const TESTNET_JESTERMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_JES
   '0x78546877Fe4079e5ca36A1c5C27a6F5ec23088c4') as `0x${string}`;
 
 export const TESTNET_NFT_VETO_COUNCIL_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_NFT_VETO_COUNCIL_CONTRACT ||
-  '') as `0x${string}`;
+  '0x0f3efB1D4E4f8Ec78eF7dd22c77Ec9DF8Bdc5Fe4') as `0x${string}`;
 
 // LP tokens
 export const TESTNET_LP_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_LP_TOKEN_CONTRACT ||
