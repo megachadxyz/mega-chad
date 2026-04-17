@@ -14,8 +14,10 @@ import {
   TESTNET_MEGAGOONER_ADDRESS,
   TESTNET_MEGACHAD_ADDRESS,
   TESTNET_JESTERGOONER_ADDRESS,
+  TESTNET_NFT_VETO_COUNCIL_ADDRESS,
   JESTERMOGGER_ABI,
   FRAMEMOGGER_ABI,
+  NFT_VETO_COUNCIL_ABI,
   ERC20_ABI,
   PROPOSAL_STATES,
 } from '@/lib/testnet-contracts';
@@ -62,7 +64,7 @@ function stateColor(state: number): string {
 // ═════════════════════════════════════════════════════════
 export default function GovernancePage() {
   const { address, isConnected } = useAccount();
-  const [view, setView] = useState<'proposals' | 'create'>('proposals');
+  const [view, setView] = useState<'proposals' | 'create' | 'veto-council'>('proposals');
   const [whitelisted, setWhitelisted] = useState(false);
 
   useEffect(() => {
@@ -115,10 +117,21 @@ export default function GovernancePage() {
               >
                 CREATE PROPOSAL
               </button>
+              {TESTNET_NFT_VETO_COUNCIL_ADDRESS && (
+                <button
+                  className={`beta-tab${view === 'veto-council' ? ' active' : ''}`}
+                  onClick={() => setView('veto-council')}
+                >
+                  VETO COUNCIL
+                </button>
+              )}
             </div>
 
             {view === 'proposals' && <ProposalList address={address!} />}
             {view === 'create' && <CreateProposal address={address!} />}
+            {view === 'veto-council' && TESTNET_NFT_VETO_COUNCIL_ADDRESS && (
+              <VetoCouncilSection address={address!} />
+            )}
           </>
         )}
       </div>
@@ -581,6 +594,7 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
         <h2>CREATE PROPOSAL</h2>
         <span className="beta-card-badge">TOP 3 BURNER</span>
       </div>
+
       <p className="beta-card-desc">
         As a top 3 weekly burner, you can submit governance proposals for $MEGAGOONER holders to vote on.
       </p>
@@ -822,6 +836,339 @@ function CreateProposal({ address }: { address: `0x${string}` }) {
       >
         SUBMIT PROPOSAL
       </button>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════
+// NFT VETO COUNCIL
+// ═════════════════════════════════════════════════════════
+function VetoCouncilSection({ address }: { address: `0x${string}` }) {
+  const [updateMaxId, setUpdateMaxId] = useState('100');
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'updating' | 'done' | 'error'>('idle');
+
+  const { data: council, refetch: refetchCouncil } = useReadContract({
+    address: TESTNET_NFT_VETO_COUNCIL_ADDRESS,
+    abi: NFT_VETO_COUNCIL_ABI,
+    functionName: 'getCouncil',
+  });
+
+  const { data: isMember } = useReadContract({
+    address: TESTNET_NFT_VETO_COUNCIL_ADDRESS,
+    abi: NFT_VETO_COUNCIL_ABI,
+    functionName: 'isCouncilMember',
+    args: [address],
+  });
+
+  const { data: proposalCount } = useReadContract({
+    address: TESTNET_JESTERMOGGER_ADDRESS,
+    abi: JESTERMOGGER_ABI,
+    functionName: 'proposalCount',
+  });
+
+  const { writeContract: writeUpdate, data: updateHash } = useWriteContract();
+  const { isSuccess: updateConfirmed } = useWaitForTransactionReceipt({ hash: updateHash });
+
+  useEffect(() => {
+    if (updateConfirmed && updateStatus === 'updating') {
+      setUpdateStatus('done');
+      refetchCouncil();
+    }
+  }, [updateConfirmed]);
+
+  const handleUpdateCouncil = () => {
+    const maxId = Number(updateMaxId);
+    if (!Number.isFinite(maxId) || maxId < 1 || maxId >= 5000) return;
+    setUpdateStatus('updating');
+    writeUpdate({
+      address: TESTNET_NFT_VETO_COUNCIL_ADDRESS,
+      abi: NFT_VETO_COUNCIL_ABI,
+      functionName: 'updateCouncil',
+      args: [BigInt(maxId)],
+    }, {
+      onError: () => setUpdateStatus('error'),
+    });
+  };
+
+  const activeMembers = council
+    ? (council as readonly `0x${string}`[]).filter(
+        (m) => m !== '0x0000000000000000000000000000000000000000'
+      )
+    : [];
+
+  const count = proposalCount ? Number(proposalCount) : 0;
+  const queuedIds: number[] = [];
+  for (let i = 1; i <= count; i++) queuedIds.push(i);
+
+  return (
+    <div className="beta-veto-council">
+      <div className="beta-card">
+        <div className="beta-card-header">
+          <h2>NFT VETO COUNCIL</h2>
+          {isMember && <span className="beta-card-badge">COUNCIL MEMBER</span>}
+        </div>
+        <p className="beta-card-desc">
+          Top 20 MEGACHAD NFT holders can veto governance proposals.
+          11 of 20 votes required to block a proposal during its 2-day veto window.
+        </p>
+
+        <div className="beta-stat-row" style={{ marginTop: '1rem' }}>
+          <div className="beta-stat">
+            <span className="beta-stat-label">COUNCIL SEATS</span>
+            <span className="beta-stat-value">{activeMembers.length} / 20</span>
+          </div>
+          <div className="beta-stat">
+            <span className="beta-stat-label">VETO THRESHOLD</span>
+            <span className="beta-stat-value">11 / 20</span>
+          </div>
+          <div className="beta-stat">
+            <span className="beta-stat-label">VETO WINDOW</span>
+            <span className="beta-stat-value">2 days</span>
+          </div>
+          <div className="beta-stat">
+            <span className="beta-stat-label">YOUR STATUS</span>
+            <span className={`beta-stat-value ${isMember ? 'text-green' : ''}`}>
+              {isMember ? 'COUNCIL MEMBER' : 'NOT ON COUNCIL'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Council Members */}
+      <div className="beta-card" style={{ marginTop: '1rem' }}>
+        <div className="beta-card-header">
+          <h2>COUNCIL MEMBERS</h2>
+        </div>
+        {activeMembers.length === 0 ? (
+          <p className="beta-dim">No council members yet. Run &quot;Update Council&quot; to scan NFT holders.</p>
+        ) : (
+          <div className="beta-council-grid">
+            {activeMembers.map((member, i) => (
+              <div key={i} className="beta-council-member">
+                <span className="beta-council-rank">#{i + 1}</span>
+                <span className="beta-council-addr">
+                  {member === address ? (
+                    <strong style={{ color: 'var(--pink)' }}>{truncAddr(member)} (you)</strong>
+                  ) : (
+                    truncAddr(member)
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+          <div className="beta-input-group" style={{ flex: 1 }}>
+            <label className="beta-input-label">MAX TOKEN ID TO SCAN</label>
+            <input
+              type="number"
+              min="1"
+              max="4999"
+              value={updateMaxId}
+              onChange={(e) => setUpdateMaxId(e.target.value)}
+              className="beta-input"
+            />
+          </div>
+          <button
+            className="beta-btn-primary"
+            onClick={handleUpdateCouncil}
+            disabled={updateStatus === 'updating'}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {updateStatus === 'updating' ? 'UPDATING...' : 'UPDATE COUNCIL'}
+          </button>
+        </div>
+        {updateStatus === 'done' && <div className="beta-status success" style={{ marginTop: '0.5rem' }}>Council updated!</div>}
+        {updateStatus === 'error' && <div className="beta-status error" style={{ marginTop: '0.5rem' }}>Update failed</div>}
+        <p className="beta-dim" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>
+          Anyone can update the council by scanning NFT ownership. Set the max token ID to the highest minted NFT ID (max 4999).
+        </p>
+      </div>
+
+      {/* Veto Votes on Proposals */}
+      <div className="beta-card" style={{ marginTop: '1rem' }}>
+        <div className="beta-card-header">
+          <h2>VETO VOTES</h2>
+        </div>
+        {count === 0 ? (
+          <p className="beta-dim">No proposals exist yet.</p>
+        ) : (
+          <div className="beta-proposal-list">
+            {queuedIds.reverse().map((id) => (
+              <VetoProposalCard
+                key={id}
+                proposalId={id}
+                voterAddress={address}
+                isMember={!!isMember}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════
+// VETO PROPOSAL CARD (per-proposal veto status)
+// ═════════════════════════════════════════════════════════
+function VetoProposalCard({
+  proposalId,
+  voterAddress,
+  isMember,
+}: {
+  proposalId: number;
+  voterAddress: `0x${string}`;
+  isMember: boolean;
+}) {
+  const [vetoStatus, setVetoStatus] = useState<'idle' | 'voting' | 'done' | 'error'>('idle');
+
+  const { data: proposal } = useReadContract({
+    address: TESTNET_JESTERMOGGER_ADDRESS,
+    abi: JESTERMOGGER_ABI,
+    functionName: 'getProposal',
+    args: [BigInt(proposalId)],
+  });
+
+  const { data: vetoVote, refetch: refetchVeto } = useReadContract({
+    address: TESTNET_NFT_VETO_COUNCIL_ADDRESS,
+    abi: NFT_VETO_COUNCIL_ABI,
+    functionName: 'getVetoVote',
+    args: [BigInt(proposalId)],
+  });
+
+  const { data: hasVoted } = useReadContract({
+    address: TESTNET_NFT_VETO_COUNCIL_ADDRESS,
+    abi: NFT_VETO_COUNCIL_ABI,
+    functionName: 'hasVotedOnVeto',
+    args: [BigInt(proposalId), voterAddress],
+  });
+
+  const { data: proposalState } = useReadContract({
+    address: TESTNET_JESTERMOGGER_ADDRESS,
+    abi: JESTERMOGGER_ABI,
+    functionName: 'state',
+    args: [BigInt(proposalId)],
+  });
+
+  const { writeContract: writeCastVeto, data: vetoHash } = useWriteContract();
+  const { isSuccess: vetoConfirmed } = useWaitForTransactionReceipt({ hash: vetoHash });
+
+  useEffect(() => {
+    if (vetoConfirmed && vetoStatus === 'voting') {
+      setVetoStatus('done');
+      refetchVeto();
+    }
+  }, [vetoConfirmed]);
+
+  const handleCastVeto = (support: boolean) => {
+    setVetoStatus('voting');
+    writeCastVeto({
+      address: TESTNET_NFT_VETO_COUNCIL_ADDRESS,
+      abi: NFT_VETO_COUNCIL_ABI,
+      functionName: 'castVetoVote',
+      args: [BigInt(proposalId), support],
+    }, {
+      onError: () => setVetoStatus('error'),
+    });
+  };
+
+  if (!proposal) return null;
+
+  const [, description, , , , , , , , , currentState] = proposal;
+  const state = proposalState !== undefined ? Number(proposalState) : Number(currentState);
+  const isQueued = state === 4;
+  const isVetoed = state === 7;
+
+  const vetoStartTime = vetoVote ? Number(vetoVote[0]) : 0;
+  const vetoEndTime = vetoVote ? Number(vetoVote[1]) : 0;
+  const yesVotes = vetoVote ? Number(vetoVote[2]) : 0;
+  const noVotes = vetoVote ? Number(vetoVote[3]) : 0;
+  const vetoExecuted = vetoVote ? vetoVote[4] : false;
+  const vetoExpired = vetoVote ? vetoVote[5] : false;
+  const vetoActive = vetoStartTime > 0 && !vetoExpired && !vetoExecuted;
+
+  if (!isQueued && !isVetoed && vetoStartTime === 0) return null;
+
+  return (
+    <div className={`beta-card beta-proposal-card ${isVetoed ? 'vetoed' : ''}`}>
+      <div className="beta-proposal-header">
+        <div className="beta-proposal-id">#{proposalId}</div>
+        <div className="beta-proposal-title">
+          {description.length > 60 ? description.slice(0, 60) + '...' : description}
+        </div>
+        <div className={`beta-proposal-state ${stateColor(state)}`}>
+          {PROPOSAL_STATES[state] || 'Unknown'}
+        </div>
+      </div>
+
+      <div className="beta-proposal-body">
+        {vetoStartTime > 0 ? (
+          <>
+            <div className="beta-stat-row" style={{ marginBottom: '0.75rem' }}>
+              <div className="beta-stat">
+                <span className="beta-stat-label">VETO VOTES (YES)</span>
+                <span className="beta-stat-value" style={{ color: '#ff4444' }}>{yesVotes} / 11</span>
+              </div>
+              <div className="beta-stat">
+                <span className="beta-stat-label">VETO VOTES (NO)</span>
+                <span className="beta-stat-value">{noVotes}</span>
+              </div>
+              <div className="beta-stat">
+                <span className="beta-stat-label">WINDOW ENDS</span>
+                <span className="beta-stat-value">{fmtDate(vetoEndTime)}</span>
+              </div>
+              <div className="beta-stat">
+                <span className="beta-stat-label">STATUS</span>
+                <span className={`beta-stat-value ${vetoExecuted ? 'text-red' : vetoExpired ? '' : 'text-green'}`}>
+                  {vetoExecuted ? 'VETOED' : vetoExpired ? 'WINDOW EXPIRED' : 'ACTIVE'}
+                </span>
+              </div>
+            </div>
+
+            {/* Veto progress bar */}
+            <div className="beta-vote-bar" style={{ marginBottom: '0.75rem' }}>
+              <div className="beta-vote-bar-label">
+                <span>VETO PROGRESS</span>
+                <span>{yesVotes} / 11 needed</span>
+              </div>
+              <div className="beta-vote-bar-track">
+                <div
+                  className="beta-vote-bar-fill against"
+                  style={{ width: `${Math.min(100, (yesVotes / 11) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {isMember && vetoActive && !hasVoted && (
+              <div className="beta-vote-buttons">
+                <button className="beta-btn-vote against" onClick={() => handleCastVeto(true)}>
+                  VOTE TO VETO
+                </button>
+                <button className="beta-btn-vote for" onClick={() => handleCastVeto(false)}>
+                  VOTE NO VETO
+                </button>
+              </div>
+            )}
+
+            {hasVoted && (
+              <div className="beta-your-vote">You have already voted on this veto.</div>
+            )}
+
+            {!isMember && vetoActive && (
+              <div className="beta-dim" style={{ fontSize: '0.8rem' }}>
+                Only council members (top 20 NFT holders) can vote on vetoes.
+              </div>
+            )}
+          </>
+        ) : isQueued ? (
+          <p className="beta-dim">Veto window not yet initialized for this proposal.</p>
+        ) : null}
+
+        {vetoStatus === 'voting' && <div className="beta-status">Casting veto vote...</div>}
+        {vetoStatus === 'done' && <div className="beta-status success">Veto vote cast!</div>}
+        {vetoStatus === 'error' && <div className="beta-status error">Veto vote failed</div>}
+      </div>
     </div>
   );
 }

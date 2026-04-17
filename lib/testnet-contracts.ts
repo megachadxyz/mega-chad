@@ -27,6 +27,9 @@ export const TESTNET_JESTERGOONER_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_JES
 export const TESTNET_JESTERMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_JESTERMOGGER_CONTRACT ||
   '0x78546877Fe4079e5ca36A1c5C27a6F5ec23088c4') as `0x${string}`;
 
+export const TESTNET_NFT_VETO_COUNCIL_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_NFT_VETO_COUNCIL_CONTRACT ||
+  '') as `0x${string}`;
+
 // LP tokens
 export const TESTNET_LP_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TESTNET_LP_TOKEN_CONTRACT ||
   '0xE150698cCcce99e0385146A70E0E150b4A2ebC70') as `0x${string}`; // MEGACHAD/MEGAGOONER
@@ -228,6 +231,27 @@ export const JESTERMOGGER_ABI = [
   { type: 'event', name: 'ProposalQueued', inputs: [{ name: 'proposalId', type: 'uint256', indexed: true }, { name: 'eta', type: 'uint256', indexed: false }] },
   { type: 'event', name: 'ProposalExecuted', inputs: [{ name: 'proposalId', type: 'uint256', indexed: true }] },
   { type: 'event', name: 'ProposalVetoed', inputs: [{ name: 'proposalId', type: 'uint256', indexed: true }] },
+] as const;
+
+// ── NFT Veto Council ABI ──
+export const NFT_VETO_COUNCIL_ABI = [
+  { type: 'function', name: 'COUNCIL_SIZE', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'VETO_THRESHOLD', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'VETO_VOTING_PERIOD', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getCouncil', inputs: [], outputs: [{ name: '', type: 'address[20]' }], stateMutability: 'view' },
+  { type: 'function', name: 'isCouncilMember', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' },
+  { type: 'function', name: 'getVetoVote', inputs: [{ name: 'proposalId', type: 'uint256' }], outputs: [{ name: 'startTime', type: 'uint256' }, { name: 'endTime', type: 'uint256' }, { name: 'yesVotes', type: 'uint256' }, { name: 'noVotes', type: 'uint256' }, { name: 'executed', type: 'bool' }, { name: 'expired', type: 'bool' }, { name: 'canExecute', type: 'bool' }], stateMutability: 'view' },
+  { type: 'function', name: 'hasVotedOnVeto', inputs: [{ name: 'proposalId', type: 'uint256' }, { name: 'voter', type: 'address' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' },
+  { type: 'function', name: 'castVetoVote', inputs: [{ name: 'proposalId', type: 'uint256' }, { name: 'support', type: 'bool' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'startVetoVote', inputs: [{ name: 'proposalId', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'updateCouncil', inputs: [{ name: 'maxTokenId', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'isVetoed', inputs: [{ name: 'proposalId', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' },
+  { type: 'function', name: 'vetoWindowElapsed', inputs: [{ name: 'proposalId', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' },
+  { type: 'event', name: 'CouncilUpdated', inputs: [{ name: 'newMembers', type: 'address[20]', indexed: false }] },
+  { type: 'event', name: 'VetoVoteStarted', inputs: [{ name: 'proposalId', type: 'uint256', indexed: true }, { name: 'startTime', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'VetoCast', inputs: [{ name: 'proposalId', type: 'uint256', indexed: true }, { name: 'voter', type: 'address', indexed: true }, { name: 'support', type: 'bool', indexed: false }] },
+  { type: 'event', name: 'VetoExecuted', inputs: [{ name: 'proposalId', type: 'uint256', indexed: true }, { name: 'yesVotes', type: 'uint256', indexed: false }, { name: 'noVotes', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'VetoFailed', inputs: [{ name: 'proposalId', type: 'uint256', indexed: true }, { name: 'yesVotes', type: 'uint256', indexed: false }, { name: 'noVotes', type: 'uint256', indexed: false }] },
 ] as const;
 
 // ── NFT ABI (same as mainnet) ──

@@ -2712,6 +2712,35 @@ textarea:focus-visible {
 
 .text-green { color: #00ff88 !important; }
 .text-orange { color: #ff8c00 !important; }
+.text-red { color: #ff4444 !important; }
+
+/* ── Veto Council ─────────────────────────────────────────── */
+.beta-council-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.beta-council-member {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(247, 134, 198, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+}
+.beta-council-rank {
+  color: var(--pink-dim);
+  font-weight: 700;
+  min-width: 2rem;
+}
+.beta-council-addr {
+  color: var(--text);
+  font-family: var(--font-body);
+}
 
 /* ── Inputs ──────────────────────────────────────────────── */
 .beta-input-group {
