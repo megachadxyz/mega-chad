@@ -17,25 +17,35 @@ export const MAINNET_NFT_ADDRESS = (process.env.NEXT_PUBLIC_NFT_CONTRACT ||
 export const MAINNET_TREN_FUND_WALLET = (process.env.NEXT_PUBLIC_TREN_FUND_WALLET ||
   '0x85bf9272DEA7dff1781F71473187b96c6f2f370C') as `0x${string}`;
 
-// ── Pending deployment (sentinels until env vars are populated post-deploy) ──
+// ── Mainnet deploy (2026-05-16, deployer/admin/treasury = tren fund 0x85bf…370C) ──
 const ZERO = '0x0000000000000000000000000000000000000000' as const;
 
-export const MAINNET_MEGAGOONER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_MEGAGOONER_CONTRACT || ZERO) as `0x${string}`;
+export const MAINNET_MEGAGOONER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_MEGAGOONER_CONTRACT ||
+  '0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46') as `0x${string}`;
 
 // V1/V2 staking sentinels (no migration on mainnet, always 0x0 — kept so UI imports resolve)
 export const MAINNET_JESTERGOONER_V1_ADDRESS = ZERO as `0x${string}`;
 export const MAINNET_JESTERGOONER_V2_ADDRESS = ZERO as `0x${string}`;
 export const MAINNET_MOGGER_STAKING_V1_ADDRESS = ZERO as `0x${string}`;
-export const MAINNET_FRAMEMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_FRAMEMOGGER_CONTRACT || ZERO) as `0x${string}`;
-export const MAINNET_MOGGER_STAKING_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_MOGGER_STAKING_CONTRACT || ZERO) as `0x${string}`;
-export const MAINNET_JESTERGOONER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_JESTERGOONER_CONTRACT || ZERO) as `0x${string}`;
-export const MAINNET_JESTERMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_JESTERMOGGER_CONTRACT || ZERO) as `0x${string}`;
-export const MAINNET_NFT_VETO_COUNCIL_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_NFT_VETO_COUNCIL_CONTRACT || ZERO) as `0x${string}`;
-export const MAINNET_EMISSION_CONTROLLER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_EMISSION_CONTROLLER_CONTRACT || ZERO) as `0x${string}`;
-export const MAINNET_CIRCUIT_BREAKER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_CIRCUIT_BREAKER_CONTRACT || ZERO) as `0x${string}`;
+export const MAINNET_FRAMEMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_FRAMEMOGGER_CONTRACT ||
+  '0xce320179Fb66E088635f789881A939321682E0c5') as `0x${string}`;
+export const MAINNET_MOGGER_STAKING_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_MOGGER_STAKING_CONTRACT ||
+  '0xfd820E6189Eb3396dA71cB072643A0E1e1239853') as `0x${string}`;
+export const MAINNET_JESTERGOONER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_JESTERGOONER_CONTRACT ||
+  '0x2695965Dd283e2425fab5C4c1E0955656802569c') as `0x${string}`;
+export const MAINNET_JESTERMOGGER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_JESTERMOGGER_CONTRACT ||
+  '0x75C38E514Ba9FEeb6EEEeF4cdEb88074Ade0582b') as `0x${string}`;
+export const MAINNET_NFT_VETO_COUNCIL_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_NFT_VETO_COUNCIL_CONTRACT ||
+  '0xbE985E5159cDFE8d33b4E61644495B38cCb46468') as `0x${string}`;
+export const MAINNET_EMISSION_CONTROLLER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_EMISSION_CONTROLLER_CONTRACT ||
+  '0x9CBB09555395643abc016b586D7d890E6911a013') as `0x${string}`;
+export const MAINNET_CIRCUIT_BREAKER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_CIRCUIT_BREAKER_CONTRACT ||
+  '0x8C6c634D0B698de2E98713E5a02f7905b117beAE') as `0x${string}`;
 
-// LP tokens (pending)
-export const MAINNET_LP_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_LP_TOKEN_CONTRACT || ZERO) as `0x${string}`; // MEGACHAD/MEGAGOONER
+// LP token — placeholder ERC20 (1B supply at tren fund). UI should keep JESTERGOONER staking
+// gated as "pending DEX pair" until a real MEGACHAD/MEGAGOONER pool exists and lpToken is upgraded.
+export const MAINNET_LP_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_LP_TOKEN_CONTRACT ||
+  '0x5e0637a78A86Db804FdD03821864C501A482eA62') as `0x${string}`;
 export const MAINNET_LP_ETH_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_LP_ETH_CONTRACT || ZERO) as `0x${string}`;
 export const MAINNET_LP_USDM_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_LP_USDM_CONTRACT || ZERO) as `0x${string}`;
 
