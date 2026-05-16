@@ -17,6 +17,7 @@ import {
   MAINNET_MOGGER_STAKING_ADDRESS,
   MAINNET_JESTERGOONER_ADDRESS,
   MAINNET_LP_TOKEN_ADDRESS,
+  MAINNET_MC_MG_PAIR_ADDRESS,
   MAINNET_NFT_ADDRESS,
   MAINNET_BURN_ADDRESS,
   MAINNET_TREN_FUND_WALLET,
@@ -620,6 +621,17 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     functionName: 'getReserves',
   });
 
+  // Live NFT balance from the MEGACHADNFT contract. The stakerInfo tuple's nftCount
+  // field is only populated after the user has interacted with MoggerStaking (it
+  // snapshots on stake/unstake/claim), so we read the NFT contract directly for
+  // display and stake-gating before first interaction.
+  const { data: nftBalance } = useReadContract({
+    address: MAINNET_NFT_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+  });
+
   // APY is hidden until the EmissionController weekly rate + a real LP pair exist.
   // The placeholder LP carries no MEGACHAD/MEGAGOONER price signal, so any computation
   // would be misleading. Show "—" until the DEX pair lands.
@@ -638,7 +650,10 @@ function StakingSection({ address }: { address: `0x${string}` }) {
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
 
-  const stakerNftCount = stakerInfo ? Number(stakerInfo[2]) : undefined;
+  // Prefer the live on-chain NFT balance; fall back to the stakerInfo snapshot only
+  // if the direct read hasn't resolved yet.
+  const liveNftCount = nftBalance !== undefined ? Number(nftBalance) : undefined;
+  const stakerNftCount = liveNftCount ?? (stakerInfo ? Number(stakerInfo[2]) : undefined);
   const lacksNFT = stakerNftCount !== undefined && stakerNftCount < 1;
 
   const handleStakeUnstake = () => {
@@ -783,7 +798,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">NFT COUNT</span>
-          <span className="beta-stat-value">{stakerInfo ? Number(stakerInfo[2]).toString() : '—'}</span>
+          <span className="beta-stat-value">{stakerNftCount !== undefined ? stakerNftCount.toString() : '—'}</span>
         </div>
       </div>
 
@@ -990,7 +1005,7 @@ function PublicStatsCard() {
 }
 
 const POOL_CONFIG = [
-  { pid: 0, name: 'MEGACHAD / MEGAGOONER', lpAddress: MAINNET_LP_TOKEN_ADDRESS, tokenBAddress: MAINNET_MEGAGOONER_ADDRESS, tokenBSymbol: 'MEGAGOONER', isEth: false },
+  { pid: 0, name: 'MEGACHAD / MEGAGOONER', lpAddress: MAINNET_MC_MG_PAIR_ADDRESS, tokenBAddress: MAINNET_MEGAGOONER_ADDRESS, tokenBSymbol: 'MEGAGOONER', isEth: false },
   { pid: 1, name: 'MEGACHAD / ETH', lpAddress: MAINNET_LP_ETH_ADDRESS, tokenBAddress: MAINNET_WETH_ADDRESS, tokenBSymbol: 'ETH', isEth: true },
   { pid: 2, name: 'MEGACHAD / USDm', lpAddress: MAINNET_LP_USDM_ADDRESS, tokenBAddress: MAINNET_USDM_ADDRESS, tokenBSymbol: 'USDm', isEth: false },
 ] as const;
@@ -998,6 +1013,7 @@ const POOL_CONFIG = [
 function LPStakingSection({ address }: { address: `0x${string}` }) {
   const [selectedPool, setSelectedPool] = useState(0);
   const pool = POOL_CONFIG[selectedPool];
+  const pairDeployed = isContractDeployed(pool.lpAddress);
 
   // ── State ──
   const [amount, setAmount] = useState('');
@@ -1066,9 +1082,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     address: pool.lpAddress, abi: LP_ABI, functionName: 'totalSupply',
   });
 
-  // MEGACHAD/MEGAGOONER LP reserves — used to price MEGAGOONER in MEGACHAD for APY
+  // MEGACHAD/MEGAGOONER LP reserves — used to price MEGAGOONER in MEGACHAD for APY.
+  // Source from the real pair (the placeholder LP is a static ERC20 with no reserves).
   const { data: goonerLpReserves } = useReadContract({
-    address: MAINNET_LP_TOKEN_ADDRESS, abi: LP_ABI, functionName: 'getReserves',
+    address: MAINNET_MC_MG_PAIR_ADDRESS, abi: LP_ABI, functionName: 'getReserves',
   });
   const goonerPrice = (() => {
     if (!goonerLpReserves) return undefined;
@@ -1143,6 +1160,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
   // ── Add Liquidity flow ──
   const handleAddLiquidity = () => {
+    if (!pairDeployed) { setErrorMsg(`${pool.name} pair not deployed yet`); return; }
     if (parsedLiqA <= 0n || parsedLiqB <= 0n) { setErrorMsg('Enter an amount'); return; }
     if (megachadBalance !== undefined && parsedLiqA > megachadBalance) { setErrorMsg('Insufficient $MEGACHAD'); return; }
     // For ETH pool, check native ETH balance is handled by wrapping step
@@ -1225,6 +1243,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
   // ── Remove Liquidity flow ──
   const handleRemoveLiquidity = () => {
+    if (!pairDeployed) { setErrorMsg(`${pool.name} pair not deployed yet`); return; }
     if (parsedRemoveLiq <= 0n) { setErrorMsg('Enter an amount'); return; }
     if (lpBalance !== undefined && parsedRemoveLiq > lpBalance) { setErrorMsg('Insufficient LP balance'); return; }
     setErrorMsg('');
@@ -1639,16 +1658,20 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
       {/* ── Pool Selector Tabs ── */}
       <div className="beta-toggle-row" style={{ marginBottom: '1rem' }}>
-        {POOL_CONFIG.map((p, i) => (
-          <button
-            key={i}
-            className={`beta-toggle${selectedPool === i ? ' active' : ''}`}
-            onClick={() => { setSelectedPool(i); setAmount(''); setLiqPanel('none'); setErrorMsg(''); setStatus('idle'); }}
-            style={{ fontSize: '0.7rem', padding: '0.4rem 0.6rem' }}
-          >
-            {p.name}
-          </button>
-        ))}
+        {POOL_CONFIG.map((p, i) => {
+          const deployed = isContractDeployed(p.lpAddress);
+          return (
+            <button
+              key={i}
+              className={`beta-toggle${selectedPool === i ? ' active' : ''}`}
+              onClick={() => { setSelectedPool(i); setAmount(''); setLiqPanel('none'); setErrorMsg(''); setStatus('idle'); }}
+              style={{ fontSize: '0.7rem', padding: '0.4rem 0.6rem', opacity: deployed ? 1 : 0.55 }}
+              title={deployed ? p.name : `${p.name} — pair not deployed yet`}
+            >
+              {p.name}{!deployed && ' (PENDING)'}
+            </button>
+          );
+        })}
       </div>
 
       {/* Pool-specific stats */}
@@ -1718,9 +1741,18 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
       {liqPanel === 'add' && (
         <div style={{ padding: '1rem', border: '1px solid rgba(247,134,198,0.15)', borderRadius: '8px', marginBottom: '1.5rem' }}>
+          {!pairDeployed && (
+            <div style={{ padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid rgba(247,134,198,0.4)', borderRadius: '6px', background: 'rgba(247,134,198,0.05)' }}>
+              <p className="beta-card-desc" style={{ margin: 0, fontSize: '0.8rem' }}>
+                <strong>{pool.name}</strong> pair is not deployed yet. Liquidity can only be added to an existing Uniswap V2 pair —
+                deployment is gated on tren fund accumulating sufficient {pool.tokenBSymbol} reserves.
+              </p>
+            </div>
+          )}
           <p className="beta-card-desc" style={{ marginBottom: '0.75rem' }}>
             Deposit $MEGACHAD and ${pool.tokenBSymbol} in the current pool ratio to receive LP tokens.
             {pool.isEth && ' ETH will be automatically wrapped to WETH.'}
+            {pairDeployed && lpTotalSupply !== undefined && lpTotalSupply === 0n && ' This pair is empty — you will set the initial price by depositing.'}
           </p>
 
           <div className="beta-stat-row" style={{ marginBottom: '0.75rem' }}>
@@ -1788,9 +1820,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           <button
             className="beta-btn-primary"
             onClick={handleAddLiquidity}
-            disabled={isBusy || parsedLiqA <= 0n}
+            disabled={isBusy || parsedLiqA <= 0n || !pairDeployed}
           >
-            {status === 'wrapping' ? 'WRAPPING ETH...'
+            {!pairDeployed ? 'PAIR NOT DEPLOYED'
+              : status === 'wrapping' ? 'WRAPPING ETH...'
               : status === 'approving' ? 'APPROVING $MEGACHAD...'
               : status === 'approving-b' ? `APPROVING $${pool.tokenBSymbol}...`
               : status === 'adding' ? 'ADDING LIQUIDITY...'
@@ -1850,9 +1883,11 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           <button
             className="beta-btn-primary"
             onClick={handleRemoveLiquidity}
-            disabled={isBusy || parsedRemoveLiq <= 0n}
+            disabled={isBusy || parsedRemoveLiq <= 0n || !pairDeployed}
           >
-            {status === 'removing' ? 'REMOVING LIQUIDITY...' : 'REMOVE LIQUIDITY'}
+            {!pairDeployed ? 'PAIR NOT DEPLOYED'
+              : status === 'removing' ? 'REMOVING LIQUIDITY...'
+              : 'REMOVE LIQUIDITY'}
           </button>
         </div>
       )}

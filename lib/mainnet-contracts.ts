@@ -46,6 +46,14 @@ export const MAINNET_CIRCUIT_BREAKER_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_
 // gated as "pending DEX pair" until a real MEGACHAD/MEGAGOONER pool exists and lpToken is upgraded.
 export const MAINNET_LP_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_LP_TOKEN_CONTRACT ||
   '0x5e0637a78A86Db804FdD03821864C501A482eA62') as `0x${string}`;
+
+// Real MEGACHAD/MEGAGOONER AMM pair (Uniswap V2-equivalent x*y=k, 0.3% fee). Empty at deploy
+// time — first depositor seeds initial reserves and mints sqrt(a*b) - 1000 LP shares. The
+// UI calls addLiquidity here; JESTERGOONER staking continues to target the placeholder LP
+// until V2.setLpToken() is called.
+export const MAINNET_MC_MG_PAIR_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_MC_MG_PAIR_CONTRACT ||
+  '0x437a433534FF6e7712D7e0A03Fa6CE577EeA1fef') as `0x${string}`;
+
 export const MAINNET_LP_ETH_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_LP_ETH_CONTRACT || ZERO) as `0x${string}`;
 export const MAINNET_LP_USDM_ADDRESS = (process.env.NEXT_PUBLIC_MAINNET_LP_USDM_CONTRACT || ZERO) as `0x${string}`;
 
