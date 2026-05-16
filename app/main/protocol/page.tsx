@@ -212,7 +212,7 @@ export default function MainnetProtocol() {
                 addresses={[MAINNET_JESTERGOONER_ADDRESS, MAINNET_MEGAGOONER_ADDRESS]}
                 label="JesterGooner"
               >
-                <PendingDexPairCard />
+                <LPStakingSection address={address!} />
               </ContractGate>
             )}
             {activeTab === 'swap' && (
@@ -1053,6 +1053,20 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     args: [address, pool.lpAddress],
   });
 
+  // Read JESTERGOONER's live lpToken setting. The mainnet proxy is the single-pool
+  // V1 contract — it exposes a public `lpToken` state var (auto getter). Until V2 is
+  // deployed and ADMIN calls setLpToken(MC/MG pair), this returns the PlaceholderLP
+  // address, and any stake/unstake/claim against the proxy reverts (function-selector
+  // mismatch with the V3 ABI used below, and the placeholder isn't what users hold).
+  const { data: jgLpToken } = useReadContract({
+    address: MAINNET_JESTERGOONER_ADDRESS,
+    abi: [{ type: 'function', name: 'lpToken', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' }] as const,
+    functionName: 'lpToken',
+  });
+  const stakingActivated = jgLpToken !== undefined
+    && typeof jgLpToken === 'string'
+    && jgLpToken.toLowerCase() === (pool.lpAddress as string).toLowerCase();
+
   // ── V3 contract reads (pid-based) ──
   const { data: poolInfoData } = useReadContract({
     address: MAINNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'getPoolInfo',
@@ -1294,6 +1308,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
   // ── Stake / Unstake flow ──
   const handleStakeUnstake = () => {
+    if (!stakingActivated) { setErrorMsg('Staking activates after the JESTERGOONER V2 upgrade points lpToken at this pair'); return; }
     if (!amount || parsedAmount <= 0n) { setErrorMsg('Enter an amount'); return; }
     setErrorMsg('');
     resetApprove();
@@ -1893,6 +1908,14 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       )}
 
       {/* ── Stake / Unstake ── */}
+      {!stakingActivated && (
+        <div style={{ padding: '0.75rem', marginTop: '1rem', border: '1px solid rgba(247,134,198,0.4)', borderRadius: '6px', background: 'rgba(247,134,198,0.05)' }}>
+          <p className="beta-card-desc" style={{ margin: 0, fontSize: '0.8rem' }}>
+            <strong>Staking pending V2 upgrade.</strong> JESTERGOONER&apos;s lpToken still points at the placeholder ERC20.
+            Once the pair has initial liquidity and ADMIN calls <code>setLpToken</code>, your LP tokens from this pair become stakeable for MEGAGOONER emissions.
+          </p>
+        </div>
+      )}
       <div className="beta-toggle-row">
         <button
           className={`beta-toggle${action === 'stake' ? ' active' : ''}`}
@@ -1949,9 +1972,12 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       <button
         className="beta-btn-primary"
         onClick={handleStakeUnstake}
-        disabled={isBusy}
+        disabled={isBusy || !stakingActivated}
       >
-        {needsApproval ? `APPROVE & ${action.toUpperCase()}` : action === 'stake' ? 'STAKE LP' : 'UNSTAKE LP'}
+        {!stakingActivated ? 'STAKING NOT YET ACTIVE'
+          : needsApproval ? `APPROVE & ${action.toUpperCase()}`
+          : action === 'stake' ? 'STAKE LP'
+          : 'UNSTAKE LP'}
       </button>
     </div>
   );
