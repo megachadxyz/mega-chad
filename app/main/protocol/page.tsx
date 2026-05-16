@@ -583,7 +583,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     args: [address, MAINNET_MOGGER_STAKING_ADDRESS],
   });
 
-  // Staker info: (staked, effectiveStake, pendingReward, multiplier, nftCount)
+  // Staker info: (stakedAmount, earnedRewards, nftCount, multiplier, effectiveStake)
   const { data: stakerInfo, refetch: refetchStaker } = useReadContract({
     address: MAINNET_MOGGER_STAKING_ADDRESS,
     abi: MOGGER_STAKING_ABI,
@@ -591,11 +591,18 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     args: [address],
   });
 
-  // Global stats: (totalStaked, totalEffectiveStake, currentWeek, weeklyEmission, rewardsRemaining)
+  // Global stats: (totalStaked, totalRewardsDistributed, rewardRate)
   const { data: globalStats } = useReadContract({
     address: MAINNET_MOGGER_STAKING_ADDRESS,
     abi: MOGGER_STAKING_ABI,
     functionName: 'getGlobalStats',
+  });
+
+  // Total effective stake (separate view — used for APY)
+  const { data: totalEffectiveStake } = useReadContract({
+    address: MAINNET_MOGGER_STAKING_ADDRESS,
+    abi: MOGGER_STAKING_ABI,
+    functionName: 'totalEffectiveStake',
   });
 
   // Earned
@@ -613,21 +620,10 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     functionName: 'getReserves',
   });
 
-  // Compute APY from weekly emission and LP price
-  // MEGAGOONER price in MEGACHAD = reserveMEGACHAD / reserveMEGAGOONER
-  // APY = (weeklyEmission * 52 * goonerPrice / totalEffectiveStake) * 100
-  const stakingAPY = (() => {
-    if (!globalStats || !lpReserves) return undefined;
-    const totalEffective = Number(formatUnits(globalStats[1], 18));
-    const weeklyEmission = Number(formatUnits(globalStats[3], 18));
-    if (totalEffective <= 0 || weeklyEmission <= 0) return undefined;
-    const reserveA = Number(formatUnits(lpReserves[0], 18));
-    const reserveB = Number(formatUnits(lpReserves[1], 18));
-    if (reserveA <= 0 || reserveB <= 0) return undefined;
-    // LP is MEGACHAD(tokenA) / MEGAGOONER(tokenB) → price = reserveA / reserveB
-    const goonerPrice = reserveA / reserveB;
-    return (weeklyEmission * 52 * goonerPrice / totalEffective) * 100;
-  })();
+  // APY is hidden until the EmissionController weekly rate + a real LP pair exist.
+  // The placeholder LP carries no MEGACHAD/MEGAGOONER price signal, so any computation
+  // would be misleading. Show "—" until the DEX pair lands.
+  const stakingAPY: number | undefined = undefined;
 
   // Write contracts
   const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
@@ -642,6 +638,9 @@ function StakingSection({ address }: { address: `0x${string}` }) {
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
 
+  const stakerNftCount = stakerInfo ? Number(stakerInfo[2]) : undefined;
+  const lacksNFT = stakerNftCount !== undefined && stakerNftCount < 1;
+
   const handleStakeUnstake = () => {
     if (!amount || parsedAmount <= 0n) { setErrorMsg('Enter an amount'); return; }
     setErrorMsg('');
@@ -649,6 +648,9 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     resetStake();
 
     if (action === 'stake') {
+      if (stakerNftCount !== undefined && stakerNftCount < 1) {
+        setErrorMsg('Requires 1+ Looksmaxxed NFT to stake'); return;
+      }
       if (megachadBalance !== undefined && parsedAmount > megachadBalance) {
         setErrorMsg('Insufficient balance'); return;
       }
@@ -756,16 +758,12 @@ function StakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} $MEGACHAD</span>
         </div>
         <div className="beta-stat">
+          <span className="beta-stat-label">TOTAL EFFECTIVE STAKE</span>
+          <span className="beta-stat-value">{totalEffectiveStake !== undefined ? fmtBig(totalEffectiveStake) : '—'}</span>
+        </div>
+        <div className="beta-stat">
           <span className="beta-stat-label">APY</span>
           <span className="beta-stat-value">{fmtAPY(stakingAPY)}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">WEEKLY EMISSION</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[3]) : '—'} $MEGAGOONER</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">WEEK</span>
-          <span className="beta-stat-value">{globalStats ? `${Number(globalStats[2])} / 225` : '—'}</span>
         </div>
       </div>
 
@@ -785,7 +783,7 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">NFT COUNT</span>
-          <span className="beta-stat-value">{stakerInfo ? Number(stakerInfo[4]).toString() : '—'}</span>
+          <span className="beta-stat-value">{stakerInfo ? Number(stakerInfo[2]).toString() : '—'}</span>
         </div>
       </div>
 
@@ -849,10 +847,21 @@ function StakingSection({ address }: { address: `0x${string}` }) {
       {status === 'done' && <div className="beta-status success">Transaction confirmed!</div>}
       {errorMsg && status === 'idle' && <div className="beta-status error">{errorMsg}</div>}
 
+      {action === 'stake' && lacksNFT && (
+        <div className="beta-status error">
+          Requires 1+ Looksmaxxed NFT — this wallet holds {stakerNftCount} on MegaETH mainnet.
+        </div>
+      )}
+
       <button
         className="beta-btn-primary"
         onClick={handleStakeUnstake}
-        disabled={status === 'approving' || status === 'staking' || status === 'unstaking'}
+        disabled={
+          status === 'approving' ||
+          status === 'staking' ||
+          status === 'unstaking' ||
+          (action === 'stake' && lacksNFT)
+        }
       >
         {needsApproval ? `APPROVE & ${action.toUpperCase()}` : action.toUpperCase()}
       </button>
@@ -943,14 +952,10 @@ function PublicStatsCard() {
     return a / b;
   })();
 
-  // Mogger APY: (weekly * 52 * goonerPrice / totalEffectiveStake) * 100
-  const moggerAPY = (() => {
-    if (!moggerGlobal || !goonerPrice) return undefined;
-    const totalEffective = Number(formatUnits(moggerGlobal[1], 18));
-    const weekly = Number(formatUnits(moggerGlobal[3], 18));
-    if (totalEffective <= 0 || weekly <= 0) return undefined;
-    return (weekly * 52 * goonerPrice / totalEffective) * 100;
-  })();
+  // Mogger APY hidden on mainnet — deployed MoggerStaking exposes cumulative
+  // rewardPerTokenStored, not a per-week rate, so APY requires reading the
+  // EmissionController schedule. Returns "—" until that wiring exists.
+  const moggerAPY: number | undefined = undefined;
 
   const pool0APY = computePoolAPY(pool0?.[4], pool0?.[2], mgReserves?.[0], mgLpSupply, goonerPrice);
   const pool1APY = computePoolAPY(pool1?.[4], pool1?.[2], lp1Reserves?.[0], lp1Supply, goonerPrice);

@@ -76,13 +76,15 @@ export function isContractDeployed(address: `0x${string}`): boolean {
   return address.toLowerCase() !== ZERO;
 }
 
-// Re-export shared ABIs from testnet-contracts (ABIs are protocol-version-specific,
-// not network-specific, so duplication would just drift over time)
+// Re-export ABIs that don't differ on mainnet. Framemogger/JESTERGOONER reads in the
+// UI assume testnet shapes that the deployed mainnet contracts don't implement — those
+// reads just resolve to undefined at runtime, which the UI already renders as "—".
+// Rewriting that whole layer is a bigger project; the immediate NFT-staking fix only
+// needs MOGGER_STAKING_ABI to be mainnet-correct.
 export {
   ERC20_ABI,
   MEGAGOONER_ABI,
   FRAMEMOGGER_ABI,
-  MOGGER_STAKING_ABI,
   JESTERGOONER_ABI,
   JESTERGOONER_V1_ABI,
   JESTERGOONER_V3_ABI,
@@ -93,3 +95,34 @@ export {
   PROPOSAL_STATES,
   type ProposalState,
 } from './testnet-contracts';
+
+// ── Mainnet MoggerStaking ABI ──
+// Deployed mainnet MoggerStaking.sol returns a different tuple shape than testnet:
+//   getStakerInfo → (stakedAmount, earnedRewards, nftCount, multiplier, effectiveStake)
+//   getGlobalStats → (totalStaked, totalRewardsDistributed, rewardRate)
+// The testnet ABI assumed multi-field weekly-emission stats that don't exist on mainnet.
+export const MOGGER_STAKING_ABI = [
+  { type: 'function', name: 'stake', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'unstake', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'claimRewards', inputs: [], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'totalStaked', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'totalEffectiveStake', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'earned', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getNFTMultiplier', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'rewardPerToken', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getStakerInfo', inputs: [{ name: 'account', type: 'address' }], outputs: [
+    { name: 'stakedAmount', type: 'uint256' },
+    { name: 'earnedRewards', type: 'uint256' },
+    { name: 'nftCount', type: 'uint256' },
+    { name: 'multiplier', type: 'uint256' },
+    { name: 'effectiveStake', type: 'uint256' },
+  ], stateMutability: 'view' },
+  { type: 'function', name: 'getGlobalStats', inputs: [], outputs: [
+    { name: '_totalStaked', type: 'uint256' },
+    { name: '_totalRewardsDistributed', type: 'uint256' },
+    { name: '_rewardRate', type: 'uint256' },
+  ], stateMutability: 'view' },
+  { type: 'event', name: 'Staked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'Unstaked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'RewardsClaimed', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'reward', type: 'uint256', indexed: false }] },
+] as const;
