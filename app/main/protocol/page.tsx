@@ -1709,6 +1709,22 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </div>
       </div>
 
+      {/* Your wallet balances (always visible — drives the Add Liquidity flow) */}
+      <div className="beta-stat-row">
+        <div className="beta-stat">
+          <span className="beta-stat-label">YOUR $MEGACHAD</span>
+          <span className="beta-stat-value">{fmtBig(megachadBalance)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">YOUR ${pool.tokenBSymbol}</span>
+          <span className="beta-stat-value">{fmtBig(tokenBBalance)}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">YOUR LP BALANCE</span>
+          <span className="beta-stat-value">{fmtBig(lpBalance)} LP</span>
+        </div>
+      </div>
+
       {/* Your position in selected pool */}
       <div className="beta-stat-row">
         <div className="beta-stat">
@@ -1722,10 +1738,6 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
           <span className="beta-stat-value">{userInfoData ? `${(Number(userInfoData[3]) / 10000).toFixed(2)}x` : '—'}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">LP BALANCE</span>
-          <span className="beta-stat-value">{fmtBig(lpBalance)} LP</span>
         </div>
       </div>
 
