@@ -647,6 +647,33 @@ function StakingSection({ address }: { address: `0x${string}` }) {
   const { writeContract: writeClaim, data: claimHash, reset: resetClaim } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash, query: { enabled: !!claimHash } });
 
+  // Permissionless weekly emission trigger — pulls MEGAGOONER from EmissionController
+  // for every unclaimed week up to the current one and notifies MoggerStaking/JESTERGOONER.
+  const { writeContract: writeDistribute, data: distributeHash, reset: resetDistribute } = useWriteContract();
+  const { isSuccess: distributeConfirmed } = useWaitForTransactionReceipt({ hash: distributeHash, query: { enabled: !!distributeHash } });
+  const [distributeStatus, setDistributeStatus] = useState<'idle' | 'pending' | 'done' | 'error'>('idle');
+  const [distributeError, setDistributeError] = useState('');
+
+  const handleDistribute = () => {
+    resetDistribute();
+    setDistributeStatus('pending');
+    setDistributeError('');
+    writeDistribute({
+      address: MAINNET_MOGGER_STAKING_ADDRESS,
+      abi: MOGGER_STAKING_ABI,
+      functionName: 'distributeWeeklyRewards',
+      gas: 1000000n,
+    }, { onError: (e) => { setDistributeStatus('error'); setDistributeError(e.message?.includes('AlreadyClaimed') ? 'All eligible weeks already distributed' : 'Distribute failed'); } });
+  };
+
+  useEffect(() => {
+    if (distributeConfirmed && distributeStatus === 'pending') {
+      setDistributeStatus('done');
+      refetchEarned();
+      refetchStaker();
+    }
+  }, [distributeConfirmed, distributeStatus]);
+
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
 
@@ -780,6 +807,23 @@ function StakingSection({ address }: { address: `0x${string}` }) {
           <span className="beta-stat-label">APY</span>
           <span className="beta-stat-value">{fmtAPY(stakingAPY)}</span>
         </div>
+      </div>
+
+      {/* Weekly distribution trigger (permissionless) */}
+      <div className="beta-info-box" style={{ marginTop: '0.5rem' }}>
+        <h4>WEEKLY EMISSION DISTRIBUTION</h4>
+        <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+          Anyone can pull the current week&apos;s MEGAGOONER mint from EmissionController into MoggerStaking + JESTERGOONER. Each tx catches up every unclaimed week in one shot.
+        </p>
+        <button
+          className="beta-btn-secondary"
+          onClick={handleDistribute}
+          disabled={distributeStatus === 'pending'}
+        >
+          {distributeStatus === 'pending' ? 'DISTRIBUTING...' : 'TRIGGER WEEKLY DISTRIBUTION'}
+        </button>
+        {distributeStatus === 'done' && <div className="beta-status success" style={{ marginTop: '0.5rem' }}>Distribution confirmed — rewards credited.</div>}
+        {distributeStatus === 'error' && <div className="beta-status error" style={{ marginTop: '0.5rem' }}>{distributeError}</div>}
       </div>
 
       {/* Your position */}
