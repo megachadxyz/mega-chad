@@ -97,6 +97,26 @@ function ContractGate({
   );
 }
 
+// JESTERGOONER + Swap rely on a real MEGACHAD/MEGAGOONER DEX pair. The mainnet
+// deploy uses a placeholder ERC20 as lpToken so the protocol could launch ahead
+// of the DEX. Until the real pair exists and JESTERGOONER is upgraded to point
+// at it, render this notice instead of the staking/swap UI.
+function PendingDexPairCard() {
+  return (
+    <div className="beta-card">
+      <div className="beta-card-header">
+        <h2>PENDING DEX PAIR</h2>
+        <span className="beta-card-badge">COMING SOON</span>
+      </div>
+      <p className="beta-card-desc">
+        LP staking and the in-app swap open once the MEGACHAD/MEGAGOONER pool
+        is live on a MegaETH DEX. The JESTERGOONER contract is already deployed
+        and will be upgraded to point at the real pair as soon as it exists.
+      </p>
+    </div>
+  );
+}
+
 // ═════════════════════════════════════════════════════════
 export default function MainnetProtocol() {
   const { address, isConnected, chainId: walletChainId } = useAccount();
@@ -191,7 +211,7 @@ export default function MainnetProtocol() {
                 addresses={[MAINNET_JESTERGOONER_ADDRESS, MAINNET_MEGAGOONER_ADDRESS]}
                 label="JesterGooner"
               >
-                <LPStakingSection address={address!} />
+                <PendingDexPairCard />
               </ContractGate>
             )}
             {activeTab === 'swap' && (
@@ -199,7 +219,7 @@ export default function MainnetProtocol() {
                 addresses={[MAINNET_LP_TOKEN_ADDRESS, MAINNET_MEGAGOONER_ADDRESS]}
                 label="Swap"
               >
-                <SwapSection address={address!} />
+                <PendingDexPairCard />
               </ContractGate>
             )}
           </>
