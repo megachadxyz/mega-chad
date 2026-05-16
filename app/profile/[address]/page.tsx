@@ -134,10 +134,12 @@ export default function ProfilePage({ params }: { params: { address: string } })
           <li><Link href="/main#about">About</Link></li>
           <li><Link href="/main#buy">Buy</Link></li>
           <li><Link href="/main#burn">Burn</Link></li>
+          <li><Link href="/main/protocol">Protocol</Link></li>
+          <li><Link href="/main/governance">Governance</Link></li>
           <li><Link href="/main#roadmap">Roadmap</Link></li>
-          <li><Link href="/main#chads">Chads</Link></li>
           <li><Link href="/chadboard">Chadboard</Link></li>
           <li><Link href="/portal">Portal</Link></li>
+          <li><Link href="/docs">Docs</Link></li>
         </ul>
         <div className="nav-right">
           {isConnected ? (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { MainNav } from '@/components/MainNav';
 
 interface AnalyticsData {
   date: string;
@@ -68,6 +69,8 @@ export default function AgentPage() {
   }, []);
 
   return (
+    <>
+      <MainNav />
     <div className="legal-page">
       <div className="legal-container">
         <Link href="/" className="back-link">&larr; Back to Home</Link>
@@ -564,5 +567,6 @@ GET https://megachad.xyz/api/stats`}</pre>
         `}</style>
       </div>
     </div>
+    </>
   );
 }

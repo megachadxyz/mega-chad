@@ -461,49 +461,17 @@ export default function Home() {
         <source src="/audio/megachad-theme.mp3" type="audio/mpeg" />
       </audio>
 
-      {/* ─── NAV ─────────────────────────────────────── */}
-      <nav className="nav">
-        <Link href="/" className="nav-logo">
-          <Image
-            src="/images/megachad-logo.png"
-            alt="$MEGACHAD"
-            width={220}
-            height={60}
-            priority
-            style={{ objectFit: 'contain', height: 'auto' }}
-          />
-        </Link>
-        <ul className={`nav-links ${mobileNav ? 'open' : ''}`}>
-          <li><a href="#about" onClick={() => setMobileNav(false)}>About</a></li>
-          <li><a href="#buy" onClick={() => setMobileNav(false)}>Buy</a></li>
-          <li><a href="#burn" onClick={() => setMobileNav(false)}>Burn</a></li>
-          <li><Link href="/main/protocol" onClick={() => setMobileNav(false)}>Protocol</Link></li>
-          <li><Link href="/main/governance" onClick={() => setMobileNav(false)}>Governance</Link></li>
-          <li><a href="#roadmap" onClick={() => setMobileNav(false)}>Roadmap</a></li>
-          <li><Link href="/chadboard" onClick={() => setMobileNav(false)}>Chadboard</Link></li>
-          <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
-          <li><Link href="/docs" onClick={() => setMobileNav(false)}>Docs</Link></li>
-        </ul>
-        <div className="nav-right">
-          <button className="audio-toggle" onClick={toggleAudio} title={audioPlaying ? 'Mute' : 'Play Music'}>
-            {audioPlaying ? '♫' : '♪'}
-          </button>
-          {isConnected ? (
-            <button className="nav-wallet" onClick={() => { if (isBusy) { if (!confirm('A burn is in progress. Disconnect anyway?')) return; } disconnect(); }}>
-              {truncAddr(address!)}
-            </button>
-          ) : (
-            <button className="nav-wallet" onClick={connectWallet}>
-              Connect Wallet
-            </button>
-          )}
-          <button className="nav-burger" onClick={() => setMobileNav(!mobileNav)} aria-label="Menu">
-            <span /><span /><span />
-          </button>
-        </div>
-      </nav>
+      {/* Floating audio toggle (nav lives in app/main/layout.tsx) */}
+      <button
+        className="audio-toggle audio-toggle-floating"
+        onClick={toggleAudio}
+        title={audioPlaying ? 'Mute' : 'Play Music'}
+        style={{ position: 'fixed', top: '1rem', right: '6rem', zIndex: 1000 }}
+      >
+        {audioPlaying ? '♫' : '♪'}
+      </button>
 
-      {/* ─── WALLET PICKER ───────────────────────────── */}
+      {/* Local wallet picker — opened by inline Connect CTAs on this page */}
       {showWalletPicker && (
         <div className="wallet-overlay" onClick={() => setShowWalletPicker(false)}>
           <div className="wallet-modal" onClick={(e) => e.stopPropagation()}>

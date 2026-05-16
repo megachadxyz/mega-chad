@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { MainNav } from '@/components/MainNav';
 
 export default function PrivacyPage() {
   return (
+    <>
+      <MainNav />
     <div className="legal-page">
       <div className="legal-container">
         <Link href="/" className="back-link">← Back to Home</Link>
@@ -394,5 +397,6 @@ export default function PrivacyPage() {
         }
       `}</style>
     </div>
+    </>
   );
 }

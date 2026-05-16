@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { MainNav } from '@/components/MainNav';
 
 export default function AboutPage() {
   return (
+    <>
+      <MainNav />
     <div className="legal-page">
       <div className="legal-container">
         <Link href="/main" className="back-link">← Back to App</Link>
@@ -365,5 +368,6 @@ export default function AboutPage() {
         }
       `}</style>
     </div>
+    </>
   );
 }
