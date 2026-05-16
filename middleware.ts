@@ -60,6 +60,8 @@ const ALLOWED_PAGES = new Set([
   '/docs',
   '/chadboard',
   '/main',
+  '/main/protocol',
+  '/main/governance',
   '/early',
   '/agent',
   '/portal',

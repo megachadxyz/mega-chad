@@ -477,8 +477,9 @@ export default function Home() {
           <li><a href="#about" onClick={() => setMobileNav(false)}>About</a></li>
           <li><a href="#buy" onClick={() => setMobileNav(false)}>Buy</a></li>
           <li><a href="#burn" onClick={() => setMobileNav(false)}>Burn</a></li>
+          <li><Link href="/main/protocol" onClick={() => setMobileNav(false)}>Protocol</Link></li>
+          <li><Link href="/main/governance" onClick={() => setMobileNav(false)}>Governance</Link></li>
           <li><a href="#roadmap" onClick={() => setMobileNav(false)}>Roadmap</a></li>
-          <li><a href="#chads" onClick={() => setMobileNav(false)}>Chads</a></li>
           <li><Link href="/chadboard" onClick={() => setMobileNav(false)}>Chadboard</Link></li>
           <li><Link href="/portal" onClick={() => setMobileNav(false)}>Portal</Link></li>
           <li><Link href="/docs" onClick={() => setMobileNav(false)}>Docs</Link></li>
@@ -880,8 +881,9 @@ export default function Home() {
             <ul className="footer-links">
               <li><a href="#about">About</a></li>
               <li><a href="#burn">Burn</a></li>
+              <li><Link href="/main/protocol">Protocol</Link></li>
+              <li><Link href="/main/governance">Governance</Link></li>
               <li><a href="#roadmap">Roadmap</a></li>
-              <li><a href="#chads">Chads</a></li>
               <li><Link href="/chadboard">Chadboard</Link></li>
               <li><Link href="/portal">Portal</Link></li>
             </ul>
