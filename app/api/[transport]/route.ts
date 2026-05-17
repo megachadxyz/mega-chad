@@ -396,6 +396,225 @@ const handler = createMcpHandler(
       },
     );
 
+    // ── Protocol Registry (single source of truth) ──────────
+    server.registerTool(
+      'get_protocol_registry',
+      {
+        title: 'Get MEGA Protocol Registry',
+        description:
+          'Canonical machine-readable registry of every MEGA Protocol contract: tokens (MEGACHAD, MEGAGOONER), AMM pair (MC/MG), staking (MoggerStaking, JESTERGOONER), governance (Jestermogger, NFTVetoCouncil, Framemogger), emissions (EmissionController), and safety (CircuitBreaker). Includes addresses, proxy/impl, ABIs, known gotchas, and direct links to all agent endpoints. Pull this FIRST for any DeFi interaction.',
+        inputSchema: {},
+      },
+      async () => {
+        trackMcpTool('get_protocol_registry').catch(() => {});
+        const res = await fetch('https://megachad.xyz/.well-known/megachad-protocol.json');
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Staking Position ──────────────────────────────
+    server.registerTool(
+      'get_staking_position',
+      {
+        title: 'Get Staking Position (MoggerStaking + JESTERGOONER)',
+        description:
+          'Returns combined position across both staking venues: MoggerStaking (stake MEGACHAD → earn MEGAGOONER) and JESTERGOONER V4 (stake MC/MG LP → earn MEGAGOONER). Includes balances, allowances, earned rewards, NFT boost, APR, and global pool stats. Without address, returns global stats only.',
+        inputSchema: {
+          address: z.string().optional().describe('Wallet address (0x...) — optional, gives per-wallet position'),
+        },
+      },
+      async ({ address }) => {
+        trackMcpTool('get_staking_position').catch(() => {});
+        const url = address
+          ? `https://megachad.xyz/api/defi/staking?address=${address}`
+          : 'https://megachad.xyz/api/defi/staking';
+        const res = await fetch(url);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Build Staking TX ──────────────────────────────
+    server.registerTool(
+      'build_staking_tx',
+      {
+        title: 'Build Staking Transaction',
+        description:
+          'Returns ready-to-sign transactions for stake / unstake / claim on either MoggerStaking (venue=mogger, stake MEGACHAD) or JESTERGOONER V4 (venue=jester, stake MC/MG LP). Stake actions return approve+stake; unstake/claim return a single tx. Each item has { to, value, data } you can pass to eth_sendTransaction.',
+        inputSchema: {
+          action: z.enum(['stake', 'unstake', 'claim']).describe('Which action to build'),
+          venue: z.enum(['mogger', 'jester']).describe('mogger = MoggerStaking (MEGACHAD), jester = JESTERGOONER V4 (LP)'),
+          amount: z.string().optional().describe('Amount in human units (e.g. "1000"). Required for stake/unstake.'),
+          address: z.string().optional().describe('Wallet address — used to skip approve if allowance is sufficient'),
+        },
+      },
+      async ({ action, venue, amount, address }) => {
+        trackMcpTool('build_staking_tx').catch(() => {});
+        const params = new URLSearchParams({ action, venue });
+        if (amount) params.set('amount', amount);
+        if (address) params.set('address', address);
+        const res = await fetch(`https://megachad.xyz/api/defi/staking/tx?${params}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: AMM Quote ─────────────────────────────────────
+    server.registerTool(
+      'get_amm_quote',
+      {
+        title: 'Get MEGACHAD/MEGAGOONER AMM Quote',
+        description:
+          'Quote a swap on the MegaChadLP MC/MG pair (constant-product, 0.3% fee). Returns expected output, price impact, and spot prices. WARNING: this pair uses tokenA/tokenB instead of token0/token1 so standard Uniswap V2 routers do not detect it — use this tool. Omit `from` + `amount` to just inspect reserves.',
+        inputSchema: {
+          from: z.enum(['MC', 'MG']).optional().describe('Input token: MC (MEGACHAD) or MG (MEGAGOONER)'),
+          amount: z.string().optional().describe('Input amount in human units (e.g. "1000")'),
+        },
+      },
+      async ({ from, amount }) => {
+        trackMcpTool('get_amm_quote').catch(() => {});
+        const params = new URLSearchParams();
+        if (from) params.set('from', from);
+        if (amount) params.set('amount', amount);
+        const url = `https://megachad.xyz/api/defi/amm/quote${params.toString() ? `?${params}` : ''}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Build AMM Swap TX ─────────────────────────────
+    server.registerTool(
+      'build_amm_swap_tx',
+      {
+        title: 'Build MC↔MG Swap Transaction',
+        description:
+          'Build a two-step plan to swap MEGACHAD↔MEGAGOONER through MegaChadLP: ERC20.transfer(pair, amountIn) → pair.swap(amountAIn, amountBIn, to). MegaChadLP has no on-chain minOut — verify your received balance after the swap. Slippage is computed off-chain and surfaced as minOut.',
+        inputSchema: {
+          from: z.enum(['MC', 'MG']).describe('Input token'),
+          amount: z.string().describe('Input amount in human units (e.g. "1000")'),
+          recipient: z.string().describe('Receive address (0x...)'),
+          slippageBps: z.number().int().min(0).max(5000).optional().describe('Slippage tolerance in bps (default 200 = 2%)'),
+        },
+      },
+      async ({ from, amount, recipient, slippageBps }) => {
+        trackMcpTool('build_amm_swap_tx').catch(() => {});
+        const params = new URLSearchParams({ from, amount, recipient });
+        if (slippageBps !== undefined) params.set('slippageBps', String(slippageBps));
+        const res = await fetch(`https://megachad.xyz/api/defi/amm/swap-tx?${params}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Build Add Liquidity TX ────────────────────────
+    server.registerTool(
+      'build_amm_add_liquidity_tx',
+      {
+        title: 'Build Add Liquidity Transaction',
+        description:
+          'Build approve(MC) + approve(MG) + addLiquidity on MegaChadLP MC/MG. The pair refunds whichever side is over-supplied. LP shares returned are stake-eligible in JESTERGOONER V4.',
+        inputSchema: {
+          amountMC: z.string().describe('MEGACHAD amount in human units'),
+          amountMG: z.string().describe('MEGAGOONER amount in human units'),
+          recipient: z.string().describe('LP token recipient (0x...)'),
+          address: z.string().optional().describe('Sender address — used to skip approve steps if allowance is sufficient'),
+        },
+      },
+      async ({ amountMC, amountMG, recipient, address }) => {
+        trackMcpTool('build_amm_add_liquidity_tx').catch(() => {});
+        const params = new URLSearchParams({ amountMC, amountMG, recipient });
+        if (address) params.set('address', address);
+        const res = await fetch(`https://megachad.xyz/api/defi/amm/add-liquidity-tx?${params}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: List Proposals ────────────────────────────────
+    server.registerTool(
+      'list_governance_proposals',
+      {
+        title: 'List Jestermogger Proposals',
+        description:
+          'List recent Jestermogger governance proposals with state (Pending / Active / Defeated / Succeeded / Queued / Executed / Expired / Vetoed), vote tallies, timing, and per-proposal lookup URLs.',
+        inputSchema: {
+          limit: z.number().int().min(1).max(100).optional().describe('Number of proposals (default 20)'),
+        },
+      },
+      async ({ limit }) => {
+        trackMcpTool('list_governance_proposals').catch(() => {});
+        const params = new URLSearchParams();
+        if (limit) params.set('limit', String(limit));
+        const res = await fetch(`https://megachad.xyz/api/defi/governance/proposals?${params}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Get Proposal Detail ───────────────────────────
+    server.registerTool(
+      'get_governance_proposal',
+      {
+        title: 'Get Single Proposal Detail',
+        description:
+          'Full state for one Jestermogger proposal: actions (target/value/calldata), vote tally, NFT veto council status, and (if voter passed) the voter receipt with vote weight.',
+        inputSchema: {
+          proposalId: z.number().int().min(1).describe('Proposal ID (1-indexed)'),
+          voter: z.string().optional().describe('Voter address to look up receipt'),
+        },
+      },
+      async ({ proposalId, voter }) => {
+        trackMcpTool('get_governance_proposal').catch(() => {});
+        const url = voter
+          ? `https://megachad.xyz/api/defi/governance/proposals/${proposalId}?voter=${voter}`
+          : `https://megachad.xyz/api/defi/governance/proposals/${proposalId}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Build Vote TX ─────────────────────────────────
+    server.registerTool(
+      'build_vote_tx',
+      {
+        title: 'Build Vote Transaction',
+        description:
+          'Build a castVote tx on Jestermogger. Support values: for | against | abstain. Vote weight = your MEGAGOONER balance at proposal snapshot.',
+        inputSchema: {
+          proposalId: z.number().int().min(1).describe('Proposal ID'),
+          support: z.enum(['for', 'against', 'abstain']).describe('Vote direction'),
+        },
+      },
+      async ({ proposalId, support }) => {
+        trackMcpTool('build_vote_tx').catch(() => {});
+        const res = await fetch(
+          `https://megachad.xyz/api/defi/governance/vote-tx?proposalId=${proposalId}&support=${support}`,
+        );
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Emission Schedule ─────────────────────────────
+    server.registerTool(
+      'get_emission_schedule',
+      {
+        title: 'Get MEGAGOONER Emission Schedule',
+        description:
+          'Returns the full 225-week MEGAGOONER emission schedule plus current week, on-chain weekly emission, and the EmissionController split (mogger / jester / treasury). Formula: 662245 * ((225 - w) / 225)^2 MEGAGOONER per week.',
+        inputSchema: {},
+      },
+      async () => {
+        trackMcpTool('get_emission_schedule').catch(() => {});
+        const res = await fetch('https://megachad.xyz/api/defi/emission');
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
     // ── MegaETH Protocol Directory ───────────────────────────
     server.registerTool(
       'get_megaeth_protocols',

@@ -1094,6 +1094,143 @@
           }
         }
       }
+    },
+    "/.well-known/megachad-protocol.json": {
+      "get": {
+        "operationId": "getProtocolRegistry",
+        "summary": "Get the MEGA Protocol contract registry",
+        "description": "Canonical machine-readable registry: every deployed contract (tokens, AMM, staking, governance, emissions, safety) with address, proxy/impl, key ABI functions, agent endpoints, and known gotchas (e.g. MegaChadLP tokenA/tokenB non-standard layout). Agents should fetch this once at startup and cache.",
+        "responses": {
+          "200": {
+            "description": "Protocol registry JSON",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/defi/staking": {
+      "get": {
+        "operationId": "getStakingPosition",
+        "summary": "Read combined MoggerStaking + JESTERGOONER position + APRs",
+        "description": "Without `address`: global stats only (totalStaked, rewardRate, periodFinish, APR per venue). With `address`: also includes per-wallet position (staked, earned, allowance, NFT boost, eligibility).",
+        "parameters": [
+          { "name": "address", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Staking state" } }
+      }
+    },
+    "/api/defi/staking/tx": {
+      "get": {
+        "operationId": "buildStakingTx",
+        "summary": "Build approve+stake / unstake / claim transaction",
+        "description": "Returns `executionPlan: [{ to, value, data, functionName, args }]`. For stake, the plan starts with approve if allowance is insufficient (or always, if `address` is omitted).",
+        "parameters": [
+          { "name": "action", "in": "query", "required": true, "schema": { "type": "string", "enum": ["stake", "unstake", "claim"] } },
+          { "name": "venue", "in": "query", "required": true, "schema": { "type": "string", "enum": ["mogger", "jester"] } },
+          { "name": "amount", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Required for stake/unstake; human units (e.g. \"1000\")." },
+          { "name": "address", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Ordered action plan" } }
+      }
+    },
+    "/api/defi/amm/quote": {
+      "get": {
+        "operationId": "getAmmQuote",
+        "summary": "Quote a swap on the MEGACHAD/MEGAGOONER pair",
+        "description": "Constant-product math (0.3% fee). Without `from`+`amount`, returns reserves + spot price. With both, returns expected output, price impact bps, and a link to the swap-tx builder. NOTE: MegaChadLP uses tokenA/tokenB rather than the V2 standard token0/token1 — generic V2 routers will not find this pool.",
+        "parameters": [
+          { "name": "from", "in": "query", "required": false, "schema": { "type": "string", "enum": ["MC", "MG"] } },
+          { "name": "amount", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Pool state + optional quote" } }
+      }
+    },
+    "/api/defi/amm/swap-tx": {
+      "get": {
+        "operationId": "buildAmmSwapTx",
+        "summary": "Build a MEGACHAD↔MEGAGOONER swap transaction",
+        "description": "Returns a two-step plan: ERC20.transfer(pair, amountIn) → pair.swap(amountAIn, amountBIn, to). MegaChadLP has no on-chain minOut — verify off-chain.",
+        "parameters": [
+          { "name": "from", "in": "query", "required": true, "schema": { "type": "string", "enum": ["MC", "MG"] } },
+          { "name": "amount", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "recipient", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "slippageBps", "in": "query", "required": false, "schema": { "type": "integer", "default": 200 } }
+        ],
+        "responses": { "200": { "description": "Swap execution plan + minOut" } }
+      }
+    },
+    "/api/defi/amm/add-liquidity-tx": {
+      "get": {
+        "operationId": "buildAddLiquidityTx",
+        "summary": "Build approve+approve+addLiquidity on the MC/MG pair",
+        "parameters": [
+          { "name": "amountMC", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "amountMG", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "recipient", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "address", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Liquidity provisioning plan" } }
+      }
+    },
+    "/api/defi/governance/proposals": {
+      "get": {
+        "operationId": "listGovernanceProposals",
+        "summary": "List Jestermogger proposals",
+        "parameters": [
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": { "200": { "description": "Proposal list with state + tally" } }
+      }
+    },
+    "/api/defi/governance/proposals/{id}": {
+      "get": {
+        "operationId": "getGovernanceProposal",
+        "summary": "Get a single proposal in detail",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "voter", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Full proposal state + receipt" } }
+      }
+    },
+    "/api/defi/governance/vote-tx": {
+      "get": {
+        "operationId": "buildVoteTx",
+        "summary": "Build castVote transaction",
+        "parameters": [
+          { "name": "proposalId", "in": "query", "required": true, "schema": { "type": "integer" } },
+          { "name": "support", "in": "query", "required": true, "schema": { "type": "string", "enum": ["for", "against", "abstain"] } }
+        ],
+        "responses": { "200": { "description": "castVote plan" } }
+      }
+    },
+    "/api/defi/governance/queue-tx": {
+      "get": {
+        "operationId": "buildQueueTx",
+        "summary": "Build queue transaction for a Succeeded proposal",
+        "parameters": [
+          { "name": "proposalId", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "queue plan" } }
+      }
+    },
+    "/api/defi/governance/execute-tx": {
+      "get": {
+        "operationId": "buildExecuteTx",
+        "summary": "Build execute transaction for a Queued proposal",
+        "parameters": [
+          { "name": "proposalId", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "execute plan" } }
+      }
+    },
+    "/api/defi/emission": {
+      "get": {
+        "operationId": "getEmissionSchedule",
+        "summary": "Get MEGAGOONER emission schedule + current state",
+        "description": "225-week quadratic decay schedule, current week, on-chain weekly emission, and the EmissionController split (mogger / jester / treasury) in bps and pct.",
+        "responses": { "200": { "description": "Emission schedule + split" } }
+      }
     }
   },
   "components": {
@@ -1119,7 +1256,16 @@
           "weth": { "type": "string", "example": "0x4200000000000000000000000000000000000006" },
           "usdmToken": { "type": "string", "example": "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7" },
           "identityRegistry": { "type": "string", "example": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" },
-          "reputationRegistry": { "type": "string", "example": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63" }
+          "reputationRegistry": { "type": "string", "example": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63" },
+          "megagoonerToken": { "type": "string", "example": "0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46" },
+          "megaChadLpMcMg": { "type": "string", "example": "0x437a433534FF6e7712D7e0A03Fa6CE577EeA1fef" },
+          "moggerStaking": { "type": "string", "example": "0xfd820E6189Eb3396dA71cB072643A0E1e1239853" },
+          "jesterGoonerV4": { "type": "string", "example": "0x2695965Dd283e2425fab5C4c1E0955656802569c" },
+          "emissionController": { "type": "string", "example": "0x9CBB09555395643abc016b586D7d890E6911a013" },
+          "framemogger": { "type": "string", "example": "0xce320179Fb66E088635f789881A939321682E0c5" },
+          "jestermogger": { "type": "string", "example": "0x75C38E514Ba9FEeb6EEEeF4cdEb88074Ade0582b" },
+          "nftVetoCouncil": { "type": "string", "example": "0xbE985E5159cDFE8d33b4E61644495B38cCb46468" },
+          "circuitBreaker": { "type": "string", "example": "0x8C6c634D0B698de2E98713E5a02f7905b117beAE" }
         }
       }
     }

@@ -215,6 +215,19 @@ Available intents:
 - compare: Compare two wallets/addresses
 - multi_burn: Multiple burns in sequence
 - schedule: Set up recurring burns
+- stake: User wants to stake MEGACHAD (venue=mogger) or MC/MG LP (venue=jester). Requires amount.
+- unstake: Withdraw stake. Requires venue + amount.
+- claim_rewards: Claim accrued MEGAGOONER. Requires venue (mogger|jester).
+- staking_position: Query current staking position / APRs.
+- swap_mc_mg: Swap MEGACHAD ↔ MEGAGOONER on the MegaChadLP AMM (NOT the Kumbaya ETH→MC pool). Requires from (MC|MG) + amount.
+- add_liquidity: Provide MC + MG liquidity to MegaChadLP. Requires amountMC + amountMG.
+- list_proposals: Show recent Jestermogger governance proposals.
+- proposal_detail: Show one proposal in detail (proposalId).
+- vote: Cast a vote on a proposal. Requires proposalId + support (for|against|abstain).
+- queue_proposal: Queue a Succeeded proposal. Requires proposalId.
+- execute_proposal: Execute a queued proposal. Requires proposalId.
+- emission_schedule: Show MEGAGOONER emission schedule + current week + split.
+- protocol_registry: Return the full machine-readable protocol registry (every contract address + ABI hints).
 - help: General help
 
 Response format:
@@ -228,7 +241,13 @@ Response format:
     "count": "number of burns or null",
     "style": "style preference or null",
     "compareWith": "0x... second address for comparison or null",
-    "query": "specific question being asked or null"
+    "query": "specific question being asked or null",
+    "venue": "mogger|jester or null (for stake/unstake/claim)",
+    "from": "MC|MG or null (for swap_mc_mg)",
+    "amountMC": "MEGACHAD amount or null (for add_liquidity)",
+    "amountMG": "MEGAGOONER amount or null (for add_liquidity)",
+    "proposalId": "integer or null (for vote/queue/execute/proposal_detail)",
+    "support": "for|against|abstain or null (for vote)"
   },
   "understanding": "one sentence describing what the user wants"
 }
@@ -346,6 +365,122 @@ function regexFallbackParse(message: string, wallet?: string): {
       intent: 'register_agent',
       params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
       understanding: 'User wants to register as a referral agent',
+    };
+  }
+
+  const numMatch = msg.match(/(\d+(?:\.\d+)?)/);
+  const amountStr = numMatch?.[1] || null;
+  const proposalIdMatch = msg.match(/proposal\s*#?\s*(\d+)|#(\d+)/);
+  const proposalId = proposalIdMatch ? (proposalIdMatch[1] || proposalIdMatch[2]) : null;
+  const venueGuess = /jester|lp\b|liquidity\s*pool/.test(msg)
+    ? 'jester'
+    : /mogger\b|megachad\s*stak/.test(msg)
+      ? 'mogger'
+      : null;
+
+  if (/protocol\s*(registry|info|contracts|addresses)|\bregistry\b|all\s*contract/.test(msg)) {
+    return {
+      intent: 'protocol_registry',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants the full protocol registry',
+    };
+  }
+
+  if (/(emission|reward\s*schedule|weekly\s*emission|quadratic|225\s*week)/.test(msg)) {
+    return {
+      intent: 'emission_schedule',
+      params: { wallet: null, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants the MEGAGOONER emission schedule',
+    };
+  }
+
+  if (/(active\s*proposal|list\s*proposal|governance\s*proposal|all\s*proposal)/.test(msg)) {
+    return {
+      intent: 'list_proposals',
+      params: { wallet: null, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants to list governance proposals',
+    };
+  }
+
+  if (/(?:vote|cast).*(?:for|against|abstain|yes|no)/.test(msg) && proposalId) {
+    const support = /\b(?:for|yes)\b/.test(msg) ? 'for' : /\b(?:against|no)\b/.test(msg) ? 'against' : 'abstain';
+    return {
+      intent: 'vote',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: support, compareWith: null, query: proposalId },
+      understanding: `User wants to vote ${support} on proposal ${proposalId}`,
+    };
+  }
+
+  if (/queue\s*(?:proposal|#)/.test(msg) && proposalId) {
+    return {
+      intent: 'queue_proposal',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: proposalId },
+      understanding: `User wants to queue proposal ${proposalId}`,
+    };
+  }
+  if (/execute\s*(?:proposal|#)/.test(msg) && proposalId) {
+    return {
+      intent: 'execute_proposal',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: proposalId },
+      understanding: `User wants to execute proposal ${proposalId}`,
+    };
+  }
+  if (/proposal\s*#?\d+/.test(msg) && proposalId) {
+    return {
+      intent: 'proposal_detail',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: proposalId },
+      understanding: `User wants detail for proposal ${proposalId}`,
+    };
+  }
+
+  if (/add\s*liquidity|provide\s*liquidity|deposit.*lp|seed.*pool/.test(msg)) {
+    return {
+      intent: 'add_liquidity',
+      params: { wallet: detectedWallet, amount: amountStr, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants to add MC/MG liquidity',
+    };
+  }
+
+  // MC↔MG swap on MegaChadLP — must run BEFORE the generic `swap` (which targets ETH→MC).
+  if (/(?:swap|trade|exchange|convert).*(?:mc\b|megachad).*(?:to|for|→|->).*(?:mg\b|megagooner)/.test(msg)
+    || /(?:swap|trade|exchange|convert).*(?:mg\b|megagooner).*(?:to|for|→|->).*(?:mc\b|megachad)/.test(msg)) {
+    const from = /(?:swap|trade|exchange|convert).*megagooner.*(?:to|for|→|->).*megachad/.test(msg)
+      || /(?:swap|trade|exchange|convert).*mg\b.*(?:to|for|→|->).*mc\b/.test(msg)
+      ? 'MG'
+      : 'MC';
+    return {
+      intent: 'swap_mc_mg',
+      params: { wallet: detectedWallet, amount: amountStr, sourceChain: null, referrer: null, count: null, style: from, compareWith: null, query: null },
+      understanding: `User wants to swap ${from === 'MC' ? 'MEGACHAD for MEGAGOONER' : 'MEGAGOONER for MEGACHAD'}`,
+    };
+  }
+
+  if (/(?:stake|deposit)\s+\d/.test(msg) || (/(?:stake|deposit)/.test(msg) && venueGuess)) {
+    return {
+      intent: 'stake',
+      params: { wallet: detectedWallet, amount: amountStr, sourceChain: null, referrer: null, count: null, style: venueGuess || 'mogger', compareWith: null, query: null },
+      understanding: `User wants to stake on ${venueGuess || 'mogger'}`,
+    };
+  }
+  if (/(?:unstake|withdraw)\s+\d/.test(msg) || (/(?:unstake|withdraw)/.test(msg) && venueGuess)) {
+    return {
+      intent: 'unstake',
+      params: { wallet: detectedWallet, amount: amountStr, sourceChain: null, referrer: null, count: null, style: venueGuess || 'mogger', compareWith: null, query: null },
+      understanding: `User wants to unstake from ${venueGuess || 'mogger'}`,
+    };
+  }
+  if (/(?:claim|harvest).*(?:reward|megagooner|mg\b)/.test(msg)) {
+    return {
+      intent: 'claim_rewards',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: venueGuess || 'mogger', compareWith: null, query: null },
+      understanding: `User wants to claim MEGAGOONER from ${venueGuess || 'mogger'}`,
+    };
+  }
+  if (/(?:my\s*stake|staking\s*position|how\s*much\s*staked|earned\s*megagooner)/.test(msg)) {
+    return {
+      intent: 'staking_position',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants their staking position',
     };
   }
 
@@ -830,11 +965,170 @@ export async function buildExecutionPlan(
       };
     }
 
+    case 'protocol_registry': {
+      const reg = await fetch(`${BASE}/.well-known/megachad-protocol.json`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: 'Return the full protocol registry',
+        answer: 'Canonical machine-readable registry with every contract address, ABI hints, agent endpoints, and known gotchas. Pull this once and cache.',
+        actions: [
+          { type: 'query', label: 'Registry JSON', description: 'Full protocol registry', apiCall: { method: 'GET', endpoint: '/.well-known/megachad-protocol.json' }, result: reg },
+        ],
+      };
+    }
+
+    case 'emission_schedule': {
+      const data = await fetch(`${BASE}/api/defi/emission`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: 'MEGAGOONER emission schedule',
+        answer: data
+          ? `Week ${data.currentWeek} of 225. Split: ${data.splitPct.moggerStaking}% MoggerStaking / ${data.splitPct.jesterGooner}% JESTERGOONER / ${data.splitPct.treasury}% Treasury. Current week emission: ${Number(data.currentWeekEmissionOnchain?.human || 0).toLocaleString()} MEGAGOONER.`
+          : 'Emission data temporarily unavailable.',
+        actions: [
+          { type: 'query', label: 'Full schedule', description: '225-week schedule + split', apiCall: { method: 'GET', endpoint: '/api/defi/emission' }, result: data },
+        ],
+      };
+    }
+
+    case 'staking_position': {
+      if (!wallet) {
+        return { intent, understanding: 'Staking position', answer: 'Pass a wallet address to see your staking position.', actions: [] };
+      }
+      const data = await fetch(`${BASE}/api/defi/staking?address=${wallet}`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: 'Staking position lookup',
+        answer: data?.position
+          ? `Mogger: ${data.position.moggerStaking.stakedHuman} MEGACHAD staked, ${data.position.moggerStaking.earnedRewardsHuman} MG pending. Jester V4: ${data.position.jesterGooner.stakedHuman} LP staked, ${data.position.jesterGooner.earnedRewardsHuman} MG pending. ${data.position.eligible ? '' : 'NOT ELIGIBLE — need 1+ MEGACHADNFT.'}`
+          : 'No position data.',
+        actions: [{ type: 'query', label: 'Position detail', description: 'Full staking state', apiCall: { method: 'GET', endpoint: `/api/defi/staking?address=${wallet}` }, result: data }],
+      };
+    }
+
+    case 'stake':
+    case 'unstake': {
+      const venue = (params.style as 'mogger' | 'jester') || 'mogger';
+      const amount = params.amount;
+      if (!amount) {
+        return { intent, understanding: `${intent} on ${venue}`, answer: `Specify an amount to ${intent}.`, actions: [] };
+      }
+      const qs = new URLSearchParams({ action: intent, venue, amount });
+      if (wallet) qs.set('address', wallet);
+      const data = await fetch(`${BASE}/api/defi/staking/tx?${qs}`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: `${intent} ${amount} on ${venue}`,
+        answer: `Built ${data?.executionPlan?.length || 0}-step ${intent} plan for ${amount} on ${venue === 'mogger' ? 'MoggerStaking' : 'JESTERGOONER V4'}.`,
+        actions: [{ type: 'query', label: `${intent} tx`, description: `${venue} ${intent}`, apiCall: { method: 'GET', endpoint: `/api/defi/staking/tx?${qs}` }, result: data }],
+      };
+    }
+
+    case 'claim_rewards': {
+      const venue = (params.style as 'mogger' | 'jester') || 'mogger';
+      const qs = new URLSearchParams({ action: 'claim', venue });
+      if (wallet) qs.set('address', wallet);
+      const data = await fetch(`${BASE}/api/defi/staking/tx?${qs}`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: `Claim MEGAGOONER from ${venue}`,
+        answer: `Built claim tx for ${venue === 'mogger' ? 'MoggerStaking' : 'JESTERGOONER V4'}.`,
+        actions: [{ type: 'query', label: 'Claim tx', description: `${venue} claim`, apiCall: { method: 'GET', endpoint: `/api/defi/staking/tx?${qs}` }, result: data }],
+      };
+    }
+
+    case 'swap_mc_mg': {
+      const from = (params.style as 'MC' | 'MG') || 'MC';
+      const amount = params.amount;
+      if (!amount) {
+        return { intent, understanding: `Swap ${from}`, answer: 'Specify an amount to swap.', actions: [] };
+      }
+      const quote = await fetch(`${BASE}/api/defi/amm/quote?from=${from}&amount=${amount}`).then(r => r.json()).catch(() => null);
+      const txQs = new URLSearchParams({ from, amount, recipient: wallet || '<YOUR_ADDRESS>' });
+      const tx = wallet ? await fetch(`${BASE}/api/defi/amm/swap-tx?${txQs}`).then(r => r.json()).catch(() => null) : null;
+      return {
+        intent,
+        understanding: `Swap ${amount} ${from} → ${from === 'MC' ? 'MG' : 'MC'}`,
+        answer: quote?.quote
+          ? `Quote: ${quote.quote.amountInHuman} ${from} → ${Number(quote.quote.amountOutHuman).toFixed(4)} ${quote.quote.to} (impact: ${quote.quote.priceImpactPct.toFixed(2)}%).`
+          : 'Quote unavailable.',
+        actions: [
+          { type: 'query', label: 'AMM quote', description: 'MC/MG pool quote', apiCall: { method: 'GET', endpoint: `/api/defi/amm/quote?from=${from}&amount=${amount}` }, result: quote },
+          ...(tx ? [{ type: 'query' as const, label: 'Swap tx plan', description: 'transfer + swap', apiCall: { method: 'GET', endpoint: `/api/defi/amm/swap-tx?${txQs}` }, result: tx }] : []),
+        ],
+      };
+    }
+
+    case 'add_liquidity': {
+      return {
+        intent,
+        understanding: 'Add MC/MG liquidity',
+        answer: 'Provide both amountMC and amountMG to /api/defi/amm/add-liquidity-tx to get the approve+approve+addLiquidity plan. LP shares are stake-eligible in JESTERGOONER V4.',
+        actions: [
+          { type: 'query', label: 'AMM reserves', description: 'Current pool state', apiCall: { method: 'GET', endpoint: '/api/defi/amm/quote' } },
+        ],
+      };
+    }
+
+    case 'list_proposals': {
+      const data = await fetch(`${BASE}/api/defi/governance/proposals?limit=20`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: 'List Jestermogger proposals',
+        answer: data?.proposals
+          ? `${data.total} total proposals. Returning latest ${data.returned}: ${data.proposals.slice(0, 3).map((p: { id: number; state: string }) => `#${p.id} (${p.state})`).join(', ')}${data.returned > 3 ? '…' : ''}.`
+          : 'No proposals.',
+        actions: [{ type: 'query', label: 'Proposals', description: 'Recent governance', apiCall: { method: 'GET', endpoint: '/api/defi/governance/proposals?limit=20' }, result: data }],
+      };
+    }
+
+    case 'proposal_detail': {
+      const id = params.query;
+      if (!id) return { intent, understanding: 'Proposal detail', answer: 'Specify a proposal id.', actions: [] };
+      const url = wallet ? `/api/defi/governance/proposals/${id}?voter=${wallet}` : `/api/defi/governance/proposals/${id}`;
+      const data = await fetch(`${BASE}${url}`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: `Proposal #${id}`,
+        answer: data?.proposal
+          ? `Proposal #${id}: ${data.proposal.state}. For ${data.proposal.votes.for}, Against ${data.proposal.votes.against}, Abstain ${data.proposal.votes.abstain}.`
+          : 'Proposal not found.',
+        actions: [{ type: 'query', label: 'Proposal', description: `#${id}`, apiCall: { method: 'GET', endpoint: url }, result: data }],
+      };
+    }
+
+    case 'vote': {
+      const id = params.query;
+      const support = params.style || 'for';
+      if (!id) return { intent, understanding: 'Vote', answer: 'Specify a proposal id.', actions: [] };
+      const data = await fetch(`${BASE}/api/defi/governance/vote-tx?proposalId=${id}&support=${support}`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: `Vote ${support} on #${id}`,
+        answer: `Built castVote tx (${support}) for proposal #${id}.`,
+        actions: [{ type: 'query', label: 'Vote tx', description: `${support} #${id}`, apiCall: { method: 'GET', endpoint: `/api/defi/governance/vote-tx?proposalId=${id}&support=${support}` }, result: data }],
+      };
+    }
+
+    case 'queue_proposal':
+    case 'execute_proposal': {
+      const id = params.query;
+      if (!id) return { intent, understanding: intent, answer: 'Specify a proposal id.', actions: [] };
+      const path = intent === 'queue_proposal' ? 'queue-tx' : 'execute-tx';
+      const data = await fetch(`${BASE}/api/defi/governance/${path}?proposalId=${id}`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: `${intent.replace('_proposal', '')} #${id}`,
+        answer: `Built ${intent.replace('_proposal', '')} tx for proposal #${id}.`,
+        actions: [{ type: 'query', label: `${intent} tx`, description: `#${id}`, apiCall: { method: 'GET', endpoint: `/api/defi/governance/${path}?proposalId=${id}` }, result: data }],
+      };
+    }
+
     default: {
       return {
         intent: 'help',
         understanding: 'General help',
-        answer: 'I can help you with: looksmaxxing (swap + burn + mint), swapping ETH for $MEGACHAD, checking wallet balances, bridging from any chain, gasless burns, referral registration, viewing the gallery/leaderboard, comparing wallets, and cross-chain operations.',
+        answer: 'I can help you with: looksmaxxing (swap + burn + mint), swapping ETH for $MEGACHAD, MC↔MG swaps on MegaChadLP, MoggerStaking / JESTERGOONER staking + claims, Jestermogger governance (list / vote / queue / execute), MEGAGOONER emission schedule, the protocol registry, bridging, gasless burns, referrals, gallery, and leaderboard.',
         actions: [
           { type: 'query', label: 'Get price', description: 'Current price + burn cost', apiCall: { method: 'GET', endpoint: '/api/price' } },
           { type: 'query', label: 'View stats', description: 'Protocol statistics', apiCall: { method: 'GET', endpoint: '/api/stats' } },

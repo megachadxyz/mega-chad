@@ -13,6 +13,7 @@ The protocol has two tokens: $MEGACHAD (primary burn token) and $MEGAGOONER (gov
 
 ## API Documentation
 
+- [Protocol Registry](https://megachad.xyz/.well-known/megachad-protocol.json): Canonical machine-readable registry of every deployed contract (tokens, AMM, staking, governance, emissions, safety). PULL THIS FIRST for any DeFi interaction.
 - [OpenAPI Spec](https://megachad.xyz/.well-known/openapi.json): Full API schema for all endpoints
 - [Agent Registration](https://megachad.xyz/.well-known/agent-registration.json): ERC-8004 agent identity and services
 - [Agent Card (A2A)](https://megachad.xyz/.well-known/agent.json): Google A2A protocol agent card
@@ -68,6 +69,7 @@ The protocol has two tokens: $MEGACHAD (primary burn token) and $MEGAGOONER (gov
 
 ## Contract Addresses (MegaETH)
 
+### Burn / NFT / Infra
 - [Token: $MEGACHAD](https://megaexplorer.xyz/address/0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888): 0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888
 - [NFT Contract](https://megaexplorer.xyz/address/0x1f1eFd3476b95091B9332b2d36a24bDE12CC6296): 0x1f1eFd3476b95091B9332b2d36a24bDE12CC6296
 - [Gasless Relayer](https://megaexplorer.xyz/address/0x87d67c0A351FeB2bB9F6985D55665544F94ebC9F): 0x87d67c0A351FeB2bB9F6985D55665544F94ebC9F
@@ -75,6 +77,33 @@ The protocol has two tokens: $MEGACHAD (primary burn token) and $MEGAGOONER (gov
 - [Kumbaya Swap Router](https://megaexplorer.xyz/address/0xE5BbEF8De2DB447a7432A47EBa58924d94eE470e): 0xE5BbEF8De2DB447a7432A47EBa58924d94eE470e
 - [ERC-8004 Identity Registry](https://megaexplorer.xyz/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432): 0x8004A169FB4a3325136EB29fA0ceB6D2e539a432
 - [ERC-8004 Reputation Registry](https://megaexplorer.xyz/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63): 0x8004BAa17C55a88189AE136b182e5fdA19dE9b63
+
+### MEGA Protocol — DeFi Stack (UUPS proxies on MegaETH mainnet)
+- [Token: $MEGAGOONER](https://megaexplorer.xyz/address/0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46): 0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46 (50M cap, 225-week emission)
+- [MegaChadLP MC/MG AMM](https://megaexplorer.xyz/address/0x437a433534FF6e7712D7e0A03Fa6CE577EeA1fef): 0x437a433534FF6e7712D7e0A03Fa6CE577EeA1fef — constant-product, 0.3% fee, USES `tokenA`/`tokenB` NOT `token0`/`token1` (standard V2 routers will not detect it; use our /api/defi/amm/* endpoints)
+- [MoggerStaking](https://megaexplorer.xyz/address/0xfd820E6189Eb3396dA71cB072643A0E1e1239853): 0xfd820E6189Eb3396dA71cB072643A0E1e1239853 (stake MEGACHAD → earn MEGAGOONER, drip)
+- [JESTERGOONER V4](https://megaexplorer.xyz/address/0x2695965Dd283e2425fab5C4c1E0955656802569c): 0x2695965Dd283e2425fab5C4c1E0955656802569c (stake MC/MG LP → earn MEGAGOONER, no lock)
+- [EmissionController](https://megaexplorer.xyz/address/0x9CBB09555395643abc016b586D7d890E6911a013): 0x9CBB09555395643abc016b586D7d890E6911a013 (45% mogger / 40% jester / 15% treasury)
+- [Framemogger](https://megaexplorer.xyz/address/0xce320179Fb66E088635f789881A939321682E0c5): 0xce320179Fb66E088635f789881A939321682E0c5 (burn-to-govern weekly)
+- [Jestermogger Governance](https://megaexplorer.xyz/address/0x75C38E514Ba9FEeb6EEEeF4cdEb88074Ade0582b): 0x75C38E514Ba9FEeb6EEEeF4cdEb88074Ade0582b (top-3 burner proposers, MEGAGOONER voters)
+- [NFTVetoCouncil](https://megaexplorer.xyz/address/0xbE985E5159cDFE8d33b4E61644495B38cCb46468): 0xbE985E5159cDFE8d33b4E61644495B38cCb46468 (top 20 NFT holders, 11-veto threshold)
+- [CircuitBreaker](https://megaexplorer.xyz/address/0x8C6c634D0B698de2E98713E5a02f7905b117beAE): 0x8C6c634D0B698de2E98713E5a02f7905b117beAE (global emergency pause)
+
+## DeFi Endpoints (MEGA Protocol)
+
+These endpoints back the DeFi MCP tools and `/api/agent/chat` intents. They return JSON with on-chain reads and (for tx builders) ready-to-sign action arrays — `{ to, value, data }` you can feed straight to `eth_sendTransaction`.
+
+- [GET /api/defi/staking](https://megachad.xyz/api/defi/staking): Combined MoggerStaking + JESTERGOONER position + global APRs. Pass `?address=0x...` for per-wallet view.
+- [GET /api/defi/staking/tx](https://megachad.xyz/api/defi/staking/tx): Build stake/unstake/claim. `?action=stake|unstake|claim&venue=mogger|jester&amount=&address=`
+- [GET /api/defi/amm/quote](https://megachad.xyz/api/defi/amm/quote): MC/MG pool reserves + (with `?from=MC|MG&amount=`) constant-product quote with price impact.
+- [GET /api/defi/amm/swap-tx](https://megachad.xyz/api/defi/amm/swap-tx): Two-step swap plan (transfer + swap) with off-chain slippage minOut. `?from=MC|MG&amount=&recipient=&slippageBps=`
+- [GET /api/defi/amm/add-liquidity-tx](https://megachad.xyz/api/defi/amm/add-liquidity-tx): approve+approve+addLiquidity. `?amountMC=&amountMG=&recipient=&address=`
+- [GET /api/defi/governance/proposals](https://megachad.xyz/api/defi/governance/proposals): List Jestermogger proposals with state + vote tally. `?limit=20`
+- [GET /api/defi/governance/proposals/{id}](https://megachad.xyz/api/defi/governance/proposals/1): Full proposal: actions, votes, NFT veto state, voter receipt (with `?voter=0x...`).
+- [GET /api/defi/governance/vote-tx](https://megachad.xyz/api/defi/governance/vote-tx): Build castVote. `?proposalId=&support=for|against|abstain`
+- [GET /api/defi/governance/queue-tx](https://megachad.xyz/api/defi/governance/queue-tx): Build queue() for Succeeded proposals.
+- [GET /api/defi/governance/execute-tx](https://megachad.xyz/api/defi/governance/execute-tx): Build execute() for Queued proposals past timelock.
+- [GET /api/defi/emission](https://megachad.xyz/api/defi/emission): 225-week MEGAGOONER schedule + current week + split + on-chain weekly emission.
 
 ## Tier System
 
@@ -88,13 +117,30 @@ Burn-gated real-time messaging on the Chadboard. Only wallets with at least 1 bu
 
 Real-time burn and mint notifications via the MegaChad Telegram bot at https://t.me/megachads.
 
-## MEGA Protocol Governance
+## MEGA Protocol DeFi Stack
 
-- **$MEGAGOONER:** Governance/reward token (50M cap, 225-week quadratic emission)
-- **Framemogger:** Burn $MEGACHAD → earn governance rights → mint $MEGAGOONER
-- **MoggerStaking:** Stake $MEGACHAD → earn $MEGAGOONER over time
-- **JESTERGOONER:** Stake LP tokens → earn $MEGAGOONER
-- **Jestermogger:** Governance voting — top 3 burners propose, $MEGAGOONER holders vote
+The DeFi stack is fully agent-driven through the registry + DeFi endpoints + MCP tools above. Architecture:
+
+- **$MEGAGOONER:** Governance/reward token (50M cap, 225-week quadratic emission). Formula: `weeklyEmission(w) = 662245 * ((225 - w) / 225)^2`.
+- **EmissionController:** Splits each week's emission 45% MoggerStaking / 40% JESTERGOONER / 15% Treasury. Governance can rebalance within ±5% bounds with a 90-day cooldown.
+- **MoggerStaking:** Stake MEGACHAD → earn MEGAGOONER (Synthetix-style continuous drip, no lock).
+- **JESTERGOONER V4:** Stake MC/MG LP → earn MEGAGOONER (no lock; V4 removed the V3 4-week lock + time multiplier).
+- **NFT boost (both venues):** Effective stake multiplier = 1.000× / 1.075× / 1.150× at 1+/10+/25+ NFTs. **1+ NFT is required to earn anything — wallets with zero NFTs accrue zero rewards.**
+- **MegaChadLP MC/MG:** Constant-product AMM with 0.3% fee. Non-standard `tokenA`/`tokenB` layout — use `/api/defi/amm/*` instead of generic V2 routers.
+- **Framemogger:** Weekly burn-to-govern. Send MEGACHAD + burn MEGAGOONER (1:4). Top 3 senders that week can propose in Jestermogger.
+- **Jestermogger:** Snapshot-based MEGAGOONER governance. 1-day delay → 3-day vote → 2-day timelock → 7-day grace. 50% quorum.
+- **NFTVetoCouncil:** Top 20 NFT-holding addresses. 11+ veto votes within 2 days cancel a queued proposal.
+- **CircuitBreaker:** Any guardian can trip global pause in an emergency; admin clears.
+
+## How to Interact (Agent Flow — DeFi)
+
+1. `GET /.well-known/megachad-protocol.json` — cache the full registry.
+2. `GET /api/defi/staking?address=0xYOU` — see your position + APRs.
+3. `GET /api/defi/staking/tx?action=stake&venue=mogger&amount=10000&address=0xYOU` — sign + send the returned actions in order.
+4. For MC↔MG swaps: `GET /api/defi/amm/quote?from=MC&amount=1000` → `GET /api/defi/amm/swap-tx?from=MC&amount=1000&recipient=0xYOU` → sign both actions.
+5. For governance: `GET /api/defi/governance/proposals` → pick id → `GET /api/defi/governance/vote-tx?proposalId=N&support=for` → sign.
+
+Or use natural language: POST `/api/agent/chat` with {"message": "stake 50000 megachad", "wallet": "0xYOU"} — returns the same calldata wrapped in an action plan.
 
 ## How to Interact (Agent Flow)
 

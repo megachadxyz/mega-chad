@@ -1,0 +1,240 @@
+{
+  "$schema": "https://megachad.xyz/.well-known/megachad-protocol.schema.json",
+  "name": "MegaChad / MEGA Protocol",
+  "version": "1.0.0",
+  "description": "Burn-to-create looksmaxxing engine + on-chain DeFi stack (governance, staking, AMM, emissions). This file is the canonical machine-readable registry of every deployed contract — agents should pull it once and use it to drive all interactions.",
+  "homepage": "https://megachad.xyz",
+  "docs": "https://megachad.xyz/docs",
+  "llms": "https://megachad.xyz/llms.txt",
+  "openapi": "https://megachad.xyz/.well-known/openapi.json",
+  "agentRegistration": "https://megachad.xyz/.well-known/agent-registration.json",
+  "agentCard": "https://megachad.xyz/.well-known/agent.json",
+  "mcp": "https://megachad.xyz/api/mcp",
+  "chain": {
+    "name": "MegaETH",
+    "chainId": 4326,
+    "rpc": "https://mainnet.megaeth.com/rpc",
+    "wsRpc": "wss://mainnet.megaeth.com/ws",
+    "explorer": "https://megaexplorer.xyz",
+    "blockTimeMs": 250,
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 }
+  },
+  "genesis": {
+    "deployedAt": "2026-05-16",
+    "genesisTimestamp": 1778941561,
+    "note": "Unix timestamp anchoring EmissionController week 0. All staking/governance/burn week indices derive from this value."
+  },
+  "roles": {
+    "admin": "0x85bf9272DEA7dff1781F71473187b96c6f2f370C",
+    "treasury": "0x85bf9272DEA7dff1781F71473187b96c6f2f370C",
+    "trenFund": "0x85bf9272DEA7dff1781F71473187b96c6f2f370C",
+    "guardians": [
+      "0xD3D78375cFd33958CF92672bb62C8Dd9Eb4607aD",
+      "0x831dB96c0E427CB2B3979E2fcf7d1Fe63Ee46466",
+      "0x4e7dBf5454299D9B92ca84100BC1E2696F0d386B",
+      "0x139b9157b2201D83B4d57C8173249F79bd30CB6A",
+      "0x51033463869FCe65aa68Ad14CE3A32D3AF5208D9"
+    ]
+  },
+  "tokens": {
+    "MEGACHAD": {
+      "address": "0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888",
+      "symbol": "MEGACHAD",
+      "decimals": 18,
+      "standard": "ERC-20",
+      "proxy": false,
+      "role": "primary burn token",
+      "explorer": "https://megaexplorer.xyz/address/0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888"
+    },
+    "MEGAGOONER": {
+      "address": "0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46",
+      "implementation": "0x8dc1E72Af8138bF4ea8a3Fed8987Be078E773Be7",
+      "symbol": "MEGAGOONER",
+      "decimals": 18,
+      "standard": "ERC-20 + snapshots",
+      "proxy": "UUPS",
+      "role": "governance + staking reward token",
+      "maxSupply": "50000000000000000000000000",
+      "maxSupplyHuman": "50,000,000",
+      "emissionWeeks": 225,
+      "emissionFormula": "weeklyEmission(w) = 662245 * ((225 - w) / 225)^2 MEGAGOONER",
+      "explorer": "https://megaexplorer.xyz/address/0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46"
+    },
+    "MEGACHADNFT": {
+      "address": "0x1f1eFd3476b95091B9332b2d36a24bDE12CC6296",
+      "symbol": "MCNFT",
+      "standard": "ERC-721",
+      "proxy": false,
+      "role": "Looksmaxxed NFT (boost tiers: 1+ = 1.000x, 10+ = 1.075x, 25+ = 1.150x). 1+ NFT required for ALL emissions eligibility (MoggerStaking + JESTERGOONER).",
+      "explorer": "https://megaexplorer.xyz/address/0x1f1eFd3476b95091B9332b2d36a24bDE12CC6296"
+    },
+    "WETH": {
+      "address": "0x4200000000000000000000000000000000000006",
+      "symbol": "WETH",
+      "decimals": 18
+    },
+    "USDm": {
+      "address": "0xfafddbb3fc7688494971a79cc65dca3ef82079e7",
+      "symbol": "USDm",
+      "decimals": 18,
+      "issuer": "Meridian",
+      "role": "x402 payment infra"
+    }
+  },
+  "amm": {
+    "MegaChadLP_MC_MG": {
+      "address": "0x437a433534FF6e7712D7e0A03Fa6CE577EeA1fef",
+      "deployedAt": "2026-05-16",
+      "proxy": false,
+      "type": "constant-product (Uniswap V2-equivalent x*y=k)",
+      "feeBps": 30,
+      "feeNote": "0.3% on swap input. Math equivalent to Uniswap V2 (1000 LP locked at first mint).",
+      "tokenA": "0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888",
+      "tokenB": "0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46",
+      "namingNote": "AGENT WARNING: this pair uses tokenA/tokenB/reserveA/reserveB instead of the standard token0/token1/getReserves() Uniswap V2 layout. Standard V2-style routers and indexers WILL NOT detect this pool. Use this registry or our /api/defi/amm/quote endpoint instead.",
+      "functions": {
+        "view": ["tokenA()", "tokenB()", "reserveA()", "reserveB()", "getReserves() returns (uint256, uint256)", "totalSupply()", "balanceOf(address)"],
+        "write": ["addLiquidity(uint256 amountA, uint256 amountB, address to) returns (uint256 liquidity)", "removeLiquidity(uint256 liquidity, address to) returns (uint256, uint256)", "swap(uint256 amountAIn, uint256 amountBIn, address to)"]
+      },
+      "swapSemantics": "swap() takes amountAIn OR amountBIn (one must be zero) and computes output via x*y=k with 0.3% fee. Caller must transfer the input amount to the pair BEFORE calling swap (or use the wrapper at /api/defi/amm/swap-tx which packs approve+transfer+swap)."
+    },
+    "Kumbaya_MEGACHAD_WETH": {
+      "address": "0x1C08A462E50532640441B4fC64385E610BA3a78D",
+      "type": "Uniswap V3 (Kumbaya)",
+      "feeTier": 10000,
+      "router": "0xE5BbEF8De2DB447a7432A47EBa58924d94eE470e",
+      "quoter": "0x1F1a8dC7E138C34b503Ca080962aC10B75384a27",
+      "note": "Use this V3 pool for ETH ↔ MEGACHAD. Standard Uniswap V3 — works with any V3 aggregator."
+    }
+  },
+  "staking": {
+    "MoggerStaking": {
+      "address": "0xfd820E6189Eb3396dA71cB072643A0E1e1239853",
+      "implementation": "0x64b8e4B9B4067F30C92aC52C306ACA6C52A6cB5B",
+      "proxy": "UUPS",
+      "stakeToken": "0x374A17bd16B5cD76aaeFC9EAF76aE07e9aF3d888",
+      "rewardToken": "0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46",
+      "model": "Synthetix-style continuous drip — rewardRate (MEGAGOONER/sec) tops up over a 7-day window each weekly distribution",
+      "lockPeriod": 0,
+      "nftRequirement": "1+ MEGACHADNFT to be eligible for rewards",
+      "boostTiers": [
+        { "minNFTs": 1, "multiplier": 1.000 },
+        { "minNFTs": 10, "multiplier": 1.075 },
+        { "minNFTs": 25, "multiplier": 1.150 }
+      ],
+      "keyFunctions": ["stake(uint256)", "unstake(uint256)", "claimRewards()", "earned(address)", "getStakerInfo(address)", "getGlobalStats()"]
+    },
+    "JESTERGOONER": {
+      "address": "0x2695965Dd283e2425fab5C4c1E0955656802569c",
+      "implementation": "0x8BD2ACF3F97d4398A16dC928cAb4C002824646F6",
+      "version": "V4",
+      "proxy": "UUPS",
+      "stakeToken": "0x437a433534FF6e7712D7e0A03Fa6CE577EeA1fef",
+      "stakeTokenNote": "MC/MG LP token from MegaChadLP_MC_MG. Get LP by calling addLiquidity on the pair.",
+      "rewardToken": "0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46",
+      "model": "Synthetix-style continuous drip — no lock, no time multiplier (V4 removed both)",
+      "lockPeriod": 0,
+      "v4Changes": "V4 (deployed 2026-05-17) removed the 4-week lock + linear time multiplier from V3, and added flushBufferedRewards() to recover stuck buffer.",
+      "nftRequirement": "1+ MEGACHADNFT to be eligible for rewards",
+      "keyFunctions": ["stake(uint256)", "unstake(uint256)", "claimRewards()", "earned(address)", "getStakerInfo(address)", "getGlobalStats()", "canUnstake(address)"]
+    }
+  },
+  "emissions": {
+    "EmissionController": {
+      "address": "0x9CBB09555395643abc016b586D7d890E6911a013",
+      "implementation": "0x4BAC8E246159A3dEc2DEB0190233574ADe636af4",
+      "proxy": "UUPS",
+      "split": {
+        "moggerStaking": 4500,
+        "jesterGooner": 4000,
+        "treasury": 1500,
+        "unit": "basis points (4500 = 45%)"
+      },
+      "splitBounds": {
+        "moggerStaking": [4000, 5000],
+        "jesterGooner": [3500, 4500],
+        "treasury": [1000, 2000],
+        "rebalanceCooldownSeconds": 7776000
+      },
+      "schedule": "225-week quadratic decay. Week w emission = 662245 * ((225 - w) / 225)^2 MEGAGOONER. Distributed every 7 days via distributeWeekly().",
+      "keyFunctions": ["distributeWeekly()", "getCurrentWeek()", "getWeeklyEmission(uint256 week)", "moggerSplitBps()", "jesterSplitBps()", "treasurySplitBps()"]
+    }
+  },
+  "governance": {
+    "Jestermogger": {
+      "address": "0x75C38E514Ba9FEeb6EEEeF4cdEb88074Ade0582b",
+      "implementation": "0x503F2F92799dF9461aD0Fc22c803C4E0B77d021d",
+      "proxy": "UUPS",
+      "model": "Snapshot-based MEGAGOONER vote with quadratic Framemogger-burn-gated proposal",
+      "proposerGate": "Must be in current week's top 3 Framemogger burners",
+      "voteToken": "0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46",
+      "lifecycle": {
+        "votingDelaySeconds": 86400,
+        "votingPeriodSeconds": 259200,
+        "timelockSeconds": 172800,
+        "graceSeconds": 604800,
+        "quorumPercentage": 50
+      },
+      "states": ["Pending", "Active", "Defeated", "Succeeded", "Queued", "Executed", "Expired", "Vetoed"],
+      "keyFunctions": ["propose(address[],uint256[],bytes[],string)", "castVote(uint256,uint8)", "queue(uint256)", "execute(uint256)", "state(uint256)", "getProposal(uint256)", "getActions(uint256)", "getReceipt(uint256,address)", "proposalCount()"],
+      "supportValues": { "0": "Against", "1": "For", "2": "Abstain" }
+    },
+    "NFTVetoCouncil": {
+      "address": "0xbE985E5159cDFE8d33b4E61644495B38cCb46468",
+      "implementation": "0x56E0e3DD57d2A0c756B9E762499B378eEE2298d3",
+      "proxy": "UUPS",
+      "model": "Top 20 NFT-holding addresses (by token ID range) form a veto council. 11+ veto votes within a 2-day window cancel a queued proposal.",
+      "councilSize": 20,
+      "vetoThreshold": 11,
+      "vetoWindowSeconds": 172800,
+      "keyFunctions": ["getCouncil()", "isCouncilMember(address)", "startVetoVote(uint256)", "castVetoVote(uint256,bool)", "getVetoVote(uint256)", "hasVotedOnVeto(uint256,address)", "isVetoed(uint256)"]
+    },
+    "Framemogger": {
+      "address": "0xce320179Fb66E088635f789881A939321682E0c5",
+      "implementation": "0xa02fB83e83964E97403CdF1d029C07FB94B8bB0d",
+      "proxy": "UUPS",
+      "model": "Weekly burn-to-govern: send MEGACHAD to tren fund AND burn MEGAGOONER (1:4 ratio). Top 3 senders that week unlock the right to propose in Jestermogger.",
+      "burnRatio": "1 MEGACHAD sent → 4 MEGACHAD-equivalent MEGAGOONER burned",
+      "weekDurationSeconds": 604800,
+      "nftRequirement": "1+ MEGACHADNFT to participate",
+      "keyFunctions": ["sendMegachad(uint256)", "getCurrentWeek()", "getWeekTop3(uint256)", "getWeekStats(uint256)", "canPropose(address)", "weeklyUserSent(uint256,address)", "totalMegagoonerBurned()"]
+    }
+  },
+  "safety": {
+    "CircuitBreaker": {
+      "address": "0x8C6c634D0B698de2E98713E5a02f7905b117beAE",
+      "implementation": "0x0aC8C890EA558df6A22502f02d606551899F63bd",
+      "proxy": "UUPS",
+      "role": "Global pause switch for staking/governance/AMM in emergencies. Any guardian can trip; admin clears."
+    }
+  },
+  "agentEndpoints": {
+    "registry": "/.well-known/megachad-protocol.json",
+    "openapi": "/.well-known/openapi.json",
+    "agentRegistration": "/.well-known/agent-registration.json",
+    "agentCard": "/.well-known/agent.json",
+    "mcp": "/api/mcp",
+    "chat": "/api/agent/chat",
+    "defi": {
+      "stakingPosition": "/api/defi/staking?address=0x...",
+      "stakingTx": "/api/defi/staking/tx?action=stake|unstake|claim&venue=mogger|jester&amount=...",
+      "ammQuote": "/api/defi/amm/quote?from=MC|MG&amount=...",
+      "ammSwapTx": "/api/defi/amm/swap-tx?from=MC|MG&amount=...&recipient=0x...&slippageBps=200",
+      "ammAddLiquidityTx": "/api/defi/amm/add-liquidity-tx?amountMC=...&amountMG=...&recipient=0x...",
+      "proposals": "/api/defi/governance/proposals?limit=20",
+      "proposal": "/api/defi/governance/proposals/{id}",
+      "voteTx": "/api/defi/governance/vote-tx?proposalId=...&support=for|against|abstain",
+      "queueTx": "/api/defi/governance/queue-tx?proposalId=...",
+      "executeTx": "/api/defi/governance/execute-tx?proposalId=...",
+      "emissionSchedule": "/api/defi/emission/schedule",
+      "emissionCurrent": "/api/defi/emission/current"
+    }
+  },
+  "knownGotchas": [
+    "MegaChadLP_MC_MG uses tokenA/tokenB instead of token0/token1 — generic Uniswap V2 router heuristics WILL fail. Use this registry or /api/defi/amm/* helpers.",
+    "MegaChadLP swap requires the caller to push tokens to the pair before calling swap(). Use /api/defi/amm/swap-tx — it returns the multi-step calldata.",
+    "Staking requires holding 1+ MEGACHADNFT (any token ID) — wallets without an NFT show 0 rewards even with stake.",
+    "JESTERGOONER was upgraded to V4 on 2026-05-17 — V3 lock + time multiplier are gone. Any UI/agent caching V3 ABI assumptions for lockEnd/timeMultiplier will see stale values.",
+    "Proposal IDs in Jestermogger are 1-indexed, not 0-indexed. proposalCount() returns the highest valid ID."
+  ]
+}
