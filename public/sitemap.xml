@@ -25,6 +25,10 @@
   <url><loc>https://megachad.xyz/agents.txt</loc><priority>0.9</priority></url>
   <url><loc>https://megachad.xyz/llms.txt</loc><priority>0.9</priority></url>
   <url><loc>https://megachad.xyz/llms-full.txt</loc><priority>0.8</priority></url>
+  <url><loc>https://megachad.xyz/humans.txt</loc><priority>0.6</priority></url>
+  <url><loc>https://megachad.xyz/.well-known/security.txt</loc><priority>0.6</priority></url>
+  <url><loc>https://megachad.xyz/manifest.json</loc><priority>0.6</priority></url>
+  <url><loc>https://megachad.xyz/tokens.json</loc><priority>0.7</priority></url>
 
   <!-- Read API endpoints -->
   <url><loc>https://megachad.xyz/api/stats</loc><priority>0.7</priority></url>

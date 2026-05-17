@@ -1,0 +1,60 @@
+{
+  "name": "MegaChad — MEGA Protocol",
+  "short_name": "MegaChad",
+  "description": "Burn-to-create looksmaxxing engine on MegaETH. AMM, staking, governance, and AI-generated NFTs.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["finance", "social", "utilities"],
+  "icons": [
+    {
+      "src": "/chadfavicon.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/megachad-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Looksmaxx",
+      "short_name": "Looksmaxx",
+      "description": "Burn $MEGACHAD and mint an AI portrait",
+      "url": "/main",
+      "icons": [{ "src": "/chadfavicon.jpg", "sizes": "any" }]
+    },
+    {
+      "name": "Chadboard",
+      "short_name": "Chadboard",
+      "description": "Top burners leaderboard",
+      "url": "/chadboard",
+      "icons": [{ "src": "/chadfavicon.jpg", "sizes": "any" }]
+    },
+    {
+      "name": "Governance",
+      "short_name": "Governance",
+      "description": "Jestermogger proposals + voting",
+      "url": "/main/governance",
+      "icons": [{ "src": "/chadfavicon.jpg", "sizes": "any" }]
+    },
+    {
+      "name": "Docs",
+      "short_name": "Docs",
+      "description": "Full protocol reference",
+      "url": "/docs",
+      "icons": [{ "src": "/chadfavicon.jpg", "sizes": "any" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

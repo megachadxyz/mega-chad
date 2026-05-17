@@ -1,0 +1,19 @@
+Contact: mailto:megachadtoken@proton.me
+Contact: https://github.com/megachadxyz/mega-chad/issues
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://megachad.xyz/.well-known/security.txt
+Policy: https://megachad.xyz/.well-known/security.txt
+Acknowledgments: https://github.com/megachadxyz/mega-chad
+
+# Scope
+# In scope: megachad.xyz, all *.megachad.xyz subdomains, all MEGA Protocol
+# contracts deployed on MegaETH mainnet (chain ID 4326). See
+# https://megachad.xyz/.well-known/megachad-protocol.json for the full
+# contract registry.
+#
+# Out of scope: third-party RPC providers, third-party indexers,
+# Vercel/Cloudflare infrastructure.
+#
+# Please disclose responsibly via the contacts above. Do not test
+# vulnerabilities against live user wallets or production contracts.

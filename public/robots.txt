@@ -5,6 +5,9 @@ Allow: /.well-known/
 Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /agents.txt
+Allow: /humans.txt
+Allow: /manifest.json
+Allow: /tokens.json
 
 # AI agent crawlers — explicitly allowed
 User-agent: GPTBot

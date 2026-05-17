@@ -116,7 +116,10 @@ export function middleware(request: NextRequest) {
     pathname === '/sitemap.xml' ||
     pathname === '/llms.txt' ||
     pathname === '/llms-full.txt' ||
-    pathname === '/agents.txt'
+    pathname === '/agents.txt' ||
+    pathname === '/humans.txt' ||
+    pathname === '/manifest.json' ||
+    pathname === '/tokens.json'
   ) {
     const res = NextResponse.next();
     res.headers.set('Access-Control-Allow-Origin', '*');

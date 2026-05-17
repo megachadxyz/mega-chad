@@ -1,0 +1,22 @@
+/* TEAM */
+Project: MegaChad
+Site: https://megachad.xyz
+Twitter: @megachadxyz
+GitHub: https://github.com/megachadxyz
+Contact: megachadtoken [at] proton.me
+
+/* PROTOCOL */
+Name: MEGA Protocol
+Chain: MegaETH mainnet (chain ID 4326)
+RPC: https://mainnet.megaeth.com/rpc
+Tokens: $MEGACHAD (burn), $MEGAGOONER (governance + rewards)
+NFT: MEGACHADNFT (ERC-721, 1+ required for emissions eligibility)
+
+/* SITE */
+Stack: Next.js 14 (App Router), TypeScript, viem, wagmi, RainbowKit, Tailwind, Upstash Redis
+Hosting: Vercel
+Style: dark cyberpunk — bg #0a0a0f, pink accents #F786C6, Bebas Neue / Space Mono
+Standards: A2A · MCP · ERC-8004 · x402 · EIP-712 · OpenAPI 3.1 · Farcaster Frames
+
+/* THANKS */
+Built by chads, for chads. Stay looksmaxxed.
