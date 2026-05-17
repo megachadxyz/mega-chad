@@ -3,12 +3,20 @@ Allow: /
 Allow: /api/
 Allow: /.well-known/
 Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /agents.txt
 
 # AI agent crawlers — explicitly allowed
 User-agent: GPTBot
 Allow: /
 
 User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
 Allow: /
 
 User-agent: PerplexityBot
@@ -20,5 +28,38 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-# Discovery endpoints
+User-agent: CCBot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Diffbot
+Allow: /
+
+User-agent: FacebookBot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+# Discovery endpoints — fetch these first for full agent surface
+# Agent index:    https://megachad.xyz/api/agent
+# A2A card:       https://megachad.xyz/.well-known/agent.json
+# MCP manifest:   https://megachad.xyz/.well-known/mcp.json
+# OpenAI plugin:  https://megachad.xyz/.well-known/ai-plugin.json
+# OpenAPI:        https://megachad.xyz/.well-known/openapi.json
+# Contract reg.:  https://megachad.xyz/.well-known/megachad-protocol.json
+# ERC-8004:       https://megachad.xyz/.well-known/agent-registration.json
+# LLM-friendly:   https://megachad.xyz/llms.txt
+# Human readable: https://megachad.xyz/agents.txt
 Sitemap: https://megachad.xyz/sitemap.xml
