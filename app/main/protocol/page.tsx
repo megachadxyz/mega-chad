@@ -1021,7 +1021,7 @@ function PublicStatsCard() {
 }
 
 // Deployed mainnet JESTERGOONER_V3 is single-pool: LP token = MEGACHAD/MEGAGOONER
-// AMM pair, 4-week minimum lock, Synthetix-style drip rewards in MEGAGOONER.
+// AMM pair, no lock, Synthetix-style drip rewards in MEGAGOONER.
 const JG_LP_ADDRESS = MAINNET_MC_MG_PAIR_ADDRESS;
 const JG_LP_NAME = 'MEGACHAD / MEGAGOONER';
 const JG_TOKEN_B_ADDRESS = MAINNET_MEGAGOONER_ADDRESS;
@@ -1324,7 +1324,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         setErrorMsg('Cannot unstake more than staked'); return;
       }
       if (canUnstakeOnchain === false) {
-        setErrorMsg('Still inside 4-week lock — see countdown above'); return;
+        setErrorMsg('Unstake not currently allowed'); return;
       }
       setStatus('unstaking');
       writeStake({
@@ -1383,17 +1383,9 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     }
   }, [claimConfirmed, status]);
 
-  // Per-staker 4-week lock countdown derived from getStakerInfo.lockEnd.
-  const userLockEnd = stakerInfo ? Number(stakerInfo[2]) : 0;
+  // V4: no lock, time multiplier always 1.0x.
   const userStaked = stakerInfo ? stakerInfo[0] : 0n;
-  const userLockSecsLeft = (userStaked > 0n && userLockEnd > 0)
-    ? Math.max(0, userLockEnd - Math.floor(Date.now() / 1000))
-    : 0;
-  const userLockDisplay = userLockSecsLeft > 0
-    ? `${Math.floor(userLockSecsLeft / 86400)}d ${Math.floor((userLockSecsLeft % 86400) / 3600)}h`
-    : userStaked > 0n ? 'Unlocked' : '—';
   const userNftMultiplier = stakerInfo ? Number(stakerInfo[4]) : 0;
-  const userTimeMultiplier = stakerInfo ? Number(stakerInfo[5]) : 0;
   const userEffective = stakerInfo ? stakerInfo[6] : 0n;
 
   const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
@@ -1401,12 +1393,12 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   return (
     <div className="beta-card">
       <div className="beta-card-header">
-        <h2>JESTERGOONER V3</h2>
+        <h2>JESTERGOONER V4</h2>
         <span className="beta-card-badge">MC/MG LP STAKING</span>
       </div>
       <p className="beta-card-desc">
         Stake $MEGACHAD/$MEGAGOONER LP tokens to earn $MEGAGOONER rewards via continuous drip emissions.
-        4-week minimum lock with linear time multiplier (0.5x → 1.0x).
+        No lock period — unstake anytime.
       </p>
 
       {/* NFT Requirement */}
@@ -1484,16 +1476,8 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
       <div className="beta-stat-row">
         <div className="beta-stat">
-          <span className="beta-stat-label">TIME MULTIPLIER</span>
-          <span className="beta-stat-value">{userTimeMultiplier > 0 ? `${(userTimeMultiplier / 10000).toFixed(3)}x` : '—'}</span>
-        </div>
-        <div className="beta-stat">
           <span className="beta-stat-label">EFFECTIVE STAKE</span>
           <span className="beta-stat-value">{fmtBig(userEffective)} LP</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">LOCK COUNTDOWN</span>
-          <span className="beta-stat-value">{userLockDisplay}</span>
         </div>
       </div>
 
@@ -1700,14 +1684,9 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
             MAX
           </button>
         </div>
-        {action === 'unstake' && userLockSecsLeft > 0 && (
-          <span className="beta-input-hint" style={{ color: '#F786C6' }}>
-            Locked for {userLockDisplay} — unstake reverts until lock expires.
-          </span>
-        )}
         {action === 'stake' && (
           <span className="beta-input-hint">
-            Staking starts a fresh 4-week lock (additional stakes extend via weighted-average timestamp).
+            No lock — you can unstake anytime. NFT boost still applies to effective stake.
           </span>
         )}
       </div>
