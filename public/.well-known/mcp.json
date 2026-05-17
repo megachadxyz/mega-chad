@@ -1,0 +1,60 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp-server.json",
+  "name": "megachad",
+  "version": "2.0.0",
+  "description": "MegaChad MCP server — burn-to-create looksmaxxing engine + MEGA Protocol DeFi stack (staking, AMM, governance, emissions) on MegaETH. 30+ tools for reading on-chain state and building ready-to-sign calldata.",
+  "vendor": "MegaChad",
+  "homepage": "https://megachad.xyz",
+  "documentation": "https://megachad.xyz/.well-known/openapi.json",
+  "transports": {
+    "http": {
+      "url": "https://megachad.xyz/api/mcp",
+      "methods": ["GET", "POST"]
+    },
+    "sse": {
+      "url": "https://megachad.xyz/api/sse"
+    }
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false,
+    "logging": false
+  },
+  "authentication": {
+    "type": "none",
+    "note": "Public read endpoints + calldata builders are unauthenticated. Looksmaxx generation uses x402 micro-payment."
+  },
+  "toolCategories": [
+    { "category": "discovery", "tools": ["get_protocol_registry", "get_agent_info"] },
+    { "category": "natural_language", "tools": ["chat_with_megachad"] },
+    { "category": "tokens", "tools": ["get_megachad_stats", "get_price", "get_swap_quote", "get_wallet_info", "get_portfolio"] },
+    { "category": "looksmaxx", "tools": ["get_looksmaxx_requirements", "get_looksmaxx_plan", "get_gallery", "get_nft_metadata", "get_identity", "get_chadboard"] },
+    { "category": "staking", "tools": ["get_staking_position", "build_staking_tx"] },
+    { "category": "amm", "tools": ["get_amm_quote", "build_amm_swap_tx", "build_amm_add_liquidity_tx"] },
+    { "category": "governance", "tools": ["list_governance_proposals", "get_governance_proposal", "build_vote_tx", "build_propose_tx", "build_veto_tx"] },
+    { "category": "emissions", "tools": ["get_emission_schedule"] },
+    { "category": "safety", "tools": ["get_protocol_safety", "get_activity_feed", "get_nft_inventory"] },
+    { "category": "agents", "tools": ["register_referral_agent", "get_referral_stats", "register_early_access"] },
+    { "category": "cross_chain", "tools": ["get_bridge_info", "cross_chain_looksmaxx"] },
+    { "category": "ecosystem", "tools": ["get_megaeth_protocols"] }
+  ],
+  "configExample": {
+    "claudeDesktop": {
+      "mcpServers": {
+        "megachad": {
+          "url": "https://megachad.xyz/api/mcp"
+        }
+      }
+    },
+    "claudeCode": {
+      "command": "claude mcp add --transport http megachad https://megachad.xyz/api/mcp"
+    }
+  },
+  "relatedManifests": {
+    "agentCard": "https://megachad.xyz/.well-known/agent.json",
+    "protocolRegistry": "https://megachad.xyz/.well-known/megachad-protocol.json",
+    "openapi": "https://megachad.xyz/.well-known/openapi.json",
+    "agentRegistration": "https://megachad.xyz/.well-known/agent-registration.json"
+  }
+}

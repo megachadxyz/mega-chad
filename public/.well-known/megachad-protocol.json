@@ -209,10 +209,14 @@
     }
   },
   "agentEndpoints": {
+    "agentIndex": "/api/agent",
     "registry": "/.well-known/megachad-protocol.json",
     "openapi": "/.well-known/openapi.json",
     "agentRegistration": "/.well-known/agent-registration.json",
     "agentCard": "/.well-known/agent.json",
+    "mcpManifest": "/.well-known/mcp.json",
+    "openaiPlugin": "/.well-known/ai-plugin.json",
+    "agentsTxt": "/agents.txt",
     "mcp": "/api/mcp",
     "chat": "/api/agent/chat",
     "defi": {
@@ -226,8 +230,12 @@
       "voteTx": "/api/defi/governance/vote-tx?proposalId=...&support=for|against|abstain",
       "queueTx": "/api/defi/governance/queue-tx?proposalId=...",
       "executeTx": "/api/defi/governance/execute-tx?proposalId=...",
-      "emissionSchedule": "/api/defi/emission/schedule",
-      "emissionCurrent": "/api/defi/emission/current"
+      "proposeTx": "/api/defi/governance/propose-tx?proposer=0x... (GET = eligibility, POST = build)",
+      "vetoTx": "/api/defi/governance/veto-tx?proposalId=...&support=yes|no&voter=0x...",
+      "emissionSchedule": "/api/defi/emission",
+      "nftInventory": "/api/defi/nft?address=0x...",
+      "safety": "/api/defi/safety",
+      "activity": "/api/defi/activity?limit=50&blocks=2000"
     }
   },
   "knownGotchas": [

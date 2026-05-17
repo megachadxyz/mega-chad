@@ -228,6 +228,11 @@ Available intents:
 - execute_proposal: Execute a queued proposal. Requires proposalId.
 - emission_schedule: Show MEGAGOONER emission schedule + current week + split.
 - protocol_registry: Return the full machine-readable protocol registry (every contract address + ABI hints).
+- nft_inventory: Check MEGACHADNFT count + staking-eligibility for a wallet (params.wallet).
+- safety: Report CircuitBreaker pause state and NFTVetoCouncil composition (no params).
+- activity: Recent on-chain protocol activity feed across all venues (no params).
+- propose: Build a Jestermogger propose() tx OR check the caller's top-3 burner eligibility. proposer = params.wallet.
+- veto: Build NFTVetoCouncil castVetoVote tx. Requires proposalId + support (yes|no).
 - help: General help
 
 Response format:
@@ -377,6 +382,47 @@ function regexFallbackParse(message: string, wallet?: string): {
     : /mogger\b|megachad\s*stak/.test(msg)
       ? 'mogger'
       : null;
+
+  if (/(?:paused|pause|circuit\s*breaker|safety|emergency\s*stop|halted|protocol\s*status|is.*(safe|down|broken))/.test(msg)) {
+    return {
+      intent: 'safety',
+      params: { wallet: null, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants CircuitBreaker + veto-council safety status',
+    };
+  }
+
+  if (/(?:activity|recent\s*(events?|txs?|burns?|stakes?|action)|what\s*happened|latest\s*on[-\s]?chain)/.test(msg)) {
+    return {
+      intent: 'activity',
+      params: { wallet: null, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants the recent protocol activity feed',
+    };
+  }
+
+  if (/(?:nft\s*(?:count|inventory|holdings?|balance)|how\s*many\s*nft|eligible.*(stak|reward)|nft\s*tier|boost\s*tier)/.test(msg)) {
+    return {
+      intent: 'nft_inventory',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants their NFT inventory + staking eligibility',
+    };
+  }
+
+  if (/(?:veto|cancel\s*proposal|block\s*proposal)/.test(msg) && proposalId) {
+    const vetoSupport = /\b(?:no|against|defend|keep)\b/.test(msg) ? 'no' : 'yes';
+    return {
+      intent: 'veto',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: vetoSupport, compareWith: null, query: proposalId },
+      understanding: `User wants to cast veto-${vetoSupport} on proposal ${proposalId}`,
+    };
+  }
+
+  if (/(?:create|make|submit|new|draft).*proposal|propose\b|am\s*i\s*eligible.*propos/.test(msg)) {
+    return {
+      intent: 'propose',
+      params: { wallet: detectedWallet, amount: null, sourceChain: null, referrer: null, count: null, style: null, compareWith: null, query: null },
+      understanding: 'User wants to create a proposal or check proposer eligibility',
+    };
+  }
 
   if (/protocol\s*(registry|info|contracts|addresses)|\bregistry\b|all\s*contract/.test(msg)) {
     return {
@@ -1121,6 +1167,68 @@ export async function buildExecutionPlan(
         understanding: `${intent.replace('_proposal', '')} #${id}`,
         answer: `Built ${intent.replace('_proposal', '')} tx for proposal #${id}.`,
         actions: [{ type: 'query', label: `${intent} tx`, description: `#${id}`, apiCall: { method: 'GET', endpoint: `/api/defi/governance/${path}?proposalId=${id}` }, result: data }],
+      };
+    }
+
+    case 'nft_inventory': {
+      const wallet = params.wallet;
+      if (!wallet) return { intent, understanding: 'NFT inventory', answer: 'Pass a wallet address to check NFT holdings + staking eligibility.', actions: [] };
+      const data = await fetch(`${BASE}/api/defi/nft?address=${wallet}`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: `NFT inventory for ${wallet}`,
+        answer: data?.eligibility?.reason || 'Fetched NFT inventory.',
+        actions: [{ type: 'query', label: 'NFT inventory', description: wallet, apiCall: { method: 'GET', endpoint: `/api/defi/nft?address=${wallet}` }, result: data }],
+      };
+    }
+
+    case 'safety': {
+      const data = await fetch(`${BASE}/api/defi/safety`).then(r => r.json()).catch(() => null);
+      const paused = data?.circuitBreaker?.paused;
+      return {
+        intent,
+        understanding: 'Protocol safety status',
+        answer: paused === true ? 'Protocol is PAUSED — writes will revert.' : paused === false ? 'Protocol is healthy. Writes are safe.' : 'Fetched safety status.',
+        actions: [{ type: 'query', label: 'Safety status', description: 'CircuitBreaker + veto council', apiCall: { method: 'GET', endpoint: '/api/defi/safety' }, result: data }],
+      };
+    }
+
+    case 'activity': {
+      const data = await fetch(`${BASE}/api/defi/activity?limit=50`).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: 'Recent protocol activity',
+        answer: `Recent on-chain activity across MEGA Protocol (${data?.returned ?? 0} events).`,
+        actions: [{ type: 'query', label: 'Activity feed', description: 'Last ~2000 blocks', apiCall: { method: 'GET', endpoint: '/api/defi/activity?limit=50' }, result: data }],
+      };
+    }
+
+    case 'propose': {
+      const proposer = params.wallet;
+      const url = proposer ? `${BASE}/api/defi/governance/propose-tx?proposer=${proposer}` : `${BASE}/api/defi/governance/propose-tx`;
+      const data = await fetch(url).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: proposer ? `Propose eligibility for ${proposer}` : 'Propose-tx template',
+        answer: data?.eligibility?.proposerNote || 'POST your proposal payload to /api/defi/governance/propose-tx to get calldata.',
+        actions: [{ type: 'query', label: 'Propose builder', description: proposer || 'template only', apiCall: { method: 'GET', endpoint: proposer ? `/api/defi/governance/propose-tx?proposer=${proposer}` : '/api/defi/governance/propose-tx' }, result: data }],
+      };
+    }
+
+    case 'veto': {
+      const id = params.query;
+      const support = params.style || 'yes';
+      const voter = params.wallet;
+      if (!id) return { intent, understanding: 'Veto', answer: 'Specify a proposal id.', actions: [] };
+      const url = voter
+        ? `${BASE}/api/defi/governance/veto-tx?proposalId=${id}&support=${support}&voter=${voter}`
+        : `${BASE}/api/defi/governance/veto-tx?proposalId=${id}&support=${support}`;
+      const data = await fetch(url).then(r => r.json()).catch(() => null);
+      return {
+        intent,
+        understanding: `Veto-${support} on #${id}`,
+        answer: `Built veto tx (${support}) for proposal #${id}.`,
+        actions: [{ type: 'query', label: 'Veto tx', description: `#${id} ${support}`, apiCall: { method: 'GET', endpoint: `/api/defi/governance/veto-tx?proposalId=${id}&support=${support}${voter ? `&voter=${voter}` : ''}` }, result: data }],
       };
     }
 

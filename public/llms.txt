@@ -103,7 +103,21 @@ These endpoints back the DeFi MCP tools and `/api/agent/chat` intents. They retu
 - [GET /api/defi/governance/vote-tx](https://megachad.xyz/api/defi/governance/vote-tx): Build castVote. `?proposalId=&support=for|against|abstain`
 - [GET /api/defi/governance/queue-tx](https://megachad.xyz/api/defi/governance/queue-tx): Build queue() for Succeeded proposals.
 - [GET /api/defi/governance/execute-tx](https://megachad.xyz/api/defi/governance/execute-tx): Build execute() for Queued proposals past timelock.
+- [GET /api/defi/governance/propose-tx](https://megachad.xyz/api/defi/governance/propose-tx): Check top-3 burner eligibility (GET `?proposer=`) or POST `{ targets[], values[], calldatas[], description }` to build propose() calldata.
+- [GET /api/defi/governance/veto-tx](https://megachad.xyz/api/defi/governance/veto-tx): Build NFTVetoCouncil castVetoVote (auto-includes startVetoVote() if window not open). `?proposalId=&support=yes|no&voter=0x...`
 - [GET /api/defi/emission](https://megachad.xyz/api/defi/emission): 225-week MEGAGOONER schedule + current week + split + on-chain weekly emission.
+- [GET /api/defi/nft](https://megachad.xyz/api/defi/nft): MEGACHADNFT inventory + boost tier + staking-eligibility verdict for a wallet. `?address=0x...`
+- [GET /api/defi/safety](https://megachad.xyz/api/defi/safety): CircuitBreaker pause state + NFTVetoCouncil composition. **Check before sending any write.**
+- [GET /api/defi/activity](https://megachad.xyz/api/defi/activity): Unified recent on-chain events feed (burns, framemogger, stakes, claims, proposals). `?limit=50&blocks=2000`
+
+## Agent Discovery Manifests
+
+- [GET /api/agent](https://megachad.xyz/api/agent): **Master directory** — every endpoint, MCP tool, manifest URL, and example in one response. Recommended first call.
+- [/.well-known/agent.json](https://megachad.xyz/.well-known/agent.json): Google A2A protocol agent card (33 skills)
+- [/.well-known/mcp.json](https://megachad.xyz/.well-known/mcp.json): MCP server discovery manifest
+- [/.well-known/ai-plugin.json](https://megachad.xyz/.well-known/ai-plugin.json): Legacy OpenAI plugin manifest
+- [/.well-known/megachad-protocol.json](https://megachad.xyz/.well-known/megachad-protocol.json): Canonical contract registry
+- [/agents.txt](https://megachad.xyz/agents.txt): Human-readable agent discovery (robots.txt-style)
 
 ## Tier System
 
@@ -134,13 +148,18 @@ The DeFi stack is fully agent-driven through the registry + DeFi endpoints + MCP
 
 ## How to Interact (Agent Flow — DeFi)
 
-1. `GET /.well-known/megachad-protocol.json` — cache the full registry.
-2. `GET /api/defi/staking?address=0xYOU` — see your position + APRs.
-3. `GET /api/defi/staking/tx?action=stake&venue=mogger&amount=10000&address=0xYOU` — sign + send the returned actions in order.
-4. For MC↔MG swaps: `GET /api/defi/amm/quote?from=MC&amount=1000` → `GET /api/defi/amm/swap-tx?from=MC&amount=1000&recipient=0xYOU` → sign both actions.
-5. For governance: `GET /api/defi/governance/proposals` → pick id → `GET /api/defi/governance/vote-tx?proposalId=N&support=for` → sign.
+1. `GET /api/agent` — pull the master directory once.
+2. `GET /.well-known/megachad-protocol.json` — cache the canonical registry.
+3. `GET /api/defi/safety` — confirm protocol is not paused before any write.
+4. `GET /api/defi/nft?address=0xYOU` — verify the 1+ NFT staking-eligibility requirement.
+5. `GET /api/defi/staking?address=0xYOU` — see your position + APRs.
+6. `GET /api/defi/staking/tx?action=stake&venue=mogger&amount=10000&address=0xYOU` — sign + send the returned actions in order.
+7. For MC↔MG swaps: `GET /api/defi/amm/quote?from=MC&amount=1000` → `GET /api/defi/amm/swap-tx?from=MC&amount=1000&recipient=0xYOU` → sign both actions.
+8. For governance: `GET /api/defi/governance/proposals` → pick id → `GET /api/defi/governance/vote-tx?proposalId=N&support=for` → sign.
+9. To propose: `GET /api/defi/governance/propose-tx?proposer=0xYOU` (eligibility) → POST your `{ targets, values, calldatas, description }` to the same URL.
+10. To veto (council members only): `GET /api/defi/governance/veto-tx?proposalId=N&support=yes&voter=0xYOU` → sign both actions (startVetoVote auto-included if needed).
 
-Or use natural language: POST `/api/agent/chat` with {"message": "stake 50000 megachad", "wallet": "0xYOU"} — returns the same calldata wrapped in an action plan.
+Or use natural language: POST `/api/agent/chat` with {"message": "stake 50000 megachad", "wallet": "0xYOU"} — returns the same calldata wrapped in an action plan. Supported intents now include `nft_inventory`, `safety`, `activity`, `propose`, `veto` on top of all earlier flows.
 
 ## How to Interact (Agent Flow)
 

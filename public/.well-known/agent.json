@@ -1,9 +1,12 @@
 {
   "name": "MegaChad",
-  "description": "Burn-to-create looksmaxxing engine on MegaETH. Burn $MEGACHAD tokens to generate AI-enhanced portraits, mint NFTs, and earn on-chain reputation.",
+  "description": "Burn-to-create looksmaxxing engine + MEGA Protocol DeFi stack (staking, AMM, governance, emissions) on MegaETH. Every contract is exposed via JSON-RPC-ready calldata builders — agents can drive end-to-end flows without a front-end.",
   "url": "https://megachad.xyz/api/agent",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "documentationUrl": "https://megachad.xyz/.well-known/openapi.json",
+  "protocolRegistry": "https://megachad.xyz/.well-known/megachad-protocol.json",
+  "mcpServer": "https://megachad.xyz/api/mcp",
+  "llmsTxt": "https://megachad.xyz/llms.txt",
   "provider": {
     "organization": "MegaChad",
     "url": "https://megachad.xyz"
@@ -11,133 +14,347 @@
   "capabilities": {
     "streaming": false,
     "pushNotifications": false,
-    "stateTransitionHistory": false
+    "stateTransitionHistory": false,
+    "callDataBuilders": true,
+    "naturalLanguage": true,
+    "mcp": true,
+    "x402": true
   },
   "authentication": {
-    "schemes": ["x402"]
+    "schemes": ["x402", "none"]
   },
   "defaultInputModes": ["application/json"],
   "defaultOutputModes": ["application/json"],
   "skills": [
     {
-      "id": "get-swap-quote",
-      "name": "Get Swap Quote",
-      "description": "Get a live swap quote and transaction parameters for buying $MEGACHAD with ETH via Kumbaya DEX on MegaETH. Returns router address, calldata, and slippage-adjusted minimum output.",
-      "tags": ["defi", "swap", "token", "megaeth"],
-      "examples": [
-        "How much $MEGACHAD can I get for 0.1 ETH?",
-        "Get a swap quote for buying MEGACHAD"
-      ],
+      "id": "protocol-registry",
+      "name": "Get Protocol Registry",
+      "description": "Pull the canonical machine-readable registry of every MEGA Protocol contract (addresses, ABIs, gotchas). Agents should call this FIRST so all subsequent reads/writes use authoritative state.",
+      "tags": ["registry", "discovery", "addresses"],
+      "examples": ["Give me the MEGA Protocol contract registry", "What's the canonical contract directory?"],
       "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "endpoint": "/.well-known/megachad-protocol.json"
+    },
+    {
+      "id": "agent-index",
+      "name": "Agent Index",
+      "description": "Single root directory listing every endpoint, MCP tool, registry URL, and example for AI agents. The recommended first stop for any agent.",
+      "tags": ["index", "discovery"],
+      "examples": ["What endpoints does MegaChad expose?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/agent"
+    },
+    {
+      "id": "natural-language-chat",
+      "name": "Natural Language Transactions",
+      "description": "Send plain English, receive ready-to-sign calldata. Wraps every DeFi flow: swap / burn / looksmaxx / stake / unstake / claim / vote / propose / queue / execute / quote / add-liquidity / emission / registry lookup.",
+      "tags": ["nlp", "intent", "agent", "calldata"],
+      "examples": ["stake 50000 megachad", "vote for proposal 3", "swap 1000 MC for MG", "looksmaxx 0xABC..."],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/agent/chat"
+    },
+    {
+      "id": "get-swap-quote",
+      "name": "Get ETH→MEGACHAD Swap Quote",
+      "description": "Quote and calldata for buying $MEGACHAD with ETH via Kumbaya V3 on MegaETH.",
+      "tags": ["defi", "swap", "kumbaya"],
+      "examples": ["How much MEGACHAD for 0.1 ETH?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/x402/quote"
     },
     {
       "id": "looksmaxx",
       "name": "Looksmaxx",
-      "description": "Burn 225,000 $MEGACHAD tokens and pay 1 USDm via x402 to generate an AI-enhanced portrait and mint it as an NFT. Requires two on-chain burn transactions and a base64-encoded portrait image.",
-      "tags": ["nft", "ai", "burn", "create", "megaeth", "x402"],
-      "examples": [
-        "Looksmaxx my portrait",
-        "Burn MEGACHAD tokens and create an AI portrait NFT"
-      ],
+      "description": "Burn 225,000 $MEGACHAD + pay 1 USDm via x402 to generate an AI portrait and mint it as an NFT.",
+      "tags": ["nft", "ai", "burn", "x402"],
+      "examples": ["Looksmaxx my portrait"],
       "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "get-stats",
-      "name": "Get Token Stats",
-      "description": "Get current $MEGACHAD token statistics including total supply, circulating supply, tokens burned, and total burn count.",
-      "tags": ["stats", "token", "data"],
-      "examples": [
-        "What are the current MEGACHAD token stats?",
-        "How many tokens have been burned?"
-      ],
-      "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "get-gallery",
-      "name": "Get Gallery",
-      "description": "Browse recent looksmaxxed burns with IPFS image URLs, burner addresses, and timestamps. Supports pagination.",
-      "tags": ["gallery", "nft", "images"],
-      "examples": [
-        "Show me recent looksmaxxed images",
-        "Get the latest burns from the gallery"
-      ],
-      "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "get-chadboard",
-      "name": "Get Chadboard",
-      "description": "Get the burner leaderboard ranked by total burns. Includes ERC-8004 reputation scores, .mega domain names, profile info, and all looksmaxxed images per burner.",
-      "tags": ["leaderboard", "reputation", "erc8004"],
-      "examples": [
-        "Who are the top MEGACHAD burners?",
-        "Show the chadboard leaderboard"
-      ],
-      "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "register-early-access",
-      "name": "Register for Early Access",
-      "description": "Register a wallet address for MegaChad testnet beta access. Requires a wallet address that holds $MEGACHAD tokens or looksmaxxed NFTs. Optionally include a referral code.",
-      "tags": ["beta", "testnet", "register", "early-access"],
-      "examples": [
-        "Sign up for MegaChad beta testing",
-        "Register my wallet for early access"
-      ],
-      "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "get-price",
-      "name": "Get Token Price",
-      "description": "Get the current $MEGACHAD price in ETH from Kumbaya DEX, plus the estimated ETH cost to complete a burn-to-create.",
-      "tags": ["price", "token", "defi", "data"],
-      "examples": [
-        "What is the current MEGACHAD price?",
-        "How much ETH do I need to looksmaxx?"
-      ],
-      "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "check-wallet",
-      "name": "Check Wallet",
-      "description": "Check a wallet's ETH balance, $MEGACHAD balance, NFT count, burn eligibility, and early access qualification.",
-      "tags": ["wallet", "balance", "eligibility"],
-      "examples": [
-        "Check if my wallet can burn",
-        "What is my MEGACHAD balance?"
-      ],
-      "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "endpoint": "/api/x402/looksmaxx"
     },
     {
       "id": "looksmaxx-plan",
       "name": "Plan Looksmaxx",
-      "description": "Get an orchestrated, step-by-step looksmaxx plan with pre-built transaction calldata for swap, burn, tren fund transfer, and final submission.",
-      "tags": ["looksmaxx", "orchestration", "agent", "plan"],
-      "examples": [
-        "Plan a looksmaxx for my wallet",
-        "Give me the full burn-to-create flow with calldata"
-      ],
+      "description": "Orchestrated step-by-step looksmaxx with pre-built calldata for swap, burn, tren fund transfer, and submission.",
+      "tags": ["orchestration", "agent", "plan"],
+      "examples": ["Plan a looksmaxx for my wallet"],
       "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "endpoint": "/api/agent/looksmaxx"
+    },
+    {
+      "id": "get-stats",
+      "name": "Get Token Stats",
+      "description": "$MEGACHAD supply, circulating, burned, total burn count.",
+      "tags": ["stats", "token"],
+      "examples": ["How many tokens have been burned?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/stats"
+    },
+    {
+      "id": "get-price",
+      "name": "Get Token Price",
+      "description": "Live $MEGACHAD price in ETH from Kumbaya plus estimated burn cost in ETH.",
+      "tags": ["price", "defi"],
+      "examples": ["What is the current MEGACHAD price?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/price"
+    },
+    {
+      "id": "check-wallet",
+      "name": "Check Wallet",
+      "description": "ETH/MEGACHAD/NFT balances, burn eligibility, early access.",
+      "tags": ["wallet", "balance"],
+      "examples": ["Check if my wallet can burn"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/wallet"
+    },
+    {
+      "id": "get-gallery",
+      "name": "Get Gallery",
+      "description": "Recent looksmaxxed burns with IPFS image URLs, burner addresses, token IDs.",
+      "tags": ["gallery", "nft"],
+      "examples": ["Show recent looksmaxxed images"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/gallery"
+    },
+    {
+      "id": "get-chadboard",
+      "name": "Get Chadboard Leaderboard",
+      "description": "Burner leaderboard with ERC-8004 reputation and identity.",
+      "tags": ["leaderboard", "reputation"],
+      "examples": ["Who are the top MEGACHAD burners?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/chadboard"
+    },
+    {
+      "id": "get-identity",
+      "name": "Get MegaChad Identity",
+      "description": "Unified identity profile — MegaNames, balances, burn history, reputation, tier, referrals.",
+      "tags": ["identity", "erc8004", "meganames"],
+      "examples": ["Who is chad.mega?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/identity/{addressOrName}"
+    },
+    {
+      "id": "register-referral-agent",
+      "name": "Register as Referral Agent",
+      "description": "On-chain agent registration calldata. Referring agents earn 11,250 MEGACHAD per referred burn.",
+      "tags": ["referral", "agent", "register"],
+      "examples": ["Register me as an agent"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/agent/register"
+    },
+    {
+      "id": "get-staking-position",
+      "name": "Get Staking Position",
+      "description": "Combined MoggerStaking (stake MEGACHAD → earn MEGAGOONER) + JESTERGOONER V4 (stake LP → earn MEGAGOONER) position with balances, allowances, earned rewards, NFT boost, APR, and global pool stats.",
+      "tags": ["defi", "staking", "mogger", "jester", "megagooner"],
+      "examples": ["What's my staking position?", "Show staking APRs"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/staking"
+    },
+    {
+      "id": "build-staking-tx",
+      "name": "Build Staking Transaction",
+      "description": "Returns ready-to-sign calldata for stake / unstake / claim on either MoggerStaking or JESTERGOONER V4. Stake actions bundle approve+stake automatically.",
+      "tags": ["defi", "staking", "tx", "calldata"],
+      "examples": ["stake 50000 megachad", "unstake all my LP", "claim my megagooner rewards"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/staking/tx"
+    },
+    {
+      "id": "get-amm-quote",
+      "name": "Get MC↔MG AMM Quote",
+      "description": "Quote a swap on MegaChadLP MC/MG (constant-product, 0.3% fee). Note this pair uses tokenA/tokenB instead of token0/token1 so standard V2 routers do NOT detect it — use this skill or the registry.",
+      "tags": ["defi", "amm", "swap", "megachad", "megagooner"],
+      "examples": ["Quote 1000 MC to MG", "What's the MC/MG price?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/amm/quote"
+    },
+    {
+      "id": "build-amm-swap-tx",
+      "name": "Build MC↔MG Swap TX",
+      "description": "Two-step plan: ERC20.transfer(pair, amountIn) → pair.swap(amountAIn, amountBIn, to). MegaChadLP has no on-chain minOut — verify received balance after the swap.",
+      "tags": ["defi", "amm", "swap", "tx"],
+      "examples": ["swap 1000 MC for MG"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/amm/swap-tx"
+    },
+    {
+      "id": "build-amm-add-liquidity-tx",
+      "name": "Build Add Liquidity TX",
+      "description": "approve(MC) + approve(MG) + addLiquidity on MegaChadLP. LP shares returned are stake-eligible in JESTERGOONER V4.",
+      "tags": ["defi", "amm", "lp"],
+      "examples": ["add liquidity 1000 MC and 10000 MG"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/amm/add-liquidity-tx"
+    },
+    {
+      "id": "list-governance-proposals",
+      "name": "List Jestermogger Proposals",
+      "description": "Recent governance proposals with state (Pending/Active/Defeated/Succeeded/Queued/Executed/Expired/Vetoed), vote tallies, timing.",
+      "tags": ["governance", "jestermogger"],
+      "examples": ["List active proposals", "Show governance"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/governance/proposals"
+    },
+    {
+      "id": "get-governance-proposal",
+      "name": "Get Proposal Detail",
+      "description": "Full state for one proposal: actions, vote tally, veto council status, optional voter receipt.",
+      "tags": ["governance", "proposal"],
+      "examples": ["Tell me about proposal 3"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/governance/proposals/{id}"
+    },
+    {
+      "id": "build-vote-tx",
+      "name": "Build Vote TX",
+      "description": "castVote calldata on Jestermogger. support = for | against | abstain. Vote weight = MEGAGOONER balance at snapshot.",
+      "tags": ["governance", "vote", "tx"],
+      "examples": ["vote for proposal 3", "vote against proposal 7"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/governance/vote-tx"
+    },
+    {
+      "id": "build-queue-tx",
+      "name": "Build Queue TX",
+      "description": "queue(proposalId) calldata for a Succeeded proposal. Starts the 2-day timelock.",
+      "tags": ["governance", "queue", "tx"],
+      "examples": ["queue proposal 4"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/governance/queue-tx"
+    },
+    {
+      "id": "build-execute-tx",
+      "name": "Build Execute TX",
+      "description": "execute(proposalId) calldata for a Queued proposal past its timelock. May be payable.",
+      "tags": ["governance", "execute", "tx"],
+      "examples": ["execute proposal 4"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/governance/execute-tx"
+    },
+    {
+      "id": "build-propose-tx",
+      "name": "Build Propose TX",
+      "description": "Build a Jestermogger propose() tx and check on-chain proposer eligibility (top-3 weekly Framemogger burner). Returns calldata + eligibility report.",
+      "tags": ["governance", "propose", "tx"],
+      "examples": ["create a proposal to upgrade staking", "am I eligible to propose?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/governance/propose-tx"
+    },
+    {
+      "id": "build-veto-tx",
+      "name": "Build NFT Veto TX",
+      "description": "NFTVetoCouncil castVetoVote calldata. Checks council membership + existing vote state. 11/20 yes votes within 2-day window cancel a proposal.",
+      "tags": ["governance", "veto", "council", "tx"],
+      "examples": ["veto proposal 5", "cast veto vote against proposal 7"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/governance/veto-tx"
+    },
+    {
+      "id": "get-emission-schedule",
+      "name": "Get Emission Schedule",
+      "description": "Full 225-week MEGAGOONER emission schedule plus current week, on-chain weekly emission, and EmissionController split (mogger/jester/treasury).",
+      "tags": ["defi", "emissions", "megagooner"],
+      "examples": ["show the emission schedule", "what's the current weekly emission?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/emission"
+    },
+    {
+      "id": "get-nft-inventory",
+      "name": "Get NFT Inventory",
+      "description": "MEGACHADNFT count for a wallet + NFT-boost tier (1+/10+/25+) + recent looksmaxxed items they own. Use this to verify the 1+ NFT requirement for staking rewards before building any stake tx.",
+      "tags": ["nft", "inventory", "eligibility"],
+      "examples": ["how many NFTs does 0xABC have?", "am I eligible for staking rewards?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/nft"
+    },
+    {
+      "id": "get-safety-status",
+      "name": "Get Protocol Safety Status",
+      "description": "CircuitBreaker state (paused?, guardian votes, auto-unpause timer) + NFTVetoCouncil composition (20 seats, current members, threshold). Critical context before sending any write tx — if paused, writes will revert.",
+      "tags": ["safety", "circuit-breaker", "veto-council"],
+      "examples": ["is the protocol paused?", "who's on the veto council?"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/safety"
+    },
+    {
+      "id": "get-activity-feed",
+      "name": "Get Activity Feed",
+      "description": "Unified recent on-chain activity across the MEGA Protocol stack: burns, framemogger sends, stakes/unstakes/claims, swaps, proposals, votes, executions. Time-ordered, with tx hashes.",
+      "tags": ["activity", "events", "feed"],
+      "examples": ["what happened in the last hour?", "show recent protocol activity"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/defi/activity"
+    },
+    {
+      "id": "register-early-access",
+      "name": "Register for Early Access",
+      "description": "Register a wallet for MegaChad testnet beta access.",
+      "tags": ["beta", "register"],
+      "examples": ["Sign up for MegaChad beta"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/early/register"
     },
     {
       "id": "get-bridge-info",
       "name": "Get Bridge Info",
-      "description": "Get cross-chain bridge information for moving ETH and other assets to MegaETH from Ethereum, Arbitrum, Base, and other chains.",
-      "tags": ["bridge", "cross-chain", "megaeth"],
-      "examples": [
-        "How do I bridge ETH to MegaETH?",
-        "What bridges support MegaETH?"
-      ],
+      "description": "Cross-chain bridge directory for moving assets to MegaETH from Ethereum, Arbitrum, Base, etc.",
+      "tags": ["bridge", "cross-chain"],
+      "examples": ["How do I bridge to MegaETH?"],
       "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "endpoint": "/api/bridge"
+    },
+    {
+      "id": "cross-chain-looksmaxx",
+      "name": "Cross-Chain Looksmaxx",
+      "description": "Bridge + swap + burn plan from any supported chain to MegaETH.",
+      "tags": ["bridge", "looksmaxx", "cross-chain"],
+      "examples": ["I have ETH on Base, looksmaxx me"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/cross-chain/intent"
+    },
+    {
+      "id": "gasless-burn",
+      "name": "Gasless Burn",
+      "description": "EIP-712 typed data for a gasless burn — sign + POST to relay without paying gas.",
+      "tags": ["gasless", "burn", "eip-712"],
+      "examples": ["burn gaslessly"],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/gasless/burn"
     }
   ]
 }

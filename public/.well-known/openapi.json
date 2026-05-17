@@ -1231,6 +1231,93 @@
         "description": "225-week quadratic decay schedule, current week, on-chain weekly emission, and the EmissionController split (mogger / jester / treasury) in bps and pct.",
         "responses": { "200": { "description": "Emission schedule + split" } }
       }
+    },
+    "/api/agent": {
+      "get": {
+        "operationId": "getAgentIndex",
+        "summary": "Master agent index — single front door for AI agents",
+        "description": "Returns a structured directory of every agent-facing surface MegaChad exposes: A2A/MCP/OpenAI-plugin manifests, OpenAPI spec, ERC-8004 registration, agents.txt, MCP server config, contract registry, all read + tx-builder endpoints grouped by domain, supported intents, and quickstart examples. Fetch this once at startup and cache (5 min).",
+        "responses": { "200": { "description": "Agent index directory" } }
+      }
+    },
+    "/api/defi/nft": {
+      "get": {
+        "operationId": "getNftInventory",
+        "summary": "Get MEGACHADNFT count + boost tier + staking eligibility",
+        "description": "Returns NFT balance, boost tier (1.000x/1.075x/1.150x at 1/10/25 NFTs), eligibility for staking rewards (requires 1+ NFT), next tier threshold, and recent looksmaxxed items for the wallet from the gallery cache.",
+        "parameters": [
+          { "name": "address", "in": "query", "required": true, "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" } }
+        ],
+        "responses": { "200": { "description": "NFT inventory + boost + eligibility" }, "400": { "description": "Invalid address" } }
+      }
+    },
+    "/api/defi/safety": {
+      "get": {
+        "operationId": "getProtocolSafety",
+        "summary": "Get CircuitBreaker pause state + NFTVetoCouncil composition",
+        "description": "Snapshot of safety surfaces agents should check before issuing writes. Includes CircuitBreaker (paused, pausedAt, autoUnpauseTime, guardians, pause/unpause votes) and NFTVetoCouncil (council size, veto threshold, veto window, current members, seats filled).",
+        "responses": { "200": { "description": "Safety snapshot" } }
+      }
+    },
+    "/api/defi/activity": {
+      "get": {
+        "operationId": "getActivityFeed",
+        "summary": "Unified recent on-chain activity feed across the MEGA Protocol stack",
+        "description": "Parallel getLogs across Token transfers (burns to dEaD), staking (stake/unstake/claim) on both venues, Framemogger MegachadSent events, and Jestermogger governance (ProposalCreated/VoteCast/Queued/Executed). Normalized to { kind, blockNumber, txHash, summary, actor, amount, ... } sorted newest-first.",
+        "parameters": [
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 200 } },
+          { "name": "blocks", "in": "query", "required": false, "schema": { "type": "integer", "default": 2000, "minimum": 100, "maximum": 50000 }, "description": "Block lookback window (default ≈ 8 min on MegaETH)" }
+        ],
+        "responses": { "200": { "description": "Unified activity feed" } }
+      }
+    },
+    "/api/defi/governance/propose-tx": {
+      "get": {
+        "operationId": "getProposeEligibility",
+        "summary": "Check Framemogger top-3 burner eligibility to propose",
+        "description": "Returns canPropose verdict + currentWeek + getWeekTop3 burners for the proposer (or current connected agent). Only the week's top 3 burners can call Jestermogger.propose().",
+        "parameters": [
+          { "name": "proposer", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" } }
+        ],
+        "responses": { "200": { "description": "Eligibility report" } }
+      },
+      "post": {
+        "operationId": "buildProposeTx",
+        "summary": "Build a Jestermogger.propose() transaction",
+        "description": "Validates target/value/calldata arrays and encodes propose(targets[], values[], calldatas[], description). Lifecycle: 1d delay → 3d voting → 2d timelock → 7d grace.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["targets", "values", "calldatas", "description"],
+                "properties": {
+                  "proposer": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" },
+                  "targets": { "type": "array", "items": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" } },
+                  "values": { "type": "array", "items": { "type": "string", "description": "wei as decimal string" } },
+                  "calldatas": { "type": "array", "items": { "type": "string", "pattern": "^0x[a-fA-F0-9]*$" } },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "propose() execution plan + eligibility echo" }, "400": { "description": "Validation failure (array length / address / wei / calldata)" } }
+      }
+    },
+    "/api/defi/governance/veto-tx": {
+      "get": {
+        "operationId": "buildVetoTx",
+        "summary": "Build NFTVetoCouncil veto transaction(s)",
+        "description": "If no veto window is currently open, prepends startVetoVote(id) so a council member can both kick off the window and cast in one bundle. Always appends castVetoVote(id, support). support: yes/veto = true, no/against = false. 20 seats, 11-veto threshold, 2-day window.",
+        "parameters": [
+          { "name": "proposalId", "in": "query", "required": true, "schema": { "type": "integer" } },
+          { "name": "support", "in": "query", "required": true, "schema": { "type": "string", "enum": ["yes", "no", "for", "against", "veto"] } },
+          { "name": "voter", "in": "query", "required": false, "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }, "description": "Voter address to check council membership + prior vote" }
+        ],
+        "responses": { "200": { "description": "Veto execution plan" } }
+      }
     }
   },
   "components": {

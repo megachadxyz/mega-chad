@@ -615,6 +615,167 @@ const handler = createMcpHandler(
       },
     );
 
+    // ── DeFi: Build Queue TX ────────────────────────────────
+    server.registerTool(
+      'build_queue_tx',
+      {
+        title: 'Build Queue Proposal TX',
+        description:
+          'Build queue(proposalId) calldata for a Succeeded Jestermogger proposal. Starts the 2-day timelock — after that, the proposal can be executed.',
+        inputSchema: {
+          proposalId: z.number().int().min(1).describe('Proposal ID (1-indexed)'),
+        },
+      },
+      async ({ proposalId }) => {
+        trackMcpTool('build_queue_tx').catch(() => {});
+        const res = await fetch(`https://megachad.xyz/api/defi/governance/queue-tx?proposalId=${proposalId}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Build Execute TX ──────────────────────────────
+    server.registerTool(
+      'build_execute_tx',
+      {
+        title: 'Build Execute Proposal TX',
+        description:
+          'Build execute(proposalId) calldata for a Queued Jestermogger proposal past its 2-day timelock. May be payable if any action carries ETH value.',
+        inputSchema: {
+          proposalId: z.number().int().min(1).describe('Proposal ID'),
+        },
+      },
+      async ({ proposalId }) => {
+        trackMcpTool('build_execute_tx').catch(() => {});
+        const res = await fetch(`https://megachad.xyz/api/defi/governance/execute-tx?proposalId=${proposalId}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Build Propose TX (eligibility + template) ─────
+    server.registerTool(
+      'build_propose_tx',
+      {
+        title: 'Build Propose TX / Check Eligibility',
+        description:
+          'GET form returns Framemogger top-3-burner eligibility for the proposer (only top 3 can propose each week). To actually build calldata, POST your { targets[], values[], calldatas[], description } payload to /api/defi/governance/propose-tx. Use this MCP tool to quickly check eligibility before drafting.',
+        inputSchema: {
+          proposer: z.string().optional().describe('Proposer wallet address (0x...) — required for eligibility check'),
+        },
+      },
+      async ({ proposer }) => {
+        trackMcpTool('build_propose_tx').catch(() => {});
+        const url = proposer
+          ? `https://megachad.xyz/api/defi/governance/propose-tx?proposer=${proposer}`
+          : 'https://megachad.xyz/api/defi/governance/propose-tx';
+        const res = await fetch(url);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Build Veto TX ─────────────────────────────────
+    server.registerTool(
+      'build_veto_tx',
+      {
+        title: 'Build NFT Veto TX',
+        description:
+          'Build castVetoVote calldata on NFTVetoCouncil. support yes = veto, no = defend. If no veto window has been opened for the proposal, the response includes an extra startVetoVote() step. Voter is optional — providing it checks council-membership + duplicate-vote state.',
+        inputSchema: {
+          proposalId: z.number().int().min(1).describe('Proposal ID'),
+          support: z.enum(['yes', 'no']).optional().describe('yes = veto, no = defend (default yes)'),
+          voter: z.string().optional().describe('Voter wallet address (0x...) — checks council-membership status'),
+        },
+      },
+      async ({ proposalId, support, voter }) => {
+        trackMcpTool('build_veto_tx').catch(() => {});
+        const params = new URLSearchParams({ proposalId: String(proposalId) });
+        if (support) params.set('support', support);
+        if (voter) params.set('voter', voter);
+        const res = await fetch(`https://megachad.xyz/api/defi/governance/veto-tx?${params}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: NFT Inventory + Eligibility ───────────────────
+    server.registerTool(
+      'get_nft_inventory',
+      {
+        title: 'Get NFT Inventory + Staking Eligibility',
+        description:
+          'MEGACHADNFT count for a wallet + boost tier (1+/10+/25+) + verdict on staking-reward eligibility (1+ NFT required). Use this BEFORE building any stake tx — a wallet with 0 NFTs accrues 0 rewards even when staked.',
+        inputSchema: {
+          address: z.string().describe('Wallet address (0x...)'),
+        },
+      },
+      async ({ address }) => {
+        trackMcpTool('get_nft_inventory').catch(() => {});
+        const res = await fetch(`https://megachad.xyz/api/defi/nft?address=${address}`);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Protocol Safety Status ────────────────────────
+    server.registerTool(
+      'get_protocol_safety',
+      {
+        title: 'Get Protocol Safety Status',
+        description:
+          'CircuitBreaker state (paused?, guardian votes, auto-unpause timer) + NFTVetoCouncil composition (20 seats, threshold, current members). Critical context BEFORE sending any write — if paused, every staking/AMM/governance write reverts.',
+        inputSchema: {},
+      },
+      async () => {
+        trackMcpTool('get_protocol_safety').catch(() => {});
+        const res = await fetch('https://megachad.xyz/api/defi/safety');
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── DeFi: Activity Feed ─────────────────────────────────
+    server.registerTool(
+      'get_activity_feed',
+      {
+        title: 'Get MEGA Protocol Activity Feed',
+        description:
+          'Unified time-ordered feed of recent on-chain events across the MEGA Protocol stack: burns, Framemogger sends, stakes / unstakes / claims (Mogger + Jester), proposal lifecycle (created / voted / queued / executed). Defaults: last 2000 blocks (~8 min on MegaETH), 50 events.',
+        inputSchema: {
+          limit: z.number().int().min(1).max(200).optional().describe('Max events to return (default 50, max 200)'),
+          blocks: z.number().int().min(100).max(50000).optional().describe('Block window to scan (default 2000)'),
+        },
+      },
+      async ({ limit, blocks }) => {
+        trackMcpTool('get_activity_feed').catch(() => {});
+        const params = new URLSearchParams();
+        if (limit) params.set('limit', String(limit));
+        if (blocks) params.set('blocks', String(blocks));
+        const url = `https://megachad.xyz/api/defi/activity${params.toString() ? `?${params}` : ''}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
+    // ── Agent Index (master directory) ──────────────────────
+    server.registerTool(
+      'get_agent_index',
+      {
+        title: 'Get MegaChad Agent Index',
+        description:
+          'Master directory of every MegaChad endpoint, MCP tool, manifest URL, and example. The recommended first call for any agent — returns the complete surface in a single response.',
+        inputSchema: {},
+      },
+      async () => {
+        trackMcpTool('get_agent_index').catch(() => {});
+        const res = await fetch('https://megachad.xyz/api/agent');
+        const data = await res.json();
+        return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+      },
+    );
+
     // ── MegaETH Protocol Directory ───────────────────────────
     server.registerTool(
       'get_megaeth_protocols',

@@ -1,0 +1,63 @@
+# MegaChad — agent discovery manifest (https://agents.txt spec, RFC-style)
+#
+# This file is the human-readable entry point for AI agents and crawlers
+# trying to figure out how to interact with megachad.xyz. Machines should
+# prefer the structured manifests linked below.
+
+Name: MegaChad
+Description: Burn-to-create looksmaxxing engine + MEGA Protocol DeFi stack on MegaETH.
+Homepage: https://megachad.xyz
+Contact: megachadtoken@proton.me
+Chain: MegaETH (chainId 4326)
+RPC: https://mainnet.megaeth.com/rpc
+
+# Structured discovery (pick one — they all point to the same surface)
+A2A-Agent-Card: https://megachad.xyz/.well-known/agent.json
+MCP-Manifest:   https://megachad.xyz/.well-known/mcp.json
+OpenAI-Plugin:  https://megachad.xyz/.well-known/ai-plugin.json
+Protocol-Registry: https://megachad.xyz/.well-known/megachad-protocol.json
+OpenAPI:        https://megachad.xyz/.well-known/openapi.json
+ERC-8004-Registration: https://megachad.xyz/.well-known/agent-registration.json
+
+# Endpoints (most useful first)
+MCP-Server:     https://megachad.xyz/api/mcp
+Agent-Index:    https://megachad.xyz/api/agent
+Natural-Language: https://megachad.xyz/api/agent/chat  (POST { message, wallet? })
+LLMs-TXT:       https://megachad.xyz/llms.txt
+LLMs-Full-TXT:  https://megachad.xyz/llms-full.txt
+
+# Read endpoints (DeFi)
+Staking-Position:   GET https://megachad.xyz/api/defi/staking?address=0x...
+AMM-Quote:          GET https://megachad.xyz/api/defi/amm/quote?from=MC|MG&amount=...
+Governance-List:    GET https://megachad.xyz/api/defi/governance/proposals
+Governance-Detail:  GET https://megachad.xyz/api/defi/governance/proposals/{id}
+Emission-Schedule:  GET https://megachad.xyz/api/defi/emission
+NFT-Inventory:      GET https://megachad.xyz/api/defi/nft?address=0x...
+Safety-Status:      GET https://megachad.xyz/api/defi/safety
+Activity-Feed:      GET https://megachad.xyz/api/defi/activity
+
+# TX builders (return ready-to-sign { to, value, data })
+Staking:        GET /api/defi/staking/tx?action=stake|unstake|claim&venue=mogger|jester&amount=
+AMM-Swap:       GET /api/defi/amm/swap-tx?from=MC|MG&amount=&recipient=
+AMM-AddLP:      GET /api/defi/amm/add-liquidity-tx?amountMC=&amountMG=&recipient=
+Vote:           GET /api/defi/governance/vote-tx?proposalId=&support=for|against|abstain
+Queue:          GET /api/defi/governance/queue-tx?proposalId=
+Execute:        GET /api/defi/governance/execute-tx?proposalId=
+Propose:        GET /api/defi/governance/propose-tx?proposer=0x...
+Veto:           GET /api/defi/governance/veto-tx?proposalId=&support=yes|no&voter=0x...
+
+# Policy
+Allow: *
+Allow: GPTBot
+Allow: ClaudeBot
+Allow: PerplexityBot
+Allow: Google-Extended
+Allow: Applebot-Extended
+Rate-Limit: best-effort; no auth required for read endpoints
+
+# Key gotchas (machines: pull /.well-known/megachad-protocol.json#knownGotchas for the canonical list)
+Gotcha-1: MegaChadLP uses tokenA/tokenB — generic Uniswap V2 router heuristics will fail. Use /api/defi/amm/* helpers.
+Gotcha-2: MegaChadLP.swap requires the caller to push tokens to the pair BEFORE calling swap. /api/defi/amm/swap-tx returns the multi-step plan.
+Gotcha-3: 1+ MEGACHADNFT required for ALL staking-reward eligibility. Verify via /api/defi/nft first.
+Gotcha-4: Jestermogger proposal IDs are 1-indexed. proposalCount() returns the highest valid ID.
+Gotcha-5: Check /api/defi/safety before sending any write — if CircuitBreaker is tripped, writes revert.

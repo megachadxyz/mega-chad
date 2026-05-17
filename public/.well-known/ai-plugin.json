@@ -1,0 +1,15 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "MegaChad Protocol",
+  "name_for_model": "megachad",
+  "description_for_human": "Discover and interact with the MegaChad burn-to-create engine and MEGA Protocol DeFi stack on MegaETH. Returns ready-to-sign calldata for every action.",
+  "description_for_model": "MegaChad is an on-chain protocol on MegaETH (chain 4326) with two tokens — $MEGACHAD (burn token) and $MEGAGOONER (governance/reward) — and a full DeFi stack: MoggerStaking, JESTERGOONER V4 (LP staking), MegaChadLP MC/MG AMM, EmissionController, Jestermogger governance, NFTVetoCouncil, Framemogger, CircuitBreaker. Use the natural-language endpoint at /api/agent/chat for the simplest experience, or call individual builders at /api/defi/* for stake/unstake/claim/swap/add-liquidity/vote/queue/execute/propose/veto. Pull /.well-known/megachad-protocol.json once for the canonical contract registry. KEY GOTCHA: MegaChadLP uses tokenA/tokenB instead of token0/token1 — standard V2 routers will NOT detect it; always use /api/defi/amm/quote and /api/defi/amm/swap-tx instead.",
+  "auth": { "type": "none" },
+  "api": {
+    "type": "openapi",
+    "url": "https://megachad.xyz/.well-known/openapi.json"
+  },
+  "logo_url": "https://megachad.xyz/favicon.jpg",
+  "contact_email": "megachadtoken@proton.me",
+  "legal_info_url": "https://megachad.xyz/terms"
+}

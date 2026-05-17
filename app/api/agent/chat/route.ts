@@ -114,6 +114,11 @@ export async function GET() {
       'execute_proposal — Build execute tx for a Queued proposal past its timelock',
       'emission_schedule — 225-week MEGAGOONER emission table + current week + split',
       'protocol_registry — Full machine-readable registry of every deployed contract',
+      'nft_inventory — MEGACHADNFT count + boost tier + staking eligibility for a wallet',
+      'safety — CircuitBreaker pause state + NFTVetoCouncil composition (check before writes)',
+      'activity — Unified recent on-chain activity feed across the MEGA Protocol stack',
+      'propose — Build a Jestermogger propose() tx (or check Framemogger top-3 eligibility)',
+      'veto — Build NFTVetoCouncil castVetoVote tx (yes = veto, no = defend)',
     ],
     examples: [
       { message: 'looksmaxx 0xABC...123', description: 'Full looksmaxx plan with calldata' },
@@ -130,6 +135,11 @@ export async function GET() {
       { message: 'vote for proposal 3', description: 'Build castVote tx' },
       { message: 'show me the emission schedule', description: '225-week MEGAGOONER schedule' },
       { message: 'give me the protocol registry', description: 'Full contract address index' },
+      { message: 'am I eligible for staking rewards?', description: 'NFT inventory + eligibility verdict' },
+      { message: 'is the protocol paused?', description: 'CircuitBreaker safety status' },
+      { message: 'what happened in the last hour?', description: 'Recent activity feed' },
+      { message: 'veto proposal 5', description: 'Build NFT veto council castVetoVote tx' },
+      { message: 'am I eligible to propose?', description: 'Framemogger top-3 burner check' },
     ],
     responseFormat: {
       intent: 'The resolved intent type',
