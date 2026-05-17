@@ -84,11 +84,10 @@ export function isContractDeployed(address: `0x${string}`): boolean {
   return address.toLowerCase() !== ZERO;
 }
 
-// Re-export ABIs that don't differ on mainnet. Framemogger/JESTERGOONER reads in the
-// UI assume testnet shapes that the deployed mainnet contracts don't implement — those
-// reads just resolve to undefined at runtime, which the UI already renders as "—".
-// Rewriting that whole layer is a bigger project; the immediate NFT-staking fix only
-// needs MOGGER_STAKING_ABI to be mainnet-correct.
+// Re-export ABIs that don't differ on mainnet. The JESTERGOONER multi-pool ABI
+// imported from testnet does NOT match the deployed mainnet V3 (single-pool drip);
+// consumers that import JESTERGOONER_V3_ABI from this module will silently get
+// undefined reads on mainnet until they migrate to MAINNET_JESTERGOONER_V3_ABI below.
 export {
   ERC20_ABI,
   MEGAGOONER_ABI,
@@ -104,11 +103,13 @@ export {
   type ProposalState,
 } from './testnet-contracts';
 
-// ── Mainnet MoggerStaking ABI ──
-// Deployed mainnet MoggerStaking.sol returns a different tuple shape than testnet:
+// ── Mainnet MoggerStaking ABI (V2 — Synthetix-style drip) ──
+// Deployed MoggerStakingV2 returns:
 //   getStakerInfo → (stakedAmount, earnedRewards, nftCount, multiplier, effectiveStake)
 //   getGlobalStats → (totalStaked, totalRewardsDistributed, rewardRate)
-// The testnet ABI assumed multi-field weekly-emission stats that don't exist on mainnet.
+// Drip getters (rewardRate, periodFinish, lastUpdateTime, REWARDS_DURATION) let
+// the UI compute a continuous APR: rewardRate * SECONDS_PER_YEAR / totalEffectiveStake
+// (in MEGAGOONER per effective-stake unit per year).
 export const MOGGER_STAKING_ABI = [
   { type: 'function', name: 'stake', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
   { type: 'function', name: 'unstake', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
@@ -119,6 +120,12 @@ export const MOGGER_STAKING_ABI = [
   { type: 'function', name: 'earned', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
   { type: 'function', name: 'getNFTMultiplier', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
   { type: 'function', name: 'rewardPerToken', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'rewardRate', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'periodFinish', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'lastUpdateTime', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'lastTimeRewardApplicable', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'REWARDS_DURATION', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'bufferedRewards', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
   { type: 'function', name: 'getStakerInfo', inputs: [{ name: 'account', type: 'address' }], outputs: [
     { name: 'stakedAmount', type: 'uint256' },
     { name: 'earnedRewards', type: 'uint256' },
@@ -134,4 +141,59 @@ export const MOGGER_STAKING_ABI = [
   { type: 'event', name: 'Staked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
   { type: 'event', name: 'Unstaked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
   { type: 'event', name: 'RewardsClaimed', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'reward', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'RewardRateUpdated', inputs: [{ name: 'rewardRate', type: 'uint256', indexed: false }, { name: 'periodFinish', type: 'uint256', indexed: false }] },
+] as const;
+
+// ── Mainnet JESTERGOONER V3 ABI (single-pool LP staking with Synthetix-style drip) ──
+// The re-exported `JESTERGOONER_V3_ABI` from testnet describes a multi-pool contract
+// that does NOT exist on mainnet — those reads return undefined at runtime. Use this
+// ABI instead. Shape matches the actual deployed JESTERGOONER_V3.sol:
+//   - single lpToken (one-shot setLpToken from PLACEHOLDER → real MC/MG pair)
+//   - 4-week lock + time multiplier (50→100% over 4 weeks, weighted-avg timestamp)
+//   - drip getters: rewardRate, periodFinish, lastUpdateTime, REWARDS_DURATION
+//   - getStakerInfo returns 7-tuple: (stakedAmount, earnedRewards, lockEnd,
+//     nftCount, nftMultiplier, timeMultiplier, effectiveStake)
+//   - getGlobalStats returns 3-tuple: (totalStaked, totalRewardsDistributed, rewardRate)
+export const MAINNET_JESTERGOONER_V3_ABI = [
+  { type: 'function', name: 'lpToken', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
+  { type: 'function', name: 'stake', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'unstake', inputs: [{ name: 'amount', type: 'uint256' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'claimRewards', inputs: [], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'emergencyWithdraw', inputs: [], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'distributeWeeklyRewards', inputs: [], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'setLpToken', inputs: [{ name: 'newLpToken', type: 'address' }], outputs: [], stateMutability: 'nonpayable' },
+  { type: 'function', name: 'totalStaked', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'totalEffectiveStake', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'earned', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'canUnstake', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'bool' }], stateMutability: 'view' },
+  { type: 'function', name: 'getNFTMultiplier', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getTimeMultiplier', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'rewardPerToken', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'rewardRate', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'periodFinish', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'lastUpdateTime', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'lastTimeRewardApplicable', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'REWARDS_DURATION', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'MIN_LOCK_DURATION', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'PLACEHOLDER_LP', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
+  { type: 'function', name: 'bufferedRewards', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { type: 'function', name: 'getStakerInfo', inputs: [{ name: 'account', type: 'address' }], outputs: [
+    { name: 'stakedAmount', type: 'uint256' },
+    { name: 'earnedRewards', type: 'uint256' },
+    { name: 'lockEnd', type: 'uint256' },
+    { name: 'nftCount', type: 'uint256' },
+    { name: 'nftMultiplier', type: 'uint256' },
+    { name: 'timeMultiplier', type: 'uint256' },
+    { name: 'effectiveStake', type: 'uint256' },
+  ], stateMutability: 'view' },
+  { type: 'function', name: 'getGlobalStats', inputs: [], outputs: [
+    { name: '_totalStaked', type: 'uint256' },
+    { name: '_totalRewardsDistributed', type: 'uint256' },
+    { name: '_rewardRate', type: 'uint256' },
+  ], stateMutability: 'view' },
+  { type: 'event', name: 'Staked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }, { name: 'lockUntil', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'Unstaked', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'RewardsClaimed', inputs: [{ name: 'user', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'RewardRateUpdated', inputs: [{ name: 'rewardRate', type: 'uint256', indexed: false }, { name: 'periodFinish', type: 'uint256', indexed: false }] },
+  { type: 'event', name: 'LpTokenSet', inputs: [{ name: 'previousLpToken', type: 'address', indexed: true }, { name: 'newLpToken', type: 'address', indexed: true }] },
 ] as const;

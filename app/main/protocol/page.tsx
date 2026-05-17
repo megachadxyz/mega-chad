@@ -16,7 +16,6 @@ import {
   MAINNET_FRAMEMOGGER_ADDRESS,
   MAINNET_MOGGER_STAKING_ADDRESS,
   MAINNET_JESTERGOONER_ADDRESS,
-  MAINNET_LP_TOKEN_ADDRESS,
   MAINNET_MC_MG_PAIR_ADDRESS,
   MAINNET_NFT_ADDRESS,
   MAINNET_BURN_ADDRESS,
@@ -26,17 +25,8 @@ import {
   ERC20_ABI,
   FRAMEMOGGER_ABI,
   MOGGER_STAKING_ABI,
-  JESTERGOONER_ABI,
   LP_ABI,
-  MAINNET_JESTERGOONER_V1_ADDRESS,
-  JESTERGOONER_V1_ABI,
-  MAINNET_JESTERGOONER_V2_ADDRESS,
-  MAINNET_LP_ETH_ADDRESS,
-  MAINNET_LP_USDM_ADDRESS,
-  MAINNET_WETH_ADDRESS,
-  MAINNET_USDM_ADDRESS,
-  JESTERGOONER_V3_ABI,
-  WETH_ABI,
+  MAINNET_JESTERGOONER_V3_ABI,
   isContractDeployed,
 } from '@/lib/mainnet-contracts';
 
@@ -102,22 +92,6 @@ function ContractGate({
 // deploy uses a placeholder ERC20 as lpToken so the protocol could launch ahead
 // of the DEX. Until the real pair exists and JESTERGOONER is upgraded to point
 // at it, render this notice instead of the staking/swap UI.
-function PendingDexPairCard() {
-  return (
-    <div className="beta-card">
-      <div className="beta-card-header">
-        <h2>PENDING DEX PAIR</h2>
-        <span className="beta-card-badge">COMING SOON</span>
-      </div>
-      <p className="beta-card-desc">
-        LP staking and the in-app swap open once the MEGACHAD/MEGAGOONER pool
-        is live on a MegaETH DEX. The JESTERGOONER contract is already deployed
-        and will be upgraded to point at the real pair as soon as it exists.
-      </p>
-    </div>
-  );
-}
-
 // ═════════════════════════════════════════════════════════
 export default function MainnetProtocol() {
   const { address, isConnected, chainId: walletChainId } = useAccount();
@@ -217,10 +191,10 @@ export default function MainnetProtocol() {
             )}
             {activeTab === 'swap' && (
               <ContractGate
-                addresses={[MAINNET_LP_TOKEN_ADDRESS, MAINNET_MEGAGOONER_ADDRESS]}
+                addresses={[MAINNET_MC_MG_PAIR_ADDRESS, MAINNET_MEGAGOONER_ADDRESS]}
                 label="Swap"
               >
-                <PendingDexPairCard />
+                <SwapSection address={address!} />
               </ContractGate>
             )}
           </>
@@ -614,11 +588,18 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     args: [address],
   });
 
-  // LP reserves for APY calculation
+  // Spot MEGAGOONER price for APR — sourced from the real MC/MG AMM pair.
   const { data: lpReserves } = useReadContract({
-    address: MAINNET_LP_TOKEN_ADDRESS,
+    address: MAINNET_MC_MG_PAIR_ADDRESS,
     abi: LP_ABI,
     functionName: 'getReserves',
+  });
+
+  // Drip period bound — APR is only meaningful while the 7-day window is live.
+  const { data: stakingPeriodFinish } = useReadContract({
+    address: MAINNET_MOGGER_STAKING_ADDRESS,
+    abi: MOGGER_STAKING_ABI,
+    functionName: 'periodFinish',
   });
 
   // Live NFT balance from the MEGACHADNFT contract. The stakerInfo tuple's nftCount
@@ -632,10 +613,16 @@ function StakingSection({ address }: { address: `0x${string}` }) {
     args: [address],
   });
 
-  // APY is hidden until the EmissionController weekly rate + a real LP pair exist.
-  // The placeholder LP carries no MEGACHAD/MEGAGOONER price signal, so any computation
-  // would be misleading. Show "—" until the DEX pair lands.
-  const stakingAPY: number | undefined = undefined;
+  // Spot MEGAGOONER price in MEGACHAD from the MC/MG pair (token0 = MEGACHAD).
+  const goonerPriceInMegachad = (() => {
+    if (!lpReserves) return undefined;
+    const mc = Number(formatUnits(lpReserves[0], 18));
+    const mg = Number(formatUnits(lpReserves[1], 18));
+    if (mc <= 0 || mg <= 0) return undefined;
+    return mc / mg;
+  })();
+  // Continuous-drip APR from rewardRate × secs/yr / totalEffectiveStake, priced in MEGACHAD.
+  const stakingAPY = computeDripAPY(globalStats?.[2], totalEffectiveStake, stakingPeriodFinish, goonerPriceInMegachad);
 
   // Write contracts
   const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
@@ -646,33 +633,6 @@ function StakingSection({ address }: { address: `0x${string}` }) {
 
   const { writeContract: writeClaim, data: claimHash, reset: resetClaim } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash, query: { enabled: !!claimHash } });
-
-  // Permissionless weekly emission trigger — pulls MEGAGOONER from EmissionController
-  // for every unclaimed week up to the current one and notifies MoggerStaking/JESTERGOONER.
-  const { writeContract: writeDistribute, data: distributeHash, reset: resetDistribute } = useWriteContract();
-  const { isSuccess: distributeConfirmed } = useWaitForTransactionReceipt({ hash: distributeHash, query: { enabled: !!distributeHash } });
-  const [distributeStatus, setDistributeStatus] = useState<'idle' | 'pending' | 'done' | 'error'>('idle');
-  const [distributeError, setDistributeError] = useState('');
-
-  const handleDistribute = () => {
-    resetDistribute();
-    setDistributeStatus('pending');
-    setDistributeError('');
-    writeDistribute({
-      address: MAINNET_MOGGER_STAKING_ADDRESS,
-      abi: MOGGER_STAKING_ABI,
-      functionName: 'distributeWeeklyRewards',
-      gas: 1000000n,
-    }, { onError: (e) => { setDistributeStatus('error'); setDistributeError(e.message?.includes('AlreadyClaimed') ? 'All eligible weeks already distributed' : 'Distribute failed'); } });
-  };
-
-  useEffect(() => {
-    if (distributeConfirmed && distributeStatus === 'pending') {
-      setDistributeStatus('done');
-      refetchEarned();
-      refetchStaker();
-    }
-  }, [distributeConfirmed, distributeStatus]);
 
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
@@ -809,23 +769,6 @@ function StakingSection({ address }: { address: `0x${string}` }) {
         </div>
       </div>
 
-      {/* Weekly distribution trigger (permissionless) */}
-      <div className="beta-info-box" style={{ marginTop: '0.5rem' }}>
-        <h4>WEEKLY EMISSION DISTRIBUTION</h4>
-        <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-          Anyone can pull the current week&apos;s MEGAGOONER mint from EmissionController into MoggerStaking + JESTERGOONER. Each tx catches up every unclaimed week in one shot.
-        </p>
-        <button
-          className="beta-btn-secondary"
-          onClick={handleDistribute}
-          disabled={distributeStatus === 'pending'}
-        >
-          {distributeStatus === 'pending' ? 'DISTRIBUTING...' : 'TRIGGER WEEKLY DISTRIBUTION'}
-        </button>
-        {distributeStatus === 'done' && <div className="beta-status success" style={{ marginTop: '0.5rem' }}>Distribution confirmed — rewards credited.</div>}
-        {distributeStatus === 'error' && <div className="beta-status error" style={{ marginTop: '0.5rem' }}>{distributeError}</div>}
-      </div>
-
       {/* Your position */}
       <div className="beta-stat-row">
         <div className="beta-stat">
@@ -953,56 +896,81 @@ function computePoolAPY(
   return (weekly * 52 * goonerPriceInMegachad / stakedValueInMegachad) * 100;
 }
 
+// Synthetix-style drip APR. The deployed MoggerStakingV2 / JESTERGOONER_V3 set
+// rewardRate (MEGAGOONER wei per second) over a 7-day window; total annualized
+// yield per effective-stake unit is rewardRate × secs/yr / totalEffectiveStake,
+// then re-denominated into MEGACHAD via the spot MC/MG price. Returns 0 when
+// the drip period has ended (rate is stale until the next notify).
+function computeDripAPY(
+  rewardRateRaw: bigint | undefined,
+  totalEffectiveStakeRaw: bigint | undefined,
+  periodFinishRaw: bigint | undefined,
+  goonerPriceInMegachad: number | undefined,
+): number | undefined {
+  if (rewardRateRaw === undefined || totalEffectiveStakeRaw === undefined || periodFinishRaw === undefined || goonerPriceInMegachad === undefined) return undefined;
+  if (totalEffectiveStakeRaw === 0n) return undefined;
+  const nowSec = BigInt(Math.floor(Date.now() / 1000));
+  if (nowSec >= periodFinishRaw) return 0;
+  const rate = Number(formatUnits(rewardRateRaw, 18));
+  const eff = Number(formatUnits(totalEffectiveStakeRaw, 18));
+  if (rate <= 0 || eff <= 0) return undefined;
+  const SECONDS_PER_YEAR = 365 * 86400;
+  return (rate * SECONDS_PER_YEAR * goonerPriceInMegachad / eff) * 100;
+}
+
 // ═════════════════════════════════════════════════════════
 // PUBLIC STATS (always visible, no wallet needed)
 // ═════════════════════════════════════════════════════════
 function PublicStatsCard() {
-  // Mogger staking globals
+  // Mogger staking globals — (totalStaked, totalRewardsDistributed, rewardRate)
   const { data: moggerGlobal } = useReadContract({
     address: MAINNET_MOGGER_STAKING_ADDRESS,
     abi: MOGGER_STAKING_ABI,
     functionName: 'getGlobalStats',
   });
+  const { data: moggerEffective } = useReadContract({
+    address: MAINNET_MOGGER_STAKING_ADDRESS,
+    abi: MOGGER_STAKING_ABI,
+    functionName: 'totalEffectiveStake',
+  });
+  const { data: moggerPeriodFinish } = useReadContract({
+    address: MAINNET_MOGGER_STAKING_ADDRESS,
+    abi: MOGGER_STAKING_ABI,
+    functionName: 'periodFinish',
+  });
 
-  // MEGACHAD/MEGAGOONER LP reserves — used for gooner price
+  // Spot MEGAGOONER price comes from the real MC/MG AMM pair (the LP_TOKEN
+  // sentinel is a static placeholder ERC20 with no reserves).
   const { data: mgReserves } = useReadContract({
-    address: MAINNET_LP_TOKEN_ADDRESS,
+    address: MAINNET_MC_MG_PAIR_ADDRESS,
     abi: LP_ABI,
     functionName: 'getReserves',
   });
   const { data: mgLpSupply } = useReadContract({
-    address: MAINNET_LP_TOKEN_ADDRESS,
+    address: MAINNET_MC_MG_PAIR_ADDRESS,
     abi: LP_ABI,
     functionName: 'totalSupply',
   });
 
-  // JesterGoonerV3 per-pool info
-  const { data: pool0 } = useReadContract({
+  // JESTERGOONER V3 drip state — single MC/MG pool.
+  const { data: jgGlobal } = useReadContract({
     address: MAINNET_JESTERGOONER_ADDRESS,
-    abi: JESTERGOONER_V3_ABI,
-    functionName: 'getPoolInfo',
-    args: [0n],
+    abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'getGlobalStats',
   });
-  const { data: pool1 } = useReadContract({
+  const { data: jgEffective } = useReadContract({
     address: MAINNET_JESTERGOONER_ADDRESS,
-    abi: JESTERGOONER_V3_ABI,
-    functionName: 'getPoolInfo',
-    args: [1n],
+    abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'totalEffectiveStake',
   });
-  const { data: pool2 } = useReadContract({
+  const { data: jgPeriodFinish } = useReadContract({
     address: MAINNET_JESTERGOONER_ADDRESS,
-    abi: JESTERGOONER_V3_ABI,
-    functionName: 'getPoolInfo',
-    args: [2n],
+    abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'periodFinish',
   });
 
-  // Per-pool LP reserves + totalSupply (for LP price)
-  const { data: lp1Reserves } = useReadContract({ address: MAINNET_LP_ETH_ADDRESS, abi: LP_ABI, functionName: 'getReserves' });
-  const { data: lp1Supply } = useReadContract({ address: MAINNET_LP_ETH_ADDRESS, abi: LP_ABI, functionName: 'totalSupply' });
-  const { data: lp2Reserves } = useReadContract({ address: MAINNET_LP_USDM_ADDRESS, abi: LP_ABI, functionName: 'getReserves' });
-  const { data: lp2Supply } = useReadContract({ address: MAINNET_LP_USDM_ADDRESS, abi: LP_ABI, functionName: 'totalSupply' });
-
-  // Gooner price (in MEGACHAD) from MC/MG reserves — tokenA is MEGACHAD
+  // Gooner price (in MEGACHAD) from MC/MG reserves — tokenA is MEGACHAD.
+  // Reused both for MoggerStaking APR and to price LP-denominated drip rewards.
   const goonerPrice = (() => {
     if (!mgReserves) return undefined;
     const a = Number(formatUnits(mgReserves[0], 18));
@@ -1011,14 +979,26 @@ function PublicStatsCard() {
     return a / b;
   })();
 
-  // Mogger APY hidden on mainnet — deployed MoggerStaking exposes cumulative
-  // rewardPerTokenStored, not a per-week rate, so APY requires reading the
-  // EmissionController schedule. Returns "—" until that wiring exists.
-  const moggerAPY: number | undefined = undefined;
+  // JG drip APR is yield per effective-LP-unit per year priced in LP-units. To
+  // produce a comparable %-APR we re-denominate via LP spot price: 1 LP =
+  // 2 * megachadReserve / lpSupply  (Uniswap V2 constant-product). The drip
+  // pays MEGAGOONER → MEGACHAD via goonerPrice, then we divide by LP-MC value.
+  const jgAPY = (() => {
+    if (jgGlobal === undefined || jgEffective === undefined || jgPeriodFinish === undefined) return undefined;
+    if (goonerPrice === undefined || !mgReserves || !mgLpSupply || mgLpSupply === 0n || jgEffective === 0n) return undefined;
+    const nowSec = BigInt(Math.floor(Date.now() / 1000));
+    if (nowSec >= jgPeriodFinish) return 0;
+    const rate = Number(formatUnits(jgGlobal[2], 18));            // MG/sec
+    const eff = Number(formatUnits(jgEffective, 18));             // LP-units (effective)
+    const mcReserve = Number(formatUnits(mgReserves[0], 18));
+    const lpSupply = Number(formatUnits(mgLpSupply, 18));
+    if (rate <= 0 || eff <= 0 || mcReserve <= 0 || lpSupply <= 0) return undefined;
+    const lpPriceInMegachad = (2 * mcReserve) / lpSupply;
+    const SECONDS_PER_YEAR = 365 * 86400;
+    return (rate * SECONDS_PER_YEAR * goonerPrice / (eff * lpPriceInMegachad)) * 100;
+  })();
 
-  const pool0APY = computePoolAPY(pool0?.[4], pool0?.[2], mgReserves?.[0], mgLpSupply, goonerPrice);
-  const pool1APY = computePoolAPY(pool1?.[4], pool1?.[2], lp1Reserves?.[0], lp1Supply, goonerPrice);
-  const pool2APY = computePoolAPY(pool2?.[4], pool2?.[2], lp2Reserves?.[0], lp2Supply, goonerPrice);
+  const moggerAPY = computeDripAPY(moggerGlobal?.[2], moggerEffective, moggerPeriodFinish, goonerPrice);
 
   return (
     <div className="beta-card" style={{ marginBottom: '1rem' }}>
@@ -1032,42 +1012,33 @@ function PublicStatsCard() {
           <span className="beta-stat-value">{fmtAPY(moggerAPY)}</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">JG: MEGACHAD / MEGAGOONER</span>
-          <span className="beta-stat-value">{fmtAPY(pool0APY)}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">JG: MEGACHAD / ETH</span>
-          <span className="beta-stat-value">{fmtAPY(pool1APY)}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">JG: MEGACHAD / USDm</span>
-          <span className="beta-stat-value">{fmtAPY(pool2APY)}</span>
+          <span className="beta-stat-label">JG: MEGACHAD / MEGAGOONER LP</span>
+          <span className="beta-stat-value">{fmtAPY(jgAPY)}</span>
         </div>
       </div>
     </div>
   );
 }
 
-const POOL_CONFIG = [
-  { pid: 0, name: 'MEGACHAD / MEGAGOONER', lpAddress: MAINNET_MC_MG_PAIR_ADDRESS, tokenBAddress: MAINNET_MEGAGOONER_ADDRESS, tokenBSymbol: 'MEGAGOONER', isEth: false },
-  { pid: 1, name: 'MEGACHAD / ETH', lpAddress: MAINNET_LP_ETH_ADDRESS, tokenBAddress: MAINNET_WETH_ADDRESS, tokenBSymbol: 'ETH', isEth: true },
-  { pid: 2, name: 'MEGACHAD / USDm', lpAddress: MAINNET_LP_USDM_ADDRESS, tokenBAddress: MAINNET_USDM_ADDRESS, tokenBSymbol: 'USDm', isEth: false },
-] as const;
+// Deployed mainnet JESTERGOONER_V3 is single-pool: LP token = MEGACHAD/MEGAGOONER
+// AMM pair, 4-week minimum lock, Synthetix-style drip rewards in MEGAGOONER.
+const JG_LP_ADDRESS = MAINNET_MC_MG_PAIR_ADDRESS;
+const JG_LP_NAME = 'MEGACHAD / MEGAGOONER';
+const JG_TOKEN_B_ADDRESS = MAINNET_MEGAGOONER_ADDRESS;
+const JG_TOKEN_B_SYMBOL = 'MEGAGOONER';
+const JG_LOCK_SECONDS = 4 * 7 * 86400;
 
 function LPStakingSection({ address }: { address: `0x${string}` }) {
-  const [selectedPool, setSelectedPool] = useState(0);
-  const pool = POOL_CONFIG[selectedPool];
-  const pairDeployed = isContractDeployed(pool.lpAddress);
+  const pairDeployed = isContractDeployed(JG_LP_ADDRESS);
 
   // ── State ──
   const [amount, setAmount] = useState('');
   const [action, setAction] = useState<'stake' | 'unstake'>('stake');
-  const [status, setStatus] = useState<'idle' | 'approving' | 'approving-b' | 'adding' | 'removing' | 'wrapping' | 'staking' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'approving' | 'approving-b' | 'adding' | 'removing' | 'staking' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [liqPanel, setLiqPanel] = useState<'none' | 'add' | 'remove'>('none');
   const [liqAmountA, setLiqAmountA] = useState('');
   const [liqAmountB, setLiqAmountB] = useState('');
-  const [lastEditedSide, setLastEditedSide] = useState<'a' | 'b'>('a');
   const [removeLiqAmount, setRemoveLiqAmount] = useState('');
 
   // ── Token balances ──
@@ -1075,90 +1046,98 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     address: MAINNET_MEGACHAD_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
   });
   const { data: tokenBBalance, refetch: refetchTokenBBal } = useReadContract({
-    address: pool.tokenBAddress, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
+    address: JG_TOKEN_B_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
   });
-
-  // LP token balance (for this pool)
   const { data: lpBalance, refetch: refetchLpBalance } = useReadContract({
-    address: pool.lpAddress, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
+    address: JG_LP_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [address],
   });
 
   // ── Allowances ──
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: pool.lpAddress, abi: ERC20_ABI, functionName: 'allowance',
+    address: JG_LP_ADDRESS, abi: ERC20_ABI, functionName: 'allowance',
     args: [address, MAINNET_JESTERGOONER_ADDRESS],
   });
   const { data: megachadAllowanceLP } = useReadContract({
     address: MAINNET_MEGACHAD_ADDRESS, abi: ERC20_ABI, functionName: 'allowance',
-    args: [address, pool.lpAddress],
+    args: [address, JG_LP_ADDRESS],
   });
   const { data: tokenBAllowanceLP } = useReadContract({
-    address: pool.tokenBAddress, abi: ERC20_ABI, functionName: 'allowance',
-    args: [address, pool.lpAddress],
+    address: JG_TOKEN_B_ADDRESS, abi: ERC20_ABI, functionName: 'allowance',
+    args: [address, JG_LP_ADDRESS],
   });
 
-  // Read JESTERGOONER's live lpToken setting. The mainnet proxy is the single-pool
-  // V1 contract — it exposes a public `lpToken` state var (auto getter). Until V2 is
-  // deployed and ADMIN calls setLpToken(MC/MG pair), this returns the PlaceholderLP
-  // address, and any stake/unstake/claim against the proxy reverts (function-selector
-  // mismatch with the V3 ABI used below, and the placeholder isn't what users hold).
+  // Confirms JESTERGOONER's lpToken has been pointed at the real MC/MG pair
+  // (one-shot ADMIN action). Until then the proxy still targets the placeholder
+  // ERC20 and stake/unstake/claim would touch the wrong token.
   const { data: jgLpToken } = useReadContract({
     address: MAINNET_JESTERGOONER_ADDRESS,
-    abi: [{ type: 'function', name: 'lpToken', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' }] as const,
+    abi: MAINNET_JESTERGOONER_V3_ABI,
     functionName: 'lpToken',
   });
-  const stakingActivated = jgLpToken !== undefined
-    && typeof jgLpToken === 'string'
-    && jgLpToken.toLowerCase() === (pool.lpAddress as string).toLowerCase();
+  const stakingActivated = typeof jgLpToken === 'string'
+    && jgLpToken.toLowerCase() === (JG_LP_ADDRESS as string).toLowerCase();
 
-  // ── V3 contract reads (pid-based) ──
-  const { data: poolInfoData } = useReadContract({
-    address: MAINNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'getPoolInfo',
-    args: [BigInt(selectedPool)],
+  // ── V3 single-pool reads ──
+  // getStakerInfo: (stakedAmount, earnedRewards, lockEnd, nftCount, nftMultiplier, timeMultiplier, effectiveStake)
+  const { data: stakerInfo, refetch: refetchStaker } = useReadContract({
+    address: MAINNET_JESTERGOONER_ADDRESS, abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'getStakerInfo', args: [address],
   });
-  const { data: userInfoData, refetch: refetchStaker } = useReadContract({
-    address: MAINNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'getUserInfo',
-    args: [BigInt(selectedPool), address],
-  });
+  // getGlobalStats: (totalStaked, totalRewardsDistributed, rewardRate)
   const { data: globalStats } = useReadContract({
-    address: MAINNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'getGlobalStats',
+    address: MAINNET_JESTERGOONER_ADDRESS, abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'getGlobalStats',
+  });
+  const { data: jgTotalEffective } = useReadContract({
+    address: MAINNET_JESTERGOONER_ADDRESS, abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'totalEffectiveStake',
+  });
+  const { data: jgPeriodFinish } = useReadContract({
+    address: MAINNET_JESTERGOONER_ADDRESS, abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'periodFinish',
   });
   const { data: earned, refetch: refetchEarned } = useReadContract({
-    address: MAINNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'earned',
-    args: [BigInt(selectedPool), address],
+    address: MAINNET_JESTERGOONER_ADDRESS, abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'earned', args: [address],
   });
-  const { data: earnedAll, refetch: refetchEarnedAll } = useReadContract({
-    address: MAINNET_JESTERGOONER_ADDRESS, abi: JESTERGOONER_V3_ABI, functionName: 'earnedAll',
-    args: [address],
+  const { data: canUnstakeOnchain } = useReadContract({
+    address: MAINNET_JESTERGOONER_ADDRESS, abi: MAINNET_JESTERGOONER_V3_ABI,
+    functionName: 'canUnstake', args: [address],
   });
 
-  // ── LP reserves for ratio/APY ──
+  // ── LP reserves (MC/MG pair) — feed both ratio/APR pricing and add-liquidity ──
   const { data: lpReserves } = useReadContract({
-    address: pool.lpAddress, abi: LP_ABI, functionName: 'getReserves',
+    address: JG_LP_ADDRESS, abi: LP_ABI, functionName: 'getReserves',
   });
   const { data: lpTotalSupply } = useReadContract({
-    address: pool.lpAddress, abi: LP_ABI, functionName: 'totalSupply',
+    address: JG_LP_ADDRESS, abi: LP_ABI, functionName: 'totalSupply',
   });
 
-  // MEGACHAD/MEGAGOONER LP reserves — used to price MEGAGOONER in MEGACHAD for APY.
-  // Source from the real pair (the placeholder LP is a static ERC20 with no reserves).
-  const { data: goonerLpReserves } = useReadContract({
-    address: MAINNET_MC_MG_PAIR_ADDRESS, abi: LP_ABI, functionName: 'getReserves',
-  });
+  // Spot MEGAGOONER price (in MEGACHAD) — token0 = MEGACHAD.
   const goonerPrice = (() => {
-    if (!goonerLpReserves) return undefined;
-    const a = Number(formatUnits(goonerLpReserves[0], 18));
-    const b = Number(formatUnits(goonerLpReserves[1], 18));
-    if (a <= 0 || b <= 0) return undefined;
-    return a / b;
+    if (!lpReserves) return undefined;
+    const mc = Number(formatUnits(lpReserves[0], 18));
+    const mg = Number(formatUnits(lpReserves[1], 18));
+    if (mc <= 0 || mg <= 0) return undefined;
+    return mc / mg;
   })();
-  const selectedPoolAPY = computePoolAPY(
-    poolInfoData?.[4],
-    poolInfoData?.[2],
-    lpReserves?.[0],
-    lpTotalSupply,
-    goonerPrice,
-  );
+
+  // JG APR — drip MEGAGOONER per second per effective-LP unit, re-priced in MC.
+  // 1 LP ≈ 2 * mcReserve / lpSupply MEGACHAD (Uniswap V2 constant-product).
+  const selectedPoolAPY = (() => {
+    if (globalStats === undefined || jgTotalEffective === undefined || jgPeriodFinish === undefined) return undefined;
+    if (goonerPrice === undefined || !lpReserves || !lpTotalSupply || lpTotalSupply === 0n || jgTotalEffective === 0n) return undefined;
+    const nowSec = BigInt(Math.floor(Date.now() / 1000));
+    if (nowSec >= jgPeriodFinish) return 0;
+    const rate = Number(formatUnits(globalStats[2], 18));
+    const eff = Number(formatUnits(jgTotalEffective, 18));
+    const mcReserve = Number(formatUnits(lpReserves[0], 18));
+    const lpSupply = Number(formatUnits(lpTotalSupply, 18));
+    if (rate <= 0 || eff <= 0 || mcReserve <= 0 || lpSupply <= 0) return undefined;
+    const lpPriceInMegachad = (2 * mcReserve) / lpSupply;
+    const SECONDS_PER_YEAR = 365 * 86400;
+    return (rate * SECONDS_PER_YEAR * goonerPrice / (eff * lpPriceInMegachad)) * 100;
+  })();
 
   // ── Computed values ──
   const poolRatio = lpReserves && lpReserves[0] > 0n
@@ -1166,24 +1145,15 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     : 0.05;
   const inversePoolRatio = poolRatio > 0 ? 1 / poolRatio : 0;
 
-  // Auto-calculate the other side when one side changes
   const handleLiqAmountAChange = (val: string) => {
     setLiqAmountA(val);
-    setLastEditedSide('a');
-    if (val && Number(val) > 0) {
-      setLiqAmountB((Number(val) * poolRatio).toFixed(6));
-    } else {
-      setLiqAmountB('');
-    }
+    if (val && Number(val) > 0) setLiqAmountB((Number(val) * poolRatio).toFixed(6));
+    else setLiqAmountB('');
   };
   const handleLiqAmountBChange = (val: string) => {
     setLiqAmountB(val);
-    setLastEditedSide('b');
-    if (val && Number(val) > 0) {
-      setLiqAmountA((Number(val) * inversePoolRatio).toFixed(6));
-    } else {
-      setLiqAmountA('');
-    }
+    if (val && Number(val) > 0) setLiqAmountA((Number(val) * inversePoolRatio).toFixed(6));
+    else setLiqAmountA('');
   };
 
   const parsedLiqA = liqAmountA ? parseUnits(liqAmountA, 18) : 0n;
@@ -1194,8 +1164,6 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     const share = Number(formatUnits(parsedRemoveLiq, 18)) / Number(formatUnits(lpTotalSupply, 18));
     return { tokenA: Number(formatUnits(lpReserves[0], 18)) * share, tokenB: Number(formatUnits(lpReserves[1], 18)) * share };
   })();
-  const poolAllocPct = poolInfoData ? Number(poolInfoData[1]) / 100 : 0;
-  const poolWeeklyEmission = poolInfoData ? poolInfoData[4] : undefined;
 
   // ── Write hooks ──
   const { writeContract: writeApprove, data: approveHash, reset: resetApprove } = useWriteContract();
@@ -1210,38 +1178,20 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const { isSuccess: stakeConfirmed } = useWaitForTransactionReceipt({ hash: stakeHash, query: { enabled: !!stakeHash } });
   const { writeContract: writeClaim, data: claimHash, reset: resetClaim } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimHash, query: { enabled: !!claimHash } });
-  const { writeContract: writeWrap, data: wrapHash, reset: resetWrap } = useWriteContract();
-  const { isSuccess: wrapConfirmed } = useWaitForTransactionReceipt({ hash: wrapHash, query: { enabled: !!wrapHash } });
 
   const parsedAmount = amount ? parseUnits(amount, 18) : 0n;
   const needsApproval = action === 'stake' && allowance !== undefined && parsedAmount > 0n && allowance < parsedAmount;
 
   // ── Add Liquidity flow ──
   const handleAddLiquidity = () => {
-    if (!pairDeployed) { setErrorMsg(`${pool.name} pair not deployed yet`); return; }
+    if (!pairDeployed) { setErrorMsg(`${JG_LP_NAME} pair not deployed yet`); return; }
     if (parsedLiqA <= 0n || parsedLiqB <= 0n) { setErrorMsg('Enter an amount'); return; }
     if (megachadBalance !== undefined && parsedLiqA > megachadBalance) { setErrorMsg('Insufficient $MEGACHAD'); return; }
-    // For ETH pool, check native ETH balance is handled by wrapping step
-    if (!pool.isEth && tokenBBalance !== undefined && parsedLiqB > tokenBBalance) { setErrorMsg(`Insufficient $${pool.tokenBSymbol}`); return; }
+    if (tokenBBalance !== undefined && parsedLiqB > tokenBBalance) { setErrorMsg(`Insufficient $${JG_TOKEN_B_SYMBOL}`); return; }
     setErrorMsg('');
     resetApprove();
     resetApproveB();
     resetAddLiq();
-    resetWrap();
-
-    // For ETH pool: wrap ETH → WETH first
-    if (pool.isEth) {
-      setStatus('wrapping');
-      writeWrap({
-        address: MAINNET_WETH_ADDRESS,
-        abi: WETH_ABI,
-        functionName: 'deposit',
-        value: parsedLiqB,
-        gas: 2000000n,
-      }, { onError: () => { setStatus('error'); setErrorMsg('ETH wrap failed'); } });
-      return;
-    }
-
     startApproveChain();
   };
 
@@ -1255,16 +1205,16 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         address: MAINNET_MEGACHAD_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [pool.lpAddress, parsedLiqA],
+        args: [JG_LP_ADDRESS, parsedLiqA],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else if (needsApproveBToken) {
       setStatus('approving-b');
       writeApproveB({
-        address: pool.tokenBAddress,
+        address: JG_TOKEN_B_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [pool.lpAddress, parsedLiqB],
+        args: [JG_LP_ADDRESS, parsedLiqB],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else {
@@ -1277,10 +1227,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     if (needsApproveBToken) {
       setStatus('approving-b');
       writeApproveB({
-        address: pool.tokenBAddress,
+        address: JG_TOKEN_B_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [pool.lpAddress, parsedLiqB],
+        args: [JG_LP_ADDRESS, parsedLiqB],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else {
@@ -1291,7 +1241,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
   const executeAddLiquidity = () => {
     setStatus('adding');
     writeAddLiq({
-      address: pool.lpAddress,
+      address: JG_LP_ADDRESS,
       abi: LP_ABI,
       functionName: 'addLiquidity',
       args: [parsedLiqA, parsedLiqB, address],
@@ -1301,25 +1251,20 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
   // ── Remove Liquidity flow ──
   const handleRemoveLiquidity = () => {
-    if (!pairDeployed) { setErrorMsg(`${pool.name} pair not deployed yet`); return; }
+    if (!pairDeployed) { setErrorMsg(`${JG_LP_NAME} pair not deployed yet`); return; }
     if (parsedRemoveLiq <= 0n) { setErrorMsg('Enter an amount'); return; }
     if (lpBalance !== undefined && parsedRemoveLiq > lpBalance) { setErrorMsg('Insufficient LP balance'); return; }
     setErrorMsg('');
     resetRemoveLiq();
     setStatus('removing');
     writeRemoveLiq({
-      address: pool.lpAddress,
+      address: JG_LP_ADDRESS,
       abi: LP_ABI,
       functionName: 'removeLiquidity',
       args: [parsedRemoveLiq, address],
       gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Remove liquidity failed'); } });
   };
-
-  // Chain: wrap → approveA → approveB → addLiquidity
-  useEffect(() => {
-    if (wrapConfirmed && status === 'wrapping') startApproveChain();
-  }, [wrapConfirmed, status]);
 
   useEffect(() => {
     if (approveConfirmed && status === 'approving' && liqPanel === 'add') executeApproveB();
@@ -1352,7 +1297,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
 
   // ── Stake / Unstake flow ──
   const handleStakeUnstake = () => {
-    if (!stakingActivated) { setErrorMsg('Staking activates after the JESTERGOONER V2 upgrade points lpToken at this pair'); return; }
+    if (!stakingActivated) { setErrorMsg('JESTERGOONER lpToken not yet pointed at this pair'); return; }
     if (!amount || parsedAmount <= 0n) { setErrorMsg('Enter an amount'); return; }
     setErrorMsg('');
     resetApprove();
@@ -1365,7 +1310,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       if (needsApproval) {
         setStatus('approving');
         writeApprove({
-          address: pool.lpAddress,
+          address: JG_LP_ADDRESS,
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [MAINNET_JESTERGOONER_ADDRESS, parsedAmount],
@@ -1375,15 +1320,18 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         executeStake();
       }
     } else {
-      if (userInfoData && parsedAmount > userInfoData[0]) {
+      if (stakerInfo && parsedAmount > stakerInfo[0]) {
         setErrorMsg('Cannot unstake more than staked'); return;
+      }
+      if (canUnstakeOnchain === false) {
+        setErrorMsg('Still inside 4-week lock — see countdown above'); return;
       }
       setStatus('unstaking');
       writeStake({
         address: MAINNET_JESTERGOONER_ADDRESS,
-        abi: JESTERGOONER_V3_ABI,
+        abi: MAINNET_JESTERGOONER_V3_ABI,
         functionName: 'unstake',
-        args: [BigInt(selectedPool), parsedAmount],
+        args: [parsedAmount],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Unstake failed'); } });
     }
@@ -1393,9 +1341,9 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     setStatus('staking');
     writeStake({
       address: MAINNET_JESTERGOONER_ADDRESS,
-      abi: JESTERGOONER_V3_ABI,
+      abi: MAINNET_JESTERGOONER_V3_ABI,
       functionName: 'stake',
-      args: [BigInt(selectedPool), parsedAmount],
+      args: [parsedAmount],
       gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Stake failed'); } });
   };
@@ -1405,22 +1353,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     setStatus('claiming');
     writeClaim({
       address: MAINNET_JESTERGOONER_ADDRESS,
-      abi: JESTERGOONER_V3_ABI,
+      abi: MAINNET_JESTERGOONER_V3_ABI,
       functionName: 'claimRewards',
-      args: [BigInt(selectedPool)],
       gas: 2000000n,
     }, { onError: () => { setStatus('error'); setErrorMsg('Claim failed'); } });
-  };
-
-  const handleClaimAll = () => {
-    resetClaim();
-    setStatus('claiming');
-    writeClaim({
-      address: MAINNET_JESTERGOONER_ADDRESS,
-      abi: JESTERGOONER_V3_ABI,
-      functionName: 'claimAllRewards',
-      gas: 2000000n,
-    }, { onError: () => { setStatus('error'); setErrorMsg('Claim all failed'); } });
   };
 
   // Stake approve → stake chain (only when not in add-liq panel)
@@ -1444,144 +1380,21 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       setStatus('done');
       refetchStaker();
       refetchEarned();
-      refetchEarnedAll();
     }
   }, [claimConfirmed, status]);
 
-  // ── V1 Migration: old JesterGooner with lock periods ──
-  const { data: v1StakerInfo, refetch: refetchV1Staker } = useReadContract({
-    address: MAINNET_JESTERGOONER_V1_ADDRESS,
-    abi: JESTERGOONER_V1_ABI,
-    functionName: 'getStakerInfo',
-    args: [address],
-  });
-  const { data: v1Earned, refetch: refetchV1Earned } = useReadContract({
-    address: MAINNET_JESTERGOONER_V1_ADDRESS,
-    abi: JESTERGOONER_V1_ABI,
-    functionName: 'earned',
-    args: [address],
-  });
-  const { writeContract: writeV1Unstake, data: v1UnstakeHash, reset: resetV1Unstake } = useWriteContract();
-  const { isSuccess: v1UnstakeConfirmed } = useWaitForTransactionReceipt({ hash: v1UnstakeHash, query: { enabled: !!v1UnstakeHash } });
-  const { writeContract: writeV1Claim, data: v1ClaimHash, reset: resetV1Claim } = useWriteContract();
-  const { isSuccess: v1ClaimConfirmed } = useWaitForTransactionReceipt({ hash: v1ClaimHash, query: { enabled: !!v1ClaimHash } });
-
-  const v1Staked = v1StakerInfo ? v1StakerInfo[0] : 0n;
-  const v1LockEnd = v1StakerInfo ? Number(v1StakerInfo[2]) : 0;
-  const v1CanUnstake = v1StakerInfo ? v1StakerInfo[6] : false;
-  const [v1Status, setV1Status] = useState<'idle' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
-  const [v1Error, setV1Error] = useState('');
-
-  // ── V2 Migration: old JesterGooner V2 (single pool, no lock) ──
-  const { data: v2StakerInfo, refetch: refetchV2Staker } = useReadContract({
-    address: MAINNET_JESTERGOONER_V2_ADDRESS,
-    abi: JESTERGOONER_ABI,
-    functionName: 'getStakerInfo',
-    args: [address],
-  });
-  const { data: v2Earned, refetch: refetchV2Earned } = useReadContract({
-    address: MAINNET_JESTERGOONER_V2_ADDRESS,
-    abi: JESTERGOONER_ABI,
-    functionName: 'earned',
-    args: [address],
-  });
-  const { writeContract: writeV2Unstake, data: v2UnstakeHash, reset: resetV2Unstake } = useWriteContract();
-  const { isSuccess: v2UnstakeConfirmed } = useWaitForTransactionReceipt({ hash: v2UnstakeHash, query: { enabled: !!v2UnstakeHash } });
-  const { writeContract: writeV2Claim, data: v2ClaimHash, reset: resetV2Claim } = useWriteContract();
-  const { isSuccess: v2ClaimConfirmed } = useWaitForTransactionReceipt({ hash: v2ClaimHash, query: { enabled: !!v2ClaimHash } });
-
-  const v2Staked = v2StakerInfo ? v2StakerInfo[0] : 0n;
-  const [v2Status, setV2Status] = useState<'idle' | 'unstaking' | 'claiming' | 'done' | 'error'>('idle');
-  const [v2Error, setV2Error] = useState('');
-
-  const handleV1Unstake = () => {
-    resetV1Unstake();
-    setV1Status('unstaking');
-    setV1Error('');
-    writeV1Unstake({
-      address: MAINNET_JESTERGOONER_V1_ADDRESS,
-      abi: JESTERGOONER_V1_ABI,
-      functionName: 'unstake',
-      args: [v1Staked],
-      gas: 2000000n,
-    }, { onError: (err) => { setV1Status('error'); setV1Error(err.message?.includes('locked') ? 'Still locked' : 'Unstake failed'); } });
-  };
-
-  const handleV1Claim = () => {
-    resetV1Claim();
-    setV1Status('claiming');
-    setV1Error('');
-    writeV1Claim({
-      address: MAINNET_JESTERGOONER_V1_ADDRESS,
-      abi: JESTERGOONER_V1_ABI,
-      functionName: 'claimRewards',
-      gas: 2000000n,
-    }, { onError: () => { setV1Status('error'); setV1Error('Claim failed'); } });
-  };
-
-  const handleV2Unstake = () => {
-    resetV2Unstake();
-    setV2Status('unstaking');
-    setV2Error('');
-    writeV2Unstake({
-      address: MAINNET_JESTERGOONER_V2_ADDRESS,
-      abi: JESTERGOONER_ABI,
-      functionName: 'unstake',
-      args: [v2Staked],
-      gas: 2000000n,
-    }, { onError: () => { setV2Status('error'); setV2Error('Unstake failed'); } });
-  };
-
-  const handleV2Claim = () => {
-    resetV2Claim();
-    setV2Status('claiming');
-    setV2Error('');
-    writeV2Claim({
-      address: MAINNET_JESTERGOONER_V2_ADDRESS,
-      abi: JESTERGOONER_ABI,
-      functionName: 'claimRewards',
-      gas: 2000000n,
-    }, { onError: () => { setV2Status('error'); setV2Error('Claim failed'); } });
-  };
-
-  useEffect(() => {
-    if (v1UnstakeConfirmed && v1Status === 'unstaking') {
-      setV1Status('done');
-      refetchV1Staker();
-      refetchV1Earned();
-      refetchLpBalance();
-    }
-  }, [v1UnstakeConfirmed, v1Status]);
-
-  useEffect(() => {
-    if (v1ClaimConfirmed && v1Status === 'claiming') {
-      setV1Status('done');
-      refetchV1Staker();
-      refetchV1Earned();
-    }
-  }, [v1ClaimConfirmed, v1Status]);
-
-  useEffect(() => {
-    if (v2UnstakeConfirmed && v2Status === 'unstaking') {
-      setV2Status('done');
-      refetchV2Staker();
-      refetchV2Earned();
-      refetchLpBalance();
-    }
-  }, [v2UnstakeConfirmed, v2Status]);
-
-  useEffect(() => {
-    if (v2ClaimConfirmed && v2Status === 'claiming') {
-      setV2Status('done');
-      refetchV2Staker();
-      refetchV2Earned();
-    }
-  }, [v2ClaimConfirmed, v2Status]);
-
-  const v1LockTimeLeft = v1LockEnd > 0 ? Math.max(0, v1LockEnd - Math.floor(Date.now() / 1000)) : 0;
-  const v1LockDisplay = v1LockTimeLeft > 0
-    ? `${Math.floor(v1LockTimeLeft / 86400)}d ${Math.floor((v1LockTimeLeft % 86400) / 3600)}h`
-    : 'Unlocked';
+  // Per-staker 4-week lock countdown derived from getStakerInfo.lockEnd.
+  const userLockEnd = stakerInfo ? Number(stakerInfo[2]) : 0;
+  const userStaked = stakerInfo ? stakerInfo[0] : 0n;
+  const userLockSecsLeft = (userStaked > 0n && userLockEnd > 0)
+    ? Math.max(0, userLockEnd - Math.floor(Date.now() / 1000))
+    : 0;
+  const userLockDisplay = userLockSecsLeft > 0
+    ? `${Math.floor(userLockSecsLeft / 86400)}d ${Math.floor((userLockSecsLeft % 86400) / 3600)}h`
+    : userStaked > 0n ? 'Unlocked' : '—';
+  const userNftMultiplier = stakerInfo ? Number(stakerInfo[4]) : 0;
+  const userTimeMultiplier = stakerInfo ? Number(stakerInfo[5]) : 0;
+  const userEffective = stakerInfo ? stakerInfo[6] : 0n;
 
   const isBusy = status !== 'idle' && status !== 'done' && status !== 'error';
 
@@ -1589,87 +1402,12 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
     <div className="beta-card">
       <div className="beta-card-header">
         <h2>JESTERGOONER V3</h2>
-        <span className="beta-card-badge">MULTI-POOL LP STAKING</span>
+        <span className="beta-card-badge">MC/MG LP STAKING</span>
       </div>
       <p className="beta-card-desc">
-        Stake LP tokens across multiple pools to earn $MEGAGOONER rewards. No lock period — stake and unstake freely.
+        Stake $MEGACHAD/$MEGAGOONER LP tokens to earn $MEGAGOONER rewards via continuous drip emissions.
+        4-week minimum lock with linear time multiplier (0.5x → 1.0x).
       </p>
-
-      {/* V1 Migration Banner */}
-      {v1Staked > 0n && (
-        <div className="beta-info-box beta-info-warning" style={{ borderColor: '#F786C6' }}>
-          <h4>V1 MIGRATION REQUIRED</h4>
-          <p>You have <strong>{Number(formatUnits(v1Staked, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} LP</strong> staked in V1 (lock-based).</p>
-          <div className="beta-stat-row" style={{ margin: '0.5rem 0' }}>
-            <div className="beta-stat">
-              <span className="beta-stat-label">LOCK STATUS</span>
-              <span className="beta-stat-value">{v1LockDisplay}</span>
-            </div>
-            <div className="beta-stat">
-              <span className="beta-stat-label">PENDING REWARDS</span>
-              <span className="beta-stat-value">{v1Earned ? Number(formatUnits(v1Earned, 18)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0'} $MEGAGOONER</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <button
-              className="beta-btn-primary"
-              onClick={handleV1Unstake}
-              disabled={!v1CanUnstake || v1Status === 'unstaking' || v1Status === 'claiming'}
-              style={{ flex: 1, opacity: v1CanUnstake ? 1 : 0.5 }}
-            >
-              {v1Status === 'unstaking' ? 'UNSTAKING...' : v1CanUnstake ? 'UNSTAKE FROM V1' : `LOCKED (${v1LockDisplay})`}
-            </button>
-            {v1Earned !== undefined && v1Earned > 0n && (
-              <button
-                className="beta-btn-secondary"
-                onClick={handleV1Claim}
-                disabled={v1Status === 'unstaking' || v1Status === 'claiming'}
-                style={{ flex: 1 }}
-              >
-                {v1Status === 'claiming' ? 'CLAIMING...' : 'CLAIM V1 REWARDS'}
-              </button>
-            )}
-          </div>
-          {v1Status === 'done' && <div className="beta-status success" style={{ marginTop: '0.5rem' }}>V1 transaction confirmed!</div>}
-          {v1Status === 'error' && <div className="beta-status error" style={{ marginTop: '0.5rem' }}>{v1Error || 'V1 transaction failed'}</div>}
-        </div>
-      )}
-
-      {/* V2 Migration Banner */}
-      {v2Staked > 0n && (
-        <div className="beta-info-box beta-info-warning" style={{ borderColor: '#F786C6' }}>
-          <h4>V2 MIGRATION REQUIRED</h4>
-          <p>You have <strong>{Number(formatUnits(v2Staked, 18)).toLocaleString(undefined, { maximumFractionDigits: 2 })} LP</strong> staked in V2 (single pool). Unstake and re-stake in V3 to earn from the new multi-pool system.</p>
-          <div className="beta-stat-row" style={{ margin: '0.5rem 0' }}>
-            <div className="beta-stat">
-              <span className="beta-stat-label">PENDING REWARDS</span>
-              <span className="beta-stat-value">{v2Earned ? Number(formatUnits(v2Earned, 18)).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0'} $MEGAGOONER</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <button
-              className="beta-btn-primary"
-              onClick={handleV2Unstake}
-              disabled={v2Status === 'unstaking' || v2Status === 'claiming'}
-              style={{ flex: 1 }}
-            >
-              {v2Status === 'unstaking' ? 'UNSTAKING...' : 'UNSTAKE FROM V2'}
-            </button>
-            {v2Earned !== undefined && v2Earned > 0n && (
-              <button
-                className="beta-btn-secondary"
-                onClick={handleV2Claim}
-                disabled={v2Status === 'unstaking' || v2Status === 'claiming'}
-                style={{ flex: 1 }}
-              >
-                {v2Status === 'claiming' ? 'CLAIMING...' : 'CLAIM V2 REWARDS'}
-              </button>
-            )}
-          </div>
-          {v2Status === 'done' && <div className="beta-status success" style={{ marginTop: '0.5rem' }}>V2 transaction confirmed!</div>}
-          {v2Status === 'error' && <div className="beta-status error" style={{ marginTop: '0.5rem' }}>{v2Error || 'V2 transaction failed'}</div>}
-        </div>
-      )}
 
       {/* NFT Requirement */}
       <div className="beta-info-box beta-info-warning">
@@ -1688,79 +1426,38 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </ul>
       </div>
 
-      {/* Global stats */}
+      {/* Global stats — single-pool V3 getGlobalStats: (totalStaked, totalRewardsDistributed, rewardRate) */}
       <div className="beta-stat-row">
         <div className="beta-stat">
-          <span className="beta-stat-label">WEEK</span>
-          <span className="beta-stat-value">{globalStats ? `${Number(globalStats[0])} / 225` : '—'}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">TOTAL WEEKLY EMISSION</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'} $MEGAGOONER</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">REWARDS REMAINING</span>
-          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[2]) : '—'} $MEGAGOONER</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">POOLS</span>
-          <span className="beta-stat-value">{globalStats ? Number(globalStats[3]).toString() : '—'}</span>
-        </div>
-      </div>
-
-      {/* Claim All Rewards */}
-      {earnedAll !== undefined && earnedAll > 0n && (
-        <button className="beta-btn-secondary" onClick={handleClaimAll} disabled={isBusy} style={{ marginBottom: '1rem' }}>
-          CLAIM ALL: {fmtBig(earnedAll)} $MEGAGOONER
-        </button>
-      )}
-
-      {/* ── Pool Selector Tabs ── */}
-      <div className="beta-toggle-row" style={{ marginBottom: '1rem' }}>
-        {POOL_CONFIG.map((p, i) => {
-          const deployed = isContractDeployed(p.lpAddress);
-          return (
-            <button
-              key={i}
-              className={`beta-toggle${selectedPool === i ? ' active' : ''}`}
-              onClick={() => { setSelectedPool(i); setAmount(''); setLiqPanel('none'); setErrorMsg(''); setStatus('idle'); }}
-              style={{ fontSize: '0.7rem', padding: '0.4rem 0.6rem', opacity: deployed ? 1 : 0.55 }}
-              title={deployed ? p.name : `${p.name} — pair not deployed yet`}
-            >
-              {p.name}{!deployed && ' (PENDING)'}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Pool-specific stats */}
-      <div className="beta-stat-row">
-        <div className="beta-stat">
-          <span className="beta-stat-label">POOL APY</span>
-          <span className="beta-stat-value">{fmtAPY(selectedPoolAPY)}</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">POOL ALLOCATION</span>
-          <span className="beta-stat-value">{poolAllocPct.toFixed(1)}%</span>
-        </div>
-        <div className="beta-stat">
-          <span className="beta-stat-label">POOL WEEKLY EMISSION</span>
-          <span className="beta-stat-value">{poolWeeklyEmission ? fmtBig(poolWeeklyEmission) : '—'} $MEGAGOONER</span>
+          <span className="beta-stat-label">POOL APR</span>
+          <span className="beta-stat-value highlight">{fmtAPY(selectedPoolAPY)}</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">TOTAL LP STAKED</span>
-          <span className="beta-stat-value">{poolInfoData ? fmtBig(poolInfoData[2]) : '—'} LP</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[0]) : '—'} LP</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">REWARDS DISTRIBUTED</span>
+          <span className="beta-stat-value">{globalStats ? fmtBig(globalStats[1]) : '—'} $MEGAGOONER</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">DRIP RATE</span>
+          <span className="beta-stat-value">
+            {globalStats && globalStats[2] > 0n
+              ? `${(Number(formatUnits(globalStats[2], 18)) * 86400).toLocaleString(undefined, { maximumFractionDigits: 2 })} /day`
+              : 'idle'}
+          </span>
         </div>
       </div>
 
-      {/* Your wallet balances (always visible — drives the Add Liquidity flow) */}
+      {/* Your wallet balances */}
       <div className="beta-stat-row">
         <div className="beta-stat">
           <span className="beta-stat-label">YOUR $MEGACHAD</span>
           <span className="beta-stat-value">{fmtBig(megachadBalance)}</span>
         </div>
         <div className="beta-stat">
-          <span className="beta-stat-label">YOUR ${pool.tokenBSymbol}</span>
+          <span className="beta-stat-label">YOUR ${JG_TOKEN_B_SYMBOL}</span>
           <span className="beta-stat-value">{fmtBig(tokenBBalance)}</span>
         </div>
         <div className="beta-stat">
@@ -1769,11 +1466,11 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </div>
       </div>
 
-      {/* Your position in selected pool */}
+      {/* Your position */}
       <div className="beta-stat-row">
         <div className="beta-stat">
           <span className="beta-stat-label">YOUR LP STAKED</span>
-          <span className="beta-stat-value">{userInfoData ? fmtBig(userInfoData[0]) : '—'} LP</span>
+          <span className="beta-stat-value">{fmtBig(userStaked)} LP</span>
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">PENDING REWARDS</span>
@@ -1781,14 +1478,29 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
         </div>
         <div className="beta-stat">
           <span className="beta-stat-label">NFT MULTIPLIER</span>
-          <span className="beta-stat-value">{userInfoData ? `${(Number(userInfoData[3]) / 10000).toFixed(2)}x` : '—'}</span>
+          <span className="beta-stat-value">{userNftMultiplier > 0 ? `${(userNftMultiplier / 10000).toFixed(3)}x` : '—'}</span>
         </div>
       </div>
 
-      {/* Claim this pool */}
+      <div className="beta-stat-row">
+        <div className="beta-stat">
+          <span className="beta-stat-label">TIME MULTIPLIER</span>
+          <span className="beta-stat-value">{userTimeMultiplier > 0 ? `${(userTimeMultiplier / 10000).toFixed(3)}x` : '—'}</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">EFFECTIVE STAKE</span>
+          <span className="beta-stat-value">{fmtBig(userEffective)} LP</span>
+        </div>
+        <div className="beta-stat">
+          <span className="beta-stat-label">LOCK COUNTDOWN</span>
+          <span className="beta-stat-value">{userLockDisplay}</span>
+        </div>
+      </div>
+
+      {/* Claim */}
       {earned !== undefined && earned > 0n && (
-        <button className="beta-btn-secondary" onClick={handleClaim} disabled={isBusy}>
-          CLAIM {fmtBig(earned)} $MEGAGOONER (THIS POOL)
+        <button className="beta-btn-secondary" onClick={handleClaim} disabled={isBusy} style={{ marginBottom: '1rem' }}>
+          CLAIM {fmtBig(earned)} $MEGAGOONER
         </button>
       )}
 
@@ -1815,21 +1527,19 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           {!pairDeployed && (
             <div style={{ padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid rgba(247,134,198,0.4)', borderRadius: '6px', background: 'rgba(247,134,198,0.05)' }}>
               <p className="beta-card-desc" style={{ margin: 0, fontSize: '0.8rem' }}>
-                <strong>{pool.name}</strong> pair is not deployed yet. Liquidity can only be added to an existing Uniswap V2 pair —
-                deployment is gated on tren fund accumulating sufficient {pool.tokenBSymbol} reserves.
+                <strong>{JG_LP_NAME}</strong> pair is not deployed yet.
               </p>
             </div>
           )}
           <p className="beta-card-desc" style={{ marginBottom: '0.75rem' }}>
-            Deposit $MEGACHAD and ${pool.tokenBSymbol} in the current pool ratio to receive LP tokens.
-            {pool.isEth && ' ETH will be automatically wrapped to WETH.'}
+            Deposit $MEGACHAD and ${JG_TOKEN_B_SYMBOL} in the current pool ratio to receive LP tokens.
             {pairDeployed && lpTotalSupply !== undefined && lpTotalSupply === 0n && ' This pair is empty — you will set the initial price by depositing.'}
           </p>
 
           <div className="beta-stat-row" style={{ marginBottom: '0.75rem' }}>
             <div className="beta-stat">
               <span className="beta-stat-label">POOL RATIO</span>
-              <span className="beta-stat-value">1 MEGACHAD = {poolRatio.toFixed(4)} {pool.tokenBSymbol}</span>
+              <span className="beta-stat-value">1 MEGACHAD = {poolRatio.toFixed(4)} {JG_TOKEN_B_SYMBOL}</span>
             </div>
           </div>
 
@@ -1856,7 +1566,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
           </div>
 
           <div className="beta-input-group" style={{ marginTop: '0.5rem' }}>
-            <label className="beta-input-label">${pool.tokenBSymbol} AMOUNT</label>
+            <label className="beta-input-label">${JG_TOKEN_B_SYMBOL} AMOUNT</label>
             <div className="beta-input-row">
               <input
                 type="number"
@@ -1877,26 +1587,14 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
             </div>
           </div>
 
-          <div className="beta-stat-row" style={{ margin: '0.5rem 0' }}>
-            <div className="beta-stat">
-              <span className="beta-stat-label">YOUR $MEGACHAD</span>
-              <span className="beta-stat-value">{fmtBig(megachadBalance)}</span>
-            </div>
-            <div className="beta-stat">
-              <span className="beta-stat-label">YOUR ${pool.tokenBSymbol}</span>
-              <span className="beta-stat-value">{fmtBig(tokenBBalance)}</span>
-            </div>
-          </div>
-
           <button
             className="beta-btn-primary"
             onClick={handleAddLiquidity}
             disabled={isBusy || parsedLiqA <= 0n || !pairDeployed}
           >
             {!pairDeployed ? 'PAIR NOT DEPLOYED'
-              : status === 'wrapping' ? 'WRAPPING ETH...'
               : status === 'approving' ? 'APPROVING $MEGACHAD...'
-              : status === 'approving-b' ? `APPROVING $${pool.tokenBSymbol}...`
+              : status === 'approving-b' ? `APPROVING $${JG_TOKEN_B_SYMBOL}...`
               : status === 'adding' ? 'ADDING LIQUIDITY...'
               : 'ADD LIQUIDITY'}
           </button>
@@ -1906,7 +1604,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       {liqPanel === 'remove' && (
         <div style={{ padding: '1rem', border: '1px solid rgba(247,134,198,0.15)', borderRadius: '8px', marginBottom: '1.5rem' }}>
           <p className="beta-card-desc" style={{ marginBottom: '0.75rem' }}>
-            Burn LP tokens to withdraw your $MEGACHAD and ${pool.tokenBSymbol} from the pool.
+            Burn LP tokens to withdraw your $MEGACHAD and ${JG_TOKEN_B_SYMBOL} from the pool.
           </p>
 
           <div className="beta-input-group">
@@ -1939,17 +1637,10 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
               </div>
               <div className="beta-stat">
                 <span className="beta-stat-label">&nbsp;</span>
-                <span className="beta-stat-value">{removeEstimate.tokenB.toFixed(2)} ${pool.tokenBSymbol}</span>
+                <span className="beta-stat-value">{removeEstimate.tokenB.toFixed(2)} ${JG_TOKEN_B_SYMBOL}</span>
               </div>
             </div>
           )}
-
-          <div className="beta-stat-row" style={{ margin: '0.5rem 0' }}>
-            <div className="beta-stat">
-              <span className="beta-stat-label">YOUR LP BALANCE</span>
-              <span className="beta-stat-value">{fmtBig(lpBalance)} LP</span>
-            </div>
-          </div>
 
           <button
             className="beta-btn-primary"
@@ -1967,8 +1658,7 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
       {!stakingActivated && (
         <div style={{ padding: '0.75rem', marginTop: '1rem', border: '1px solid rgba(247,134,198,0.4)', borderRadius: '6px', background: 'rgba(247,134,198,0.05)' }}>
           <p className="beta-card-desc" style={{ margin: 0, fontSize: '0.8rem' }}>
-            <strong>Staking pending V2 upgrade.</strong> JESTERGOONER&apos;s lpToken still points at the placeholder ERC20.
-            Once the pair has initial liquidity and ADMIN calls <code>setLpToken</code>, your LP tokens from this pair become stakeable for MEGAGOONER emissions.
+            <strong>Staking not yet activated.</strong> JESTERGOONER&apos;s lpToken does not point at this pair yet.
           </p>
         </div>
       )}
@@ -2004,17 +1694,26 @@ function LPStakingSection({ address }: { address: `0x${string}` }) {
             className="beta-btn-max"
             onClick={() => {
               if (action === 'stake' && lpBalance) setAmount(formatUnits(lpBalance, 18));
-              if (action === 'unstake' && userInfoData) setAmount(formatUnits(userInfoData[0], 18));
+              if (action === 'unstake' && userStaked > 0n) setAmount(formatUnits(userStaked, 18));
             }}
           >
             MAX
           </button>
         </div>
+        {action === 'unstake' && userLockSecsLeft > 0 && (
+          <span className="beta-input-hint" style={{ color: '#F786C6' }}>
+            Locked for {userLockDisplay} — unstake reverts until lock expires.
+          </span>
+        )}
+        {action === 'stake' && (
+          <span className="beta-input-hint">
+            Staking starts a fresh 4-week lock (additional stakes extend via weighted-average timestamp).
+          </span>
+        )}
       </div>
 
       {status !== 'idle' && status !== 'done' && (
         <div className={`beta-status ${status === 'error' ? 'error' : ''}`}>
-          {status === 'wrapping' && 'Wrapping ETH to WETH...'}
           {status === 'approving' && liqPanel !== 'add' && 'Approving LP tokens...'}
           {status === 'staking' && 'Staking LP tokens...'}
           {status === 'unstaking' && 'Unstaking LP tokens...'}
@@ -2069,19 +1768,19 @@ function SwapSection({ address }: { address: `0x${string}` }) {
     address: MAINNET_MEGACHAD_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'allowance',
-    args: [address, MAINNET_LP_TOKEN_ADDRESS],
+    args: [address, MAINNET_MC_MG_PAIR_ADDRESS],
   });
 
   const { data: goonerAllowance, refetch: refetchGoonerAllowance } = useReadContract({
     address: MAINNET_MEGAGOONER_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'allowance',
-    args: [address, MAINNET_LP_TOKEN_ADDRESS],
+    args: [address, MAINNET_MC_MG_PAIR_ADDRESS],
   });
 
-  // Reserves for quote
+  // Reserves for quote — pulled from the real MC/MG Uniswap V2 pair.
   const { data: reserves } = useReadContract({
-    address: MAINNET_LP_TOKEN_ADDRESS,
+    address: MAINNET_MC_MG_PAIR_ADDRESS,
     abi: LP_ABI,
     functionName: 'getReserves',
   });
@@ -2146,7 +1845,7 @@ function SwapSection({ address }: { address: `0x${string}` }) {
       : [0n, parsedInput, address];
 
     writeSwap({
-      address: MAINNET_LP_TOKEN_ADDRESS,
+      address: MAINNET_MC_MG_PAIR_ADDRESS,
       abi: LP_ABI,
       functionName: 'swap',
       args,
@@ -2168,7 +1867,7 @@ function SwapSection({ address }: { address: `0x${string}` }) {
         address: tokenAddr,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [MAINNET_LP_TOKEN_ADDRESS, parsedInput],
+        args: [MAINNET_MC_MG_PAIR_ADDRESS, parsedInput],
         gas: 2000000n,
       }, { onError: () => { setStatus('error'); setErrorMsg('Approval rejected'); } });
     } else {
