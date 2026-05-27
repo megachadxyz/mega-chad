@@ -1,0 +1,104 @@
+name: Emissions Keeper
+
+# Perpetual keeper for the MEGA Protocol emission schedule.
+#
+# Calls MoggerStaking.distributeWeeklyRewards() on MegaETH mainnet weekly.
+# That call cascades through EmissionController.distributeEmissions(), which
+# mints the current week's $MEGAGOONER and notifies BOTH MoggerStaking and
+# JESTERGOONER staking pools (Synthetix 7-day drip).
+#
+# Safety: EmissionController has a catch-up loop —
+#   for (uint256 w = lastProcessedWeek; w <= currentWeek; w++) { ... }
+# so a missed week is automatically processed on the next successful call.
+# The keeper just needs to fire roughly weekly until week 225 is processed.
+#
+# Schedule: every Saturday at 15:00 UTC. Genesis was Saturday 2026-05-16
+# 14:26 UTC, so each new week opens at ~14:26 every Saturday — we trigger
+# ~34 minutes after the week boundary to be safe.
+#
+# Manual run: use the "Run workflow" button (workflow_dispatch) to fire on
+# demand — e.g. to recover after extended downtime or kick off week 1.
+
+on:
+  schedule:
+    - cron: "0 15 * * 6"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you running this manually? (logged only)"
+        required: false
+        default: "manual trigger"
+
+permissions:
+  contents: read
+
+jobs:
+  drip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MOGGER_STAKING: "0xfd820E6189Eb3396dA71cB072643A0E1e1239853"
+      JESTERGOONER: "0x2695965Dd283e2425fab5C4c1E0955656802569c"
+      EMISSION_CONTROLLER: "0x9CBB09555395643abc016b586D7d890E6911a013"
+      MEGAGOONER: "0x11d819Dbd6e9aF0b13A54e88EA411155764e3F46"
+      KEEPER_RPC_URL: ${{ secrets.KEEPER_RPC_URL }}
+      KEEPER_PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}
+
+    steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Sanity check secrets
+        run: |
+          if [ -z "$KEEPER_RPC_URL" ]; then
+            echo "::error::KEEPER_RPC_URL secret is missing"
+            exit 1
+          fi
+          if [ -z "$KEEPER_PRIVATE_KEY" ]; then
+            echo "::error::KEEPER_PRIVATE_KEY secret is missing"
+            exit 1
+          fi
+
+      - name: Read pre-call state
+        run: |
+          echo "## Pre-call state" >> "$GITHUB_STEP_SUMMARY"
+          CUR_WEEK=$(cast call "$EMISSION_CONTROLLER" "getCurrentWeek()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          LAST_WEEK=$(cast call "$EMISSION_CONTROLLER" "lastProcessedWeek()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          TOTAL_EMITTED=$(cast call "$EMISSION_CONTROLLER" "totalEmitted()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          MG_SUPPLY=$(cast call "$MEGAGOONER" "totalSupply()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          echo "currentWeek=$CUR_WEEK" >> "$GITHUB_STEP_SUMMARY"
+          echo "lastProcessedWeek=$LAST_WEEK" >> "$GITHUB_STEP_SUMMARY"
+          echo "totalEmitted=$TOTAL_EMITTED" >> "$GITHUB_STEP_SUMMARY"
+          echo "megaGoonerSupply=$MG_SUPPLY" >> "$GITHUB_STEP_SUMMARY"
+          echo "currentWeek=$CUR_WEEK"
+          echo "lastProcessedWeek=$LAST_WEEK"
+
+      - name: Trigger weekly distribution (MoggerStaking entrypoint)
+        run: |
+          cast send "$MOGGER_STAKING" "distributeWeeklyRewards()" \
+            --rpc-url "$KEEPER_RPC_URL" \
+            --private-key "$KEEPER_PRIVATE_KEY" \
+            --legacy \
+            --gas-price 100000000 \
+            --gas-limit 300000000 \
+            --confirmations 1
+
+      - name: Read post-call state
+        run: |
+          echo "## Post-call state" >> "$GITHUB_STEP_SUMMARY"
+          LAST_WEEK=$(cast call "$EMISSION_CONTROLLER" "lastProcessedWeek()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          TOTAL_EMITTED=$(cast call "$EMISSION_CONTROLLER" "totalEmitted()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          MG_SUPPLY=$(cast call "$MEGAGOONER" "totalSupply()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          MOGGER_PERIOD_FINISH=$(cast call "$MOGGER_STAKING" "periodFinish()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          JESTER_PERIOD_FINISH=$(cast call "$JESTERGOONER" "periodFinish()(uint256)" --rpc-url "$KEEPER_RPC_URL")
+          echo "lastProcessedWeek=$LAST_WEEK" >> "$GITHUB_STEP_SUMMARY"
+          echo "totalEmitted=$TOTAL_EMITTED" >> "$GITHUB_STEP_SUMMARY"
+          echo "megaGoonerSupply=$MG_SUPPLY" >> "$GITHUB_STEP_SUMMARY"
+          echo "moggerStaking.periodFinish=$MOGGER_PERIOD_FINISH" >> "$GITHUB_STEP_SUMMARY"
+          echo "jestergooner.periodFinish=$JESTER_PERIOD_FINISH" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep workflow alive (GitHub disables cron after 60 days idle)
+        if: github.event_name == 'schedule'
+        run: echo "tick $(date -u +%FT%TZ)"
